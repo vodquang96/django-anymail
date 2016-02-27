@@ -1,6 +1,6 @@
 from django.core import mail
 
-from anymail import MandrillAPIError
+from anymail.exceptions import AnymailAPIError
 
 from .mock_backend import DjrillBackendMockAPITestCase
 
@@ -47,7 +47,7 @@ class DjrillMandrillSendTemplateTests(DjrillBackendMockAPITestCase):
             'from@example.com', ['to@example.com'])
         msg.template_name = "PERSONALIZED_SPECIALS"
         msg.use_template_from = True
-        with self.assertRaises(MandrillAPIError):
+        with self.assertRaises(AnymailAPIError):
             msg.send()
 
     def test_send_template_without_subject_field(self):

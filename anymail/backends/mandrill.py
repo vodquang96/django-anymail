@@ -16,8 +16,8 @@ from django.core.mail.backends.base import BaseEmailBackend
 from django.core.mail.message import sanitize_address, DEFAULT_ATTACHMENT_MIME_TYPE
 
 from .._version import __version__
-from ..exceptions import (DjrillError, MandrillAPIError, MandrillRecipientsRefused,
-                          NotSerializableForMandrillError, NotSupportedByMandrillError)
+from ..exceptions import (AnymailError, AnymailRequestsAPIError, AnymailRecipientsRefused,
+                          AnymailSerializationError, AnymailUnsupportedFeature)
 
 
 class MandrillBackend(BaseEmailBackend):
@@ -127,8 +127,8 @@ class MandrillBackend(BaseEmailBackend):
             message.mandrill_response = self.parse_response(response, payload, message)
             self.validate_response(message.mandrill_response, response, payload, message)
 
-        except DjrillError:
-            # every *expected* error is derived from DjrillError;
+        except AnymailError:
+            # every *expected* error is derived from AnymailError;
             # we deliberately don't silence unexpected errors
             if not self.fail_silently:
                 raise
@@ -153,7 +153,7 @@ class MandrillBackend(BaseEmailBackend):
         payload is a dict that will become the Mandrill send data
         message is an EmailMessage, possibly with additional Mandrill-specific attrs
 
-        Can raise NotSupportedByMandrillError for unsupported options in message.
+        Can raise AnymailUnsupportedFeature for unsupported options in message.
         """
         msg_dict = self._build_standard_message_dict(message)
         self._add_mandrill_options(message, msg_dict)
@@ -192,32 +192,32 @@ class MandrillBackend(BaseEmailBackend):
         message is the original EmailMessage
         return should be a requests.Response
 
-        Can raise NotSerializableForMandrillError if payload is not serializable
-        Can raise MandrillAPIError for HTTP errors in the post
+        Can raise AnymailSerializationError if payload is not serializable
+        Can raise AnymailRequestsAPIError for HTTP errors in the post
         """
         api_url = self.get_api_url(payload, message)
         try:
             json_payload = self.serialize_payload(payload, message)
         except TypeError as err:
             # Add some context to the "not JSON serializable" message
-            raise NotSerializableForMandrillError(
+            raise AnymailSerializationError(
                 orig_err=err, email_message=message, payload=payload)
 
         response = self.session.post(api_url, data=json_payload)
         if response.status_code != 200:
-            raise MandrillAPIError(email_message=message, payload=payload, response=response)
+            raise AnymailRequestsAPIError(email_message=message, payload=payload, response=response)
         return response
 
     def parse_response(self, response, payload, message):
         """Return parsed json from Mandrill API response
 
-        Can raise MandrillAPIError if response is not valid JSON
+        Can raise AnymailRequestsAPIError if response is not valid JSON
         """
         try:
             return response.json()
         except ValueError:
-            raise MandrillAPIError("Invalid JSON in Mandrill API response",
-                                   email_message=message, payload=payload, response=response)
+            raise AnymailRequestsAPIError("Invalid JSON in Mandrill API response",
+                                          email_message=message, payload=payload, response=response)
 
     def validate_response(self, parsed_response, response, payload, message):
         """Validate parsed_response, raising exceptions for any problems.
@@ -233,12 +233,12 @@ class MandrillBackend(BaseEmailBackend):
         try:
             recipient_status = [item["status"] for item in parsed_response]
         except (KeyError, TypeError):
-            raise MandrillAPIError("Invalid Mandrill API response format",
-                                   email_message=message, payload=payload, response=response)
+            raise AnymailRequestsAPIError("Invalid Mandrill API response format",
+                                          email_message=message, payload=payload, response=response)
         # Error if *all* recipients are invalid or refused
         # (This behavior parallels smtplib.SMTPRecipientsRefused from Django's SMTP EmailBackend)
         if all([status in ('invalid', 'rejected') for status in recipient_status]):
-            raise MandrillRecipientsRefused(email_message=message, payload=payload, response=response)
+            raise AnymailRecipientsRefused(email_message=message, payload=payload, response=response)
 
     #
     # Payload construction
@@ -251,7 +251,7 @@ class MandrillBackend(BaseEmailBackend):
         use by default. Standard text email messages sent through Django will
         still work through Mandrill.
 
-        Raises NotSupportedByMandrillError for any standard EmailMessage
+        Raises AnymailUnsupportedFeature for any standard EmailMessage
         features that cannot be accurately communicated to Mandrill.
         """
         sender = sanitize_address(message.from_email, message.encoding)
@@ -381,14 +381,14 @@ class MandrillBackend(BaseEmailBackend):
         the HTML output for your email.
         """
         if len(message.alternatives) > 1:
-            raise NotSupportedByMandrillError(
+            raise AnymailUnsupportedFeature(
                 "Too many alternatives attached to the message. "
                 "Mandrill only accepts plain text and html emails.",
                 email_message=message)
 
         (content, mimetype) = message.alternatives[0]
         if mimetype != 'text/html':
-            raise NotSupportedByMandrillError(
+            raise AnymailUnsupportedFeature(
                 "Invalid alternative mimetype '%s'. "
                 "Mandrill only accepts plain text and html emails."
                 % mimetype,

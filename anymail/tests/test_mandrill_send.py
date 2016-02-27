@@ -19,8 +19,8 @@ from django.core.mail import make_msgid
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from anymail import (MandrillAPIError, MandrillRecipientsRefused,
-                     NotSerializableForMandrillError, NotSupportedByMandrillError)
+from anymail.exceptions import (AnymailAPIError, AnymailRecipientsRefused,
+                                AnymailSerializationError, AnymailUnsupportedFeature)
 
 from .mock_backend import DjrillBackendMockAPITestCase
 
@@ -275,14 +275,14 @@ class DjrillBackendTests(DjrillBackendMockAPITestCase):
             'from@example.com', ['to@example.com'])
         email.attach_alternative("<p>First html is OK</p>", "text/html")
         email.attach_alternative("<p>But not second html</p>", "text/html")
-        with self.assertRaises(NotSupportedByMandrillError):
+        with self.assertRaises(AnymailUnsupportedFeature):
             email.send()
 
         # Only html alternatives allowed
         email = mail.EmailMultiAlternatives('Subject', 'Body',
             'from@example.com', ['to@example.com'])
         email.attach_alternative("{'not': 'allowed'}", "application/json")
-        with self.assertRaises(NotSupportedByMandrillError):
+        with self.assertRaises(AnymailUnsupportedFeature):
             email.send()
 
         # Make sure fail_silently is respected
@@ -296,7 +296,7 @@ class DjrillBackendTests(DjrillBackendMockAPITestCase):
 
     def test_mandrill_api_failure(self):
         self.mock_post.return_value = self.MockResponse(status_code=400)
-        with self.assertRaises(MandrillAPIError):
+        with self.assertRaises(AnymailAPIError):
             sent = mail.send_mail('Subject', 'Body', 'from@example.com',
                 ['to@example.com'])
             self.assertEqual(sent, 0)
@@ -319,17 +319,17 @@ class DjrillBackendTests(DjrillBackendMockAPITestCase):
                                  "message": "Helpful explanation from Mandrill"
                              }"""
         self.mock_post.return_value = self.MockResponse(status_code=400, raw=error_response)
-        with self.assertRaisesMessage(MandrillAPIError, "Helpful explanation from Mandrill"):
+        with self.assertRaisesMessage(AnymailAPIError, "Helpful explanation from Mandrill"):
             msg.send()
 
         # Non-JSON error response:
         self.mock_post.return_value = self.MockResponse(status_code=500, raw=b"Invalid API key")
-        with self.assertRaisesMessage(MandrillAPIError, "Invalid API key"):
+        with self.assertRaisesMessage(AnymailAPIError, "Invalid API key"):
             msg.send()
 
         # No content in the error response:
         self.mock_post.return_value = self.MockResponse(status_code=502, raw=None)
-        with self.assertRaises(MandrillAPIError):
+        with self.assertRaises(AnymailAPIError):
             msg.send()
 
 
@@ -539,29 +539,29 @@ class DjrillMandrillFeatureTests(DjrillBackendMockAPITestCase):
         """If the send succeeds, but a non-JSON API response, should raise an API exception"""
         self.mock_post.return_value = self.MockResponse(status_code=500, raw=b"this isn't json")
         msg = mail.EmailMessage('Subject', 'Message', 'from@example.com', ['to1@example.com'],)
-        with self.assertRaises(MandrillAPIError):
+        with self.assertRaises(AnymailAPIError):
             msg.send()
         self.assertIsNone(msg.mandrill_response)
 
     def test_json_serialization_errors(self):
         """Try to provide more information about non-json-serializable data"""
         self.message.global_merge_vars = {'PRICE': Decimal('19.99')}
-        with self.assertRaises(NotSerializableForMandrillError) as cm:
+        with self.assertRaises(AnymailSerializationError) as cm:
             self.message.send()
         err = cm.exception
         self.assertTrue(isinstance(err, TypeError))  # Djrill 1.x re-raised TypeError from json.dumps
-        self.assertStrContains(str(err), "Don't know how to send this data to Mandrill")  # our added context
+        self.assertStrContains(str(err), "Don't know how to send this data to your ESP")  # our added context
         self.assertStrContains(str(err), "Decimal('19.99') is not JSON serializable")  # original message
 
     def test_dates_not_serialized(self):
         """Pre-2.0 Djrill accidentally serialized dates to ISO"""
         self.message.global_merge_vars = {'SHIP_DATE': date(2015, 12, 2)}
-        with self.assertRaises(NotSerializableForMandrillError):
+        with self.assertRaises(AnymailSerializationError):
             self.message.send()
 
 
 class DjrillRecipientsRefusedTests(DjrillBackendMockAPITestCase):
-    """Djrill raises MandrillRecipientsRefused when *all* recipients are rejected or invalid"""
+    """Djrill raises AnymailRecipientsRefused when *all* recipients are rejected or invalid"""
 
     def test_recipients_refused(self):
         msg = mail.EmailMessage('Subject', 'Body', 'from@example.com',
@@ -569,7 +569,7 @@ class DjrillRecipientsRefusedTests(DjrillBackendMockAPITestCase):
         self.mock_post.return_value = self.MockResponse(status_code=200, raw=b"""
             [{ "email": "invalid@localhost", "status": "invalid" },
              { "email": "reject@test.mandrillapp.com", "status": "rejected" }]""")
-        with self.assertRaises(MandrillRecipientsRefused):
+        with self.assertRaises(AnymailRecipientsRefused):
             msg.send()
 
     def test_fail_silently(self):

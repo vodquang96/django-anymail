@@ -7,7 +7,7 @@ from django.core import mail
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from anymail import MandrillAPIError, MandrillRecipientsRefused
+from anymail.exceptions import AnymailAPIError, AnymailRecipientsRefused
 
 
 MANDRILL_TEST_API_KEY = os.getenv('MANDRILL_TEST_API_KEY')
@@ -51,7 +51,7 @@ class DjrillIntegrationTests(TestCase):
         try:
             self.message.send()
             self.fail("This line will not be reached, because send() raised an exception")
-        except MandrillAPIError as err:
+        except AnymailAPIError as err:
             self.assertEqual(err.status_code, 500)
             self.assertIn("email address is invalid", str(err))
 
@@ -60,7 +60,7 @@ class DjrillIntegrationTests(TestCase):
         self.message.to = ['invalid@localhost']
         try:
             self.message.send()
-        except MandrillRecipientsRefused:
+        except AnymailRecipientsRefused:
             # Mandrill refused to deliver the mail -- message.mandrill_response will tell you why:
             # noinspection PyUnresolvedReferences
             response = self.message.mandrill_response
@@ -72,14 +72,14 @@ class DjrillIntegrationTests(TestCase):
             if response[0]['status'] == 'queued':
                 self.skipTest("Mandrill queued the send -- can't complete this test")
             else:
-                self.fail("Djrill did not raise MandrillRecipientsRefused for invalid recipient")
+                self.fail("Djrill did not raise AnymailRecipientsRefused for invalid recipient")
 
     def test_rejected_to(self):
         # Example of detecting when a recipient is on Mandrill's rejection blacklist
         self.message.to = ['reject@test.mandrillapp.com']
         try:
             self.message.send()
-        except MandrillRecipientsRefused:
+        except AnymailRecipientsRefused:
             # Mandrill refused to deliver the mail -- message.mandrill_response will tell you why:
             # noinspection PyUnresolvedReferences
             response = self.message.mandrill_response
@@ -92,7 +92,7 @@ class DjrillIntegrationTests(TestCase):
             if response[0]['status'] == 'queued':
                 self.skipTest("Mandrill queued the send -- can't complete this test")
             else:
-                self.fail("Djrill did not raise MandrillRecipientsRefused for blacklist recipient")
+                self.fail("Djrill did not raise AnymailRecipientsRefused for blacklist recipient")
 
     @override_settings(MANDRILL_API_KEY="Hey, that's not an API key!")
     def test_invalid_api_key(self):
@@ -100,6 +100,6 @@ class DjrillIntegrationTests(TestCase):
         try:
             self.message.send()
             self.fail("This line will not be reached, because send() raised an exception")
-        except MandrillAPIError as err:
+        except AnymailAPIError as err:
             self.assertEqual(err.status_code, 500)
             self.assertIn("Invalid API key", str(err))
