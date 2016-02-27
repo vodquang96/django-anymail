@@ -16,12 +16,12 @@ MANDRILL_SUCCESS_RESPONSE = b"""[{
 
 
 @override_settings(MANDRILL_API_KEY="FAKE_API_KEY_FOR_TESTING",
-                   EMAIL_BACKEND="djrill.mail.backends.djrill.DjrillBackend")
+                   EMAIL_BACKEND="anymail.backends.mandrill.MandrillBackend")
 class DjrillBackendMockAPITestCase(TestCase):
     """TestCase that uses Djrill EmailBackend with a mocked Mandrill API"""
 
     class MockResponse(requests.Response):
-        """requests.post return value mock sufficient for DjrillBackend"""
+        """requests.post return value mock sufficient for MandrillBackend"""
         def __init__(self, status_code=200, raw=MANDRILL_SUCCESS_RESPONSE, encoding='utf-8'):
             super(DjrillBackendMockAPITestCase.MockResponse, self).__init__()
             self.status_code = status_code

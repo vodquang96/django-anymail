@@ -1,5 +1,10 @@
-Django-Djrill
-=============
+Anymail
+=======
+
+Mike Edmunds
+
+
+Anymail was forked from Djrill, which included contributions from:
 
 Kenneth Love
 Chris Jones

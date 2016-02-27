@@ -5,7 +5,7 @@
 import sys
 from django.conf import settings
 
-APP = 'djrill'
+APP = 'anymail'
 
 settings.configure(
     DEBUG=True,
@@ -29,7 +29,7 @@ settings.configure(
         'django.contrib.auth.middleware.AuthenticationMiddleware',
     ),
     TEMPLATES=[
-        # Djrill doesn't have any templates, but tests need a TEMPLATES
+        # Anymail doesn't have any templates, but tests need a TEMPLATES
         # setting to avoid warnings from the Django 1.8+ test client.
         {
             'BACKEND': 'django.template.backends.django.DjangoTemplates',

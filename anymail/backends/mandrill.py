@@ -15,19 +15,19 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.mail.backends.base import BaseEmailBackend
 from django.core.mail.message import sanitize_address, DEFAULT_ATTACHMENT_MIME_TYPE
 
-from ..._version import __version__
-from ...exceptions import (DjrillError, MandrillAPIError, MandrillRecipientsRefused,
-                           NotSerializableForMandrillError, NotSupportedByMandrillError)
+from .._version import __version__
+from ..exceptions import (DjrillError, MandrillAPIError, MandrillRecipientsRefused,
+                          NotSerializableForMandrillError, NotSupportedByMandrillError)
 
 
-class DjrillBackend(BaseEmailBackend):
+class MandrillBackend(BaseEmailBackend):
     """
     Mandrill API Email Backend
     """
 
     def __init__(self, **kwargs):
         """Init options from Django settings"""
-        super(DjrillBackend, self).__init__(**kwargs)
+        super(MandrillBackend, self).__init__(**kwargs)
 
         try:
             self.api_key = settings.MANDRILL_API_KEY
@@ -223,7 +223,7 @@ class DjrillBackend(BaseEmailBackend):
         """Validate parsed_response, raising exceptions for any problems.
 
         Extend this to provide your own validation checks.
-        Validation exceptions should inherit from djrill.exceptions.DjrillException
+        Validation exceptions should inherit from anymail.exceptions.DjrillException
         for proper fail_silently behavior.
 
         The base version here checks for invalid or refused recipients.

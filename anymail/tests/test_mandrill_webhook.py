@@ -8,8 +8,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from djrill.compat import b
-from djrill.signals import webhook_event
+from anymail.compat import b
+from anymail.signals import webhook_event
 
 
 class DjrillWebhookSecretMixinTests(TestCase):

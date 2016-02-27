@@ -2,7 +2,7 @@ sudo: false
 language: python
 matrix:
   include:
-    # Django 1.4: Python 2.6--2.7 (but Djrill doesn't support 2.6)
+    # Django 1.4: Python 2.6--2.7 (but Anymail doesn't support 2.6)
     - { env: DJANGO=django==1.4, python: 2.7 }
     # Django 1.5: Python 2.7, pypy
     - { env: DJANGO=django==1.5, python: 2.7 }

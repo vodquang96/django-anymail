@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
-# Djrill documentation build configuration file, created by
-# sphinx-quickstart on Sat Mar  2 13:07:34 2013.
+# Anymail documentation build configuration file, created by
+# sphinx-quickstart
 #
 # This file is execfile()d with the current directory set to its containing dir.
 #
@@ -18,10 +18,10 @@ import sys, os
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('..'))
 
-# define __version__ and __minor_version__ from ../djrill/_version.py,
-# but without importing from djrill (which would make docs dependent on Django, etc.)
-with open("../djrill/_version.py") as f:
-    code = compile(f.read(), "../djrill/_version.py", 'exec')
+# define __version__ and __minor_version__ from ../anymail/_version.py,
+# but without importing from anymail (which would make docs dependent on Django, etc.)
+with open("../anymail/_version.py") as f:
+    code = compile(f.read(), "../anymail/_version.py", 'exec')
     exec(code)
 
 # -- General configuration -----------------------------------------------------
@@ -46,9 +46,9 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Djrill'
+project = u'Anymail'
 # noinspection PyShadowingBuiltins
-copyright = u'2015, Djrill contributors (see AUTHORS.txt)'
+copyright = u'2016, Anymail contributors (see AUTHORS.txt)'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -171,7 +171,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Djrilldoc'
+htmlhelp_basename = 'Anymaildoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -190,8 +190,8 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'Djrill.tex', u'Djrill Documentation',
-   u'Djrill contributors (see AUTHORS.txt)', 'manual'),
+  ('index', 'Anymail.tex', u'Anymail Documentation',
+   u'Anymail contributors (see AUTHORS.txt)', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -220,8 +220,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'djrill', u'Djrill Documentation',
-     [u'Djrill contributors (see AUTHORS.txt)'], 1)
+    ('index', 'anymail', u'Anymail Documentation',
+     [u'Anymail contributors (see AUTHORS.txt)'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -234,8 +234,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'Djrill', u'Djrill Documentation',
-   u'Djrill contributors (see AUTHORS.txt)', 'Djrill', 'Mandrill integration for Django.',
+  ('index', 'Anymail', u'Anymail Documentation',
+   u'Anymail contributors (see AUTHORS.txt)', 'Anymail', 'Multi-ESP transactional email for Django.',
    'Miscellaneous'),
 ]
 

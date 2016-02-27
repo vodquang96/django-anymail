@@ -7,7 +7,7 @@ from django.core import mail
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from djrill import MandrillAPIError, MandrillRecipientsRefused
+from anymail import MandrillAPIError, MandrillRecipientsRefused
 
 
 MANDRILL_TEST_API_KEY = os.getenv('MANDRILL_TEST_API_KEY')
@@ -16,7 +16,7 @@ MANDRILL_TEST_API_KEY = os.getenv('MANDRILL_TEST_API_KEY')
 @unittest.skipUnless(MANDRILL_TEST_API_KEY,
             "Set MANDRILL_TEST_API_KEY environment variable to run integration tests")
 @override_settings(MANDRILL_API_KEY=MANDRILL_TEST_API_KEY,
-                   EMAIL_BACKEND="djrill.mail.backends.djrill.DjrillBackend")
+                   EMAIL_BACKEND="anymail.backends.mandrill.MandrillBackend")
 class DjrillIntegrationTests(TestCase):
     """Mandrill API integration tests
 

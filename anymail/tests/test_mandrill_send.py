@@ -19,8 +19,8 @@ from django.core.mail import make_msgid
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from djrill import (MandrillAPIError, MandrillRecipientsRefused,
-                    NotSerializableForMandrillError, NotSupportedByMandrillError)
+from anymail import (MandrillAPIError, MandrillRecipientsRefused,
+                     NotSerializableForMandrillError, NotSupportedByMandrillError)
 
 from .mock_backend import DjrillBackendMockAPITestCase
 
@@ -742,7 +742,7 @@ class DjrillMandrillGlobalFeatureTests(DjrillBackendMockAPITestCase):
                          [{'name': 'TEST', 'content': 'Hello'}])
 
 
-@override_settings(EMAIL_BACKEND="djrill.mail.backends.djrill.DjrillBackend")
+@override_settings(EMAIL_BACKEND="anymail.backends.mandrill.MandrillBackend")
 class DjrillImproperlyConfiguredTests(TestCase):
     """Test Djrill backend without Djrill-specific settings in place"""
 

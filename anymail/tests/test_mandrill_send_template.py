@@ -1,6 +1,6 @@
 from django.core import mail
 
-from djrill import MandrillAPIError
+from anymail import MandrillAPIError
 
 from .mock_backend import DjrillBackendMockAPITestCase
 
