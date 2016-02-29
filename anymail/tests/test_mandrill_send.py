@@ -525,7 +525,10 @@ class DjrillMandrillFeatureTests(DjrillBackendMockAPITestCase):
         msg = mail.EmailMessage('Subject', 'Message', 'from@example.com', ['to1@example.com'],)
         sent = msg.send()
         self.assertEqual(sent, 1)
+        # noinspection PyUnresolvedReferences
         self.assertEqual(msg.mandrill_response, response)
+        # noinspection PyUnresolvedReferences
+        self.assertEqual(msg.anymail_status, "sent")
 
     def test_send_failed_mandrill_response(self):
         """ If the send fails, mandrill_response should be set to None """
@@ -533,7 +536,10 @@ class DjrillMandrillFeatureTests(DjrillBackendMockAPITestCase):
         msg = mail.EmailMessage('Subject', 'Message', 'from@example.com', ['to1@example.com'],)
         sent = msg.send(fail_silently=True)
         self.assertEqual(sent, 0)
+        # noinspection PyUnresolvedReferences
         self.assertIsNone(msg.mandrill_response)
+        # noinspection PyUnresolvedReferences
+        self.assertIsNone(msg.anymail_status)
 
     def test_send_unparsable_mandrill_response(self):
         """If the send succeeds, but a non-JSON API response, should raise an API exception"""
@@ -541,7 +547,10 @@ class DjrillMandrillFeatureTests(DjrillBackendMockAPITestCase):
         msg = mail.EmailMessage('Subject', 'Message', 'from@example.com', ['to1@example.com'],)
         with self.assertRaises(AnymailAPIError):
             msg.send()
+        # noinspection PyUnresolvedReferences
         self.assertIsNone(msg.mandrill_response)
+        # noinspection PyUnresolvedReferences
+        self.assertIsNone(msg.anymail_status)
 
     def test_json_serialization_errors(self):
         """Try to provide more information about non-json-serializable data"""
