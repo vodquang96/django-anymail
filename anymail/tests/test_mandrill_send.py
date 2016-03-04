@@ -614,7 +614,7 @@ class DjrillRecipientsRefusedTests(DjrillBackendMockAPITestCase):
         self.assertEqual(sent, 1)  # refused message is included in sent count
 
 
-@override_settings(MANDRILL_SETTINGS={
+@override_settings(ANYMAIL_SEND_DEFAULTS={
     'from_name': 'Djrill Test',
     'important': True,
     'track_opens': True,
@@ -632,7 +632,7 @@ class DjrillRecipientsRefusedTests(DjrillBackendMockAPITestCase):
     'return_path_domain': 'example.com',
     'google_analytics_domains': ['example.com/test'],
     'google_analytics_campaign': ['UA-00000000-1'],
-    'metadata': ['djrill'],
+    'metadata': {'feature': 'global', 'plus': 'that'},
     'merge_language': 'mailchimp',
     'global_merge_vars': {'TEST': 'djrill'},
     'async': True,
@@ -670,7 +670,7 @@ class DjrillMandrillGlobalFeatureTests(DjrillBackendMockAPITestCase):
         self.assertEqual(data['message']['return_path_domain'], 'example.com')
         self.assertEqual(data['message']['google_analytics_domains'], ['example.com/test'])
         self.assertEqual(data['message']['google_analytics_campaign'], ['UA-00000000-1'])
-        self.assertEqual(data['message']['metadata'], ['djrill'])
+        self.assertEqual(data['message']['metadata'], {'feature': 'global', 'plus': 'that'})
         self.assertEqual(data['message']['merge_language'], 'mailchimp')
         self.assertEqual(data['message']['global_merge_vars'],
                          [{'name': 'TEST', 'content': 'djrill'}])
@@ -702,7 +702,7 @@ class DjrillMandrillGlobalFeatureTests(DjrillBackendMockAPITestCase):
         self.message.return_path_domain = "override.example.com"
         self.message.google_analytics_domains = ['override.example.com']
         self.message.google_analytics_campaign = ['UA-99999999-1']
-        self.message.metadata = ['override']
+        self.message.metadata = {'feature': 'message', 'also': 'this'}
         self.message.merge_language = 'handlebars'
         self.message.async = False
         self.message.ip_pool = "Bulk Pool"
@@ -716,7 +716,7 @@ class DjrillMandrillGlobalFeatureTests(DjrillBackendMockAPITestCase):
         self.assertFalse(data['message']['auto_html'])
         self.assertFalse(data['message']['inline_css'])
         self.assertFalse(data['message']['url_strip_qs'])
-        self.assertEqual(data['message']['tags'], ['override'])
+        self.assertEqual(data['message']['tags'], ['djrill', 'override'])  # tags are merged
         self.assertFalse(data['message']['preserve_recipients'])
         self.assertFalse(data['message']['view_content_link'])
         self.assertEqual(data['message']['subaccount'], 'override')
@@ -725,7 +725,8 @@ class DjrillMandrillGlobalFeatureTests(DjrillBackendMockAPITestCase):
         self.assertEqual(data['message']['return_path_domain'], 'override.example.com')
         self.assertEqual(data['message']['google_analytics_domains'], ['override.example.com'])
         self.assertEqual(data['message']['google_analytics_campaign'], ['UA-99999999-1'])
-        self.assertEqual(data['message']['metadata'], ['override'])
+        # metadata is merged:
+        self.assertEqual(data['message']['metadata'], {'feature': 'message', 'also': 'this', 'plus': 'that'})
         self.assertEqual(data['message']['merge_language'], 'handlebars')
         self.assertEqual(data['message']['global_merge_vars'],
                          [{'name': 'TEST', 'content': 'djrill'}])
