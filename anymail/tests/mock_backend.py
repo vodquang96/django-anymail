@@ -29,7 +29,7 @@ class DjrillBackendMockAPITestCase(TestCase):
             self.raw = six.BytesIO(raw)
 
     def setUp(self):
-        self.patch = patch('requests.Session.post', autospec=True)
+        self.patch = patch('requests.Session.request', autospec=True)
         self.mock_post = self.patch.start()
         self.mock_post.return_value = self.MockResponse()
 

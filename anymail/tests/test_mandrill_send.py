@@ -559,7 +559,7 @@ class DjrillMandrillFeatureTests(DjrillBackendMockAPITestCase):
             self.message.send()
         err = cm.exception
         self.assertTrue(isinstance(err, TypeError))  # Djrill 1.x re-raised TypeError from json.dumps
-        self.assertStrContains(str(err), "Don't know how to send this data to your ESP")  # our added context
+        self.assertStrContains(str(err), "Don't know how to send this data to Mandrill")  # our added context
         self.assertStrContains(str(err), "Decimal('19.99') is not JSON serializable")  # original message
 
     def test_dates_not_serialized(self):

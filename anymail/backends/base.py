@@ -1,6 +1,8 @@
 import json
 
 import requests
+# noinspection PyUnresolvedReferences
+from six.moves.urllib.parse import urljoin
 
 from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
@@ -110,149 +112,19 @@ class AnymailBaseBackend(BaseEmailBackend):
         return True
 
     def build_message_payload(self, message):
-        """Return a payload with all message-specific options for ESP send call.
+        """Returns a payload that will allow message to be sent via the ESP.
 
-        message is an EmailMessage, possibly with additional Anymail-specific attrs
+        Derived classes must implement, and should subclass :class:BasePayload
+        to get standard Anymail options.
 
-        Can raise AnymailUnsupportedFeature for unsupported options in message.
+        Raises :exc:AnymailUnsupportedFeature for message options that
+        cannot be communicated to the ESP.
+
+        :param message: :class:EmailMessage
+        :return: :class:BasePayload
         """
-        encoding = message.encoding
-        payload = self.get_base_payload(message)
-
-        # Standard EmailMessage features:
-        self.set_payload_from_email(payload, ParsedEmail(message.from_email, encoding), message)
-        for recipient_type in ["to", "cc", "bcc"]:
-            recipients = getattr(message, recipient_type, [])
-            if recipients:
-                emails = [ParsedEmail(address, encoding) for address in recipients]
-                self.add_payload_recipients(payload, recipient_type, emails, message)
-        self.set_payload_subject(payload, message.subject, message)
-
-        if hasattr(message, "reply_to"):
-            emails = [ParsedEmail(address, encoding) for address in message.reply_to]
-            self.set_payload_reply_to(payload, emails, message)
-        if hasattr(message, "extra_headers"):
-            self.add_payload_headers(payload, message.extra_headers, message)
-
-        if message.content_subtype == "html":
-            self.set_payload_html_body(payload, message.body, message)
-        else:
-            self.set_payload_text_body(payload, message.body, message)
-
-        if hasattr(message, "alternatives"):
-            for (content, mimetype) in message.alternatives:
-                self.add_payload_alternative(payload, content, mimetype, message)
-
-        str_encoding = encoding or settings.DEFAULT_CHARSET
-        for attachment in message.attachments:
-            self.add_payload_attachment(payload, Attachment(attachment, str_encoding), message)
-
-        # Anymail additions:
-        metadata = self.get_anymail_merged_attr(message, "metadata")  # merged: changes semantics from Djrill!
-        if metadata is not UNSET:
-            self.set_payload_metadata(payload, metadata, message)
-        send_at = self.get_anymail_attr(message, "send_at")
-        if send_at is not UNSET:
-            self.set_payload_send_at(payload, send_at, message)
-        tags = self.get_anymail_merged_attr(message, "tags")  # merged: changes semantics from Djrill!
-        if tags is not UNSET:
-            self.set_payload_tags(payload, tags, message)
-        track_clicks = self.get_anymail_attr(message, "track_clicks")
-        if track_clicks is not UNSET:
-            self.set_payload_track_clicks(payload, track_clicks, message)
-        track_opens = self.get_anymail_attr(message, "track_opens")
-        if track_opens is not UNSET:
-            self.set_payload_track_opens(payload, track_opens, message)
-
-        # ESP-specific fallback:
-        self.add_payload_esp_options(payload, message)
-
-        return payload
-
-    def get_anymail_attr(self, message, attr):
-        default_value = self.send_defaults.get(attr, UNSET)
-        message_value = getattr(message, attr, UNSET)
-        return last(default_value, message_value)
-
-    def get_anymail_merged_attr(self, message, attr):
-        default_value = self.send_defaults.get(attr, UNSET)
-        message_value = getattr(message, attr, UNSET)
-        return combine(default_value, message_value)
-
-    def unsupported_feature(self, feature):
-        # future: check settings.ANYMAIL_UNSUPPORTED_FEATURE_ERRORS
-        raise AnymailUnsupportedFeature("%s does not support %s" % (self.esp_name, feature))
-
-    #
-    # Payload construction
-    #
-
-    def get_base_payload(self, message):
-        raise NotImplementedError("%s.%s must implement init_base_payload" %
+        raise NotImplementedError("%s.%s must implement build_message_payload" %
                                   (self.__class__.__module__, self.__class__.__name__))
-
-    def set_payload_from_email(self, payload, email, message):
-        raise NotImplementedError("%s.%s must implement set_payload_from" %
-                                  (self.__class__.__module__, self.__class__.__name__))
-
-    def add_payload_recipients(self, payload, recipient_type, emails, message):
-        for email in emails:
-            self.add_payload_recipient(payload, recipient_type, email, message)
-
-    def add_payload_recipient(self, payload, recipient_type, email, message):
-        raise NotImplementedError("%s.%s must implement add_payload_recipient" %
-                                  (self.__class__.__module__, self.__class__.__name__))
-
-    def set_payload_subject(self, payload, subject, message):
-        raise NotImplementedError("%s.%s must implement set_payload_subject" %
-                                  (self.__class__.__module__, self.__class__.__name__))
-
-    def set_payload_reply_to(self, payload, emails, message):
-        raise NotImplementedError("%s.%s must implement set_payload_reply_to" %
-                                  (self.__class__.__module__, self.__class__.__name__))
-
-    def add_payload_headers(self, payload, headers, message):
-        raise NotImplementedError("%s.%s must implement add_payload_heeaders" %
-                                  (self.__class__.__module__, self.__class__.__name__))
-
-    def set_payload_text_body(self, payload, body, message):
-        raise NotImplementedError("%s.%s must implement set_payload_text_body" %
-                                  (self.__class__.__module__, self.__class__.__name__))
-
-    def set_payload_html_body(self, payload, body, message):
-        raise NotImplementedError("%s.%s must implement set_payload_html_body" %
-                                  (self.__class__.__module__, self.__class__.__name__))
-
-    def add_payload_alternative(self, payload, content, mimetype, message):
-        raise NotImplementedError("%s.%s must implement add_payload_alternative" %
-                                  (self.__class__.__module__, self.__class__.__name__))
-
-    def add_payload_attachment(self, payload, attachment, message):
-        raise NotImplementedError("%s.%s must implement add_payload_attachment" %
-                                  (self.__class__.__module__, self.__class__.__name__))
-
-    # Anymail-specific payload construction
-    def set_payload_metadata(self, payload, metadata, message):
-        self.unsupported_feature("metadata")
-
-    def set_payload_send_at(self, payload, send_at, message):
-        self.unsupported_feature("send_at")
-
-    def set_payload_tags(self, payload, tags, message):
-        self.unsupported_feature("tags")
-
-    def set_payload_track_clicks(self, payload, track_clicks, message):
-        self.unsupported_feature("track_clicks")
-
-    def set_payload_track_opens(self, payload, track_opens, message):
-        self.unsupported_feature("track_opens")
-
-    # ESP-specific payload construction
-    def add_payload_esp_options(self, payload, message):
-        raise NotImplementedError("%s.%s must implement add_payload_esp_options" %
-                                  (self.__class__.__module__, self.__class__.__name__))
-
-    #
 
     def post_to_esp(self, payload, message):
         """Post payload to ESP send API endpoint, and return the raw response.
@@ -343,24 +215,6 @@ class AnymailRequestsBackend(AnymailBaseBackend):
                 "or you are incorrectly calling _send directly.)".format(class_name=class_name))
         return super(AnymailRequestsBackend, self)._send(message)
 
-    def get_api_url(self, payload, message):
-        """Return the correct ESP url for sending payload
-
-        Override this to substitute your own logic for determining API endpoint.
-        """
-        return self.api_url
-
-    def serialize_payload(self, payload, message):
-        """Return payload serialized to post data.
-
-        Should raise AnymailSerializationError if payload is not serializable
-        """
-        try:
-            return json.dumps(payload)
-        except TypeError as err:
-            # Add some context to the "not JSON serializable" message
-            raise AnymailSerializationError(orig_err=err, email_message=message, payload=payload)
-
     def post_to_esp(self, payload, message):
         """Post payload to ESP send API endpoint, and return the raw response.
 
@@ -370,10 +224,8 @@ class AnymailRequestsBackend(AnymailBaseBackend):
 
         Can raise AnymailRequestsAPIError for HTTP errors in the post
         """
-        api_url = self.get_api_url(payload, message)
-        post_data = self.serialize_payload(payload, message)
-
-        response = self.session.post(api_url, data=post_data)
+        params = payload.get_request_params(self.api_url)
+        response = self.session.request(**params)
         if response.status_code != 200:
             raise AnymailRequestsAPIError(email_message=message, payload=payload, response=response)
         return response
@@ -388,3 +240,219 @@ class AnymailRequestsBackend(AnymailBaseBackend):
         except ValueError:
             raise AnymailRequestsAPIError("Invalid JSON in %s API response" % self.esp_name,
                                           email_message=message, payload=payload, response=response)
+
+
+class BasePayload(object):
+    # attr, combiner, converter
+    base_message_attrs = (
+        # Standard EmailMessage/EmailMultiAlternatives props
+        ('from_email', last, 'parsed_email'),
+        ('to', combine, 'parsed_emails'),
+        ('cc', combine, 'parsed_emails'),
+        ('bcc', combine, 'parsed_emails'),
+        ('subject', last, None),
+        ('reply_to', combine, 'parsed_emails'),
+        ('extra_headers', combine, None),
+        ('body', last, None),  # special handling below checks message.content_subtype
+        ('alternatives', combine, None),
+        ('attachments', combine, 'prepped_attachments'),
+    )
+    anymail_message_attrs = (
+        # Anymail expando-props
+        ('metadata', combine, None),
+        ('send_at', last, None),  # normalize to datetime?
+        ('tags', combine, None),
+        ('track_clicks', last, None),
+        ('track_opens', last, None),
+        ('esp_extra', combine, None),
+    )
+    esp_message_attrs = ()  # subclasses can override
+
+    def __init__(self, message, defaults, backend):
+        self.message = message
+        self.defaults = defaults
+        self.backend = backend
+        self.esp_name = backend.esp_name
+
+        self.init_payload()
+
+        # we should consider hoisting the first text/html out of alternatives into set_html_body
+        message_attrs = self.base_message_attrs + self.anymail_message_attrs + self.esp_message_attrs
+        for attr, combiner, converter in message_attrs:
+            value = getattr(message, attr, UNSET)
+            if combiner is not None:
+                default_value = self.defaults.get(attr, UNSET)
+                value = combiner(default_value, value)
+            if value is not UNSET:
+                if converter is not None:
+                    if not callable(converter):
+                        converter = getattr(self, converter)
+                    value = converter(value)
+                if attr == 'body':
+                    setter = self.set_html_body if message.content_subtype == 'html' else self.set_text_body
+                else:
+                    # AttributeError here? Your Payload subclass is missing a set_<attr> implementation
+                    setter = getattr(self, 'set_%s' % attr)
+                setter(value)
+
+    def unsupported_feature(self, feature):
+        # future: check settings.ANYMAIL_UNSUPPORTED_FEATURE_ERRORS
+        raise AnymailUnsupportedFeature("%s does not support %s" % (self.esp_name, feature),
+                                        email_message=self.message)
+
+    #
+    # Attribute converters
+    #
+
+    def parsed_email(self, address):
+        return ParsedEmail(address, self.message.encoding)
+
+    def parsed_emails(self, addresses):
+        encoding = self.message.encoding
+        return [ParsedEmail(address, encoding) for address in addresses]
+
+    def prepped_attachments(self, attachments):
+        str_encoding = self.message.encoding or settings.DEFAULT_CHARSET
+        return [Attachment(attachment, str_encoding) for attachment in attachments]
+
+    #
+    # Abstract implementation
+    #
+
+    def init_payload(self):
+        raise NotImplementedError("%s.%s must implement init_payload" %
+                                  (self.__class__.__module__, self.__class__.__name__))
+
+    def set_from_email(self, email):
+        raise NotImplementedError("%s.%s must implement set_from_email" %
+                                  (self.__class__.__module__, self.__class__.__name__))
+
+    def set_to(self, emails):
+        return self.set_recipients('to', emails)
+
+    def set_cc(self, emails):
+        return self.set_recipients('cc', emails)
+
+    def set_bcc(self, emails):
+        return self.set_recipients('bcc', emails)
+
+    def set_recipients(self, recipient_type, emails):
+        for email in emails:
+            self.add_recipient(recipient_type, email)
+
+    def add_recipient(self, recipient_type, email):
+        raise NotImplementedError("%s.%s must implement add_recipient, set_recipients, or set_{to,cc,bcc}" %
+                                  (self.__class__.__module__, self.__class__.__name__))
+
+    def set_subject(self, subject):
+        raise NotImplementedError("%s.%s must implement set_subject" %
+                                  (self.__class__.__module__, self.__class__.__name__))
+
+    def set_reply_to(self, emails):
+        self.unsupported_feature('reply_to')
+
+    def set_extra_headers(self, headers):
+        self.unsupported_feature('extra_headers')
+
+    def set_text_body(self, body):
+        raise NotImplementedError("%s.%s must implement set_text_body" %
+                                  (self.__class__.__module__, self.__class__.__name__))
+
+    def set_html_body(self, body):
+        raise NotImplementedError("%s.%s must implement set_html_body" %
+                                  (self.__class__.__module__, self.__class__.__name__))
+
+    def set_alternatives(self, alternatives):
+        for content, mimetype in alternatives:
+            self.add_alternative(content, mimetype)
+
+    def add_alternative(self, content, mimetype):
+        raise NotImplementedError("%s.%s must implement add_alternative or set_alternatives" %
+                                  (self.__class__.__module__, self.__class__.__name__))
+
+    def set_attachments(self, attachments):
+        for attachment in attachments:
+            self.add_attachment(attachment)
+
+    def add_attachment(self, attachment):
+        raise NotImplementedError("%s.%s must implement add_attachment or set_attachments" %
+                                  (self.__class__.__module__, self.__class__.__name__))
+
+    # Anymail-specific payload construction
+    def set_metadata(self, metadata):
+        self.unsupported_feature("metadata")
+
+    def set_send_at(self, send_at):
+        self.unsupported_feature("send_at")
+
+    def set_tags(self, tags):
+        self.unsupported_feature("tags")
+
+    def set_track_clicks(self, track_clicks):
+        self.unsupported_feature("track_clicks")
+
+    def set_track_opens(self, track_opens):
+        self.unsupported_feature("track_opens")
+
+    # ESP-specific payload construction
+    def set_esp_extra(self, extra):
+        self.unsupported_feature("esp_extra")
+
+
+class RequestsPayload(BasePayload):
+    """Abstract Payload for AnymailRequestsBackend"""
+
+    def __init__(self, message, defaults, backend,
+                 method="POST", params=None, data=None,
+                 headers=None, files=None, auth=None):
+        self.method = method
+        self.params = params
+        self.data = data
+        self.headers = headers
+        self.files = files
+        self.auth = auth
+        super(RequestsPayload, self).__init__(message, defaults, backend)
+
+    def get_request_params(self, api_url):
+        """Returns a dict of requests.request params that will send payload to the ESP.
+
+        :param api_url: the base api_url for the backend
+        :return: dict
+        """
+        api_endpoint = self.get_api_endpoint()
+        if api_endpoint is not None:
+            url = urljoin(api_url, api_endpoint)
+        else:
+            url = api_url
+
+        return dict(
+            method=self.method,
+            url=url,
+            params=self.params,
+            data=self.serialize_data(),
+            headers=self.headers,
+            files=self.files,
+            auth=self.auth,
+            # json= is not here, because we prefer to do our own serialization
+            #       to provide extra context in error messages
+        )
+
+    def get_api_endpoint(self):
+        """Returns a str that should be joined to the backend's api_url for sending this payload."""
+        return None
+
+    def serialize_data(self):
+        """Performs any necessary serialization on self.data, and returns the result."""
+        return self.data
+
+    def serialize_json(self, data):
+        """Returns data serialized to json, raising appropriate errors.
+
+        Useful for implementing serialize_data in a subclass,
+        """
+        try:
+            return json.dumps(data)
+        except TypeError as err:
+            # Add some context to the "not JSON serializable" message
+            raise AnymailSerializationError(orig_err=err, email_message=self.message,
+                                            backend=self.backend, payload=self)

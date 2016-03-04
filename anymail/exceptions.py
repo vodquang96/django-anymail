@@ -18,6 +18,7 @@ class AnymailError(Exception):
           payload: data arg (*not* json-stringified) for the ESP send call
           response: requests.Response from the send call
         """
+        self.backend = kwargs.pop('backend', None)
         self.email_message = kwargs.pop('email_message', None)
         self.payload = kwargs.pop('payload', None)
         self.status_code = kwargs.pop('status_code', None)
@@ -37,18 +38,17 @@ class AnymailError(Exception):
         return "\n".join(filter(None, parts))
 
     def describe_send(self):
-        """Return a string describing the ESP send in self.payload, or None"""
-        if self.payload is None:
+        """Return a string describing the ESP send in self.email_message, or None"""
+        if self.email_message is None:
             return None
         description = "Sending a message"
         try:
-            to_emails = [to['email'] for to in self.payload['message']['to']]
-            description += " to %s" % ','.join(to_emails)
-        except KeyError:
+            description += " to %s" % ','.join(self.email_message.to)
+        except AttributeError:
             pass
         try:
-            description += " from %s" % self.payload['message']['from_email']
-        except KeyError:
+            description += " from %s" % self.email_message.from_email
+        except AttributeError:
             pass
         return description
 
@@ -120,8 +120,9 @@ class AnymailSerializationError(AnymailError, TypeError):
 
     def __init__(self, message=None, orig_err=None, *args, **kwargs):
         if message is None:
-            message = "Don't know how to send this data to your ESP. " \
-                      "Try converting it to a string or number first."
+            esp_name = kwargs["backend"].esp_name if "backend" in kwargs else "the ESP"
+            message = "Don't know how to send this data to %s. " \
+                      "Try converting it to a string or number first." % esp_name
         if orig_err is not None:
             message += "\n%s" % str(orig_err)
         super(AnymailSerializationError, self).__init__(message, *args, **kwargs)

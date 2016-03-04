@@ -1,15 +1,12 @@
 from datetime import date, datetime
-try:
-    from urlparse import urljoin  # python 2
-except ImportError:
-    from urllib.parse import urljoin  # python 3
 
 from django.conf import settings
 
 from ..exceptions import (AnymailImproperlyConfigured, AnymailRequestsAPIError,
                           AnymailRecipientsRefused, AnymailUnsupportedFeature)
+from ..utils import last, combine
 
-from .base import AnymailRequestsBackend
+from .base import AnymailRequestsBackend, RequestsPayload
 
 
 class MandrillBackend(AnymailRequestsBackend):
@@ -44,20 +41,10 @@ class MandrillBackend(AnymailRequestsBackend):
         except AttributeError:
             pass  # no MANDRILL_SUBACCOUNT setting
 
-        self.global_settings = self.send_defaults
         self.ignore_recipient_status = getattr(settings, "MANDRILL_IGNORE_RECIPIENT_STATUS", False)
-        self.session = None
 
-    def get_api_url(self, payload, message):
-        """Return the correct Mandrill API url for sending payload
-
-        Override this to substitute your own logic for determining API endpoint.
-        """
-        if 'template_name' in payload:
-            api_method = "messages/send-template.json"
-        else:
-            api_method = "messages/send.json"
-        return urljoin(self.api_url, api_method)
+    def build_message_payload(self, message):
+        return MandrillPayload(message, self.send_defaults, self)
 
     def validate_response(self, parsed_response, response, payload, message):
         """Validate parsed_response, raising exceptions for any problems.
@@ -82,178 +69,201 @@ class MandrillBackend(AnymailRequestsBackend):
         else:
             return "multi"
 
+
+def _expand_merge_vars(vardict):
+    """Convert a Python dict to an array of name-content used by Mandrill.
+
+    { name: value, ... } --> [ {'name': name, 'content': value }, ... ]
+    """
+    # For testing reproducibility, we sort the keys
+    return [{'name': name, 'content': vardict[name]}
+            for name in sorted(vardict.keys())]
+
+
+def encode_date_for_mandrill(dt):
+    """Format a date or datetime for use as a Mandrill API date field
+
+    datetime becomes "YYYY-MM-DD HH:MM:SS"
+             converted to UTC, if timezone-aware
+             microseconds removed
+    date     becomes "YYYY-MM-DD 00:00:00"
+    anything else gets returned intact
+    """
+    if isinstance(dt, datetime):
+        dt = dt.replace(microsecond=0)
+        if dt.utcoffset() is not None:
+            dt = (dt - dt.utcoffset()).replace(tzinfo=None)
+        return dt.isoformat(' ')
+    elif isinstance(dt, date):
+        return dt.isoformat() + ' 00:00:00'
+    else:
+        return dt
+
+
+class MandrillPayload(RequestsPayload):
+
+    def get_api_endpoint(self):
+        if 'template_name' in self.data:
+            return "messages/send-template.json"
+        else:
+            return "messages/send.json"
+
+    def serialize_data(self):
+        return self.serialize_json(self.data)
+
     #
     # Payload construction
     #
 
-    def get_base_payload(self, message):
-        return {
-            "key": self.api_key,
+    def init_payload(self):
+        self.data = {
+            "key": self.backend.api_key,
             "message": {},
         }
 
-    def set_payload_from_email(self, payload, email, message):
-        if not getattr(message, "use_template_from", False):  # Djrill compat!
-            payload["message"]["from_email"] = email.email
+    def set_from_email(self, email):
+        if not getattr(self.message, "use_template_from", False):  # Djrill compat!
+            self.data["message"]["from_email"] = email.email
             if email.name:
-                payload["message"]["from_name"] = email.name
+                self.data["message"]["from_name"] = email.name
 
-    def add_payload_recipient(self, payload, recipient_type, email, message):
+    def add_recipient(self, recipient_type, email):
         assert recipient_type in ["to", "cc", "bcc"]
-        to_list = payload["message"].setdefault("to", [])
+        to_list = self.data["message"].setdefault("to", [])
         to_list.append({"email": email.email, "name": email.name, "type": recipient_type})
 
-    def set_payload_subject(self, payload, subject, message):
-        if not getattr(message, "use_template_subject", False):  # Djrill compat!
-            payload["message"]["subject"] = subject
+    def set_subject(self, subject):
+        if not getattr(self.message, "use_template_subject", False):  # Djrill compat!
+            self.data["message"]["subject"] = subject
 
-    def set_payload_reply_to(self, payload, emails, message):
-        reply_to = ", ".join([email.address for email in emails])
-        payload["message"].setdefault("headers", {})["Reply-To"] = reply_to
+    def set_reply_to(self, emails):
+        reply_to = ", ".join([str(email) for email in emails])
+        self.data["message"].setdefault("headers", {})["Reply-To"] = reply_to
 
-    def add_payload_headers(self, payload, headers, message):
-        payload["message"].setdefault("headers", {}).update(headers)
+    def set_extra_headers(self, headers):
+        self.data["message"].setdefault("headers", {}).update(headers)
 
-    def set_payload_text_body(self, payload, body, message):
-        payload["message"]["text"] = body
+    def set_text_body(self, body):
+        self.data["message"]["text"] = body
 
-    def set_payload_html_body(self, payload, body, message):
-        payload["message"]["html"] = body
+    def set_html_body(self, body):
+        self.data["message"]["html"] = body
 
-    def add_payload_alternative(self, payload, content, mimetype, message):
+    def add_alternative(self, content, mimetype):
         if mimetype != 'text/html':
             raise AnymailUnsupportedFeature(
                 "Invalid alternative mimetype '%s'. "
                 "Mandrill only accepts plain text and html emails."
                 % mimetype,
-                email_message=message)
+                email_message=self.message)
 
-        if "html" in payload["message"]:
+        if "html" in self.data["message"]:
             raise AnymailUnsupportedFeature(
                 "Too many alternatives attached to the message. "
                 "Mandrill only accepts plain text and html emails.",
-                email_message=message)
+                email_message=self.message)
 
-        payload["message"]["html"] = content
+        self.data["message"]["html"] = content
 
-    def add_payload_attachment(self, payload, attachment, message):
+    def add_attachment(self, attachment):
         key = "images" if attachment.inline else "attachments"
-        payload["message"].setdefault(key, []).append({
+        self.data["message"].setdefault(key, []).append({
             "type": attachment.mimetype,
             "name": attachment.name or "",
             "content": attachment.b64content
         })
 
-    def set_payload_metadata(self, payload, metadata, message):
-        payload["message"]["metadata"] = metadata
+    def set_metadata(self, metadata):
+        self.data["message"]["metadata"] = metadata
 
-    def set_payload_send_at(self, payload, send_at, message):
-        payload["send_at"] = self.encode_date_for_mandrill(send_at)
+    def set_send_at(self, send_at):
+        self.data["send_at"] = encode_date_for_mandrill(send_at)
 
-    def set_payload_tags(self, payload, tags, message):
-        payload["message"]["tags"] = tags
+    def set_tags(self, tags):
+        self.data["message"]["tags"] = tags
 
-    def set_payload_track_clicks(self, payload, track_clicks, message):
-        payload["message"]["track_clicks"] = track_clicks
+    def set_track_clicks(self, track_clicks):
+        self.data["message"]["track_clicks"] = track_clicks
 
-    def set_payload_track_opens(self, payload, track_opens, message):
-        payload["message"]["track_opens"] = track_opens
+    def set_track_opens(self, track_opens):
+        self.data["message"]["track_opens"] = track_opens
 
-    def add_payload_esp_options(self, payload, message):
-        self._add_mandrill_options(message, payload["message"])
-        if hasattr(message, 'template_name'):
-            payload['template_name'] = message.template_name
-            payload['template_content'] = \
-                self._expand_merge_vars(getattr(message, 'template_content', {}))
-        self._add_mandrill_toplevel_options(message, payload)
+    def set_esp_extra(self, extra):
+        pass
 
-    # unported
+    # Djrill leftovers
 
-    def _add_mandrill_toplevel_options(self, message, api_params):
-        """Extend api_params to include Mandrill global-send options set on message"""
-        # Mandrill attributes that can be copied directly:
-        mandrill_attrs = [
-            'async', 'ip_pool'
+    esp_message_attrs = (
+        ('async', last, None),
+        ('ip_pool', last, None),
+        ('from_name', last, None),  # overrides display name parsed from from_email above
+        ('important', last, None),
+        ('auto_text', last, None),
+        ('auto_html', last, None),
+        ('inline_css', last, None),
+        ('url_strip_qs', last, None),
+        ('tracking_domain', last, None),
+        ('signing_domain', last, None),
+        ('return_path_domain', last, None),
+        ('merge_language', last, None),
+        ('preserve_recipients', last, None),
+        ('view_content_link', last, None),
+        ('subaccount', last, None),
+        ('google_analytics_domains', last, None),
+        ('google_analytics_campaign', last, None),
+        ('global_merge_vars', combine, _expand_merge_vars),
+        ('merge_vars', combine, None),
+        ('recipient_metadata', combine, None),
+        ('template_name', last, None),
+        ('template_content', combine, _expand_merge_vars),
+    )
+
+    def set_async(self, async):
+        self.data["async"] = async
+
+    def set_ip_pool(self, ip_pool):
+        self.data["ip_pool"] = ip_pool
+
+    def set_template_name(self, template_name):
+        self.data["template_name"] = template_name
+        self.data.setdefault("template_content", [])  # Mandrill requires something here
+
+    def set_template_content(self, template_content):
+        self.data["template_content"] = template_content
+
+    def set_merge_vars(self, merge_vars):
+        # For testing reproducibility, we sort the recipients
+        self.data['message']['merge_vars'] = [
+            {'rcpt': rcpt, 'vars': _expand_merge_vars(merge_vars[rcpt])}
+            for rcpt in sorted(merge_vars.keys())
         ]
-        for attr in mandrill_attrs:
-            if attr in self.global_settings:
-                api_params[attr] = self.global_settings[attr]
-            if hasattr(message, attr):
-                api_params[attr] = getattr(message, attr)
 
-    def _add_mandrill_options(self, message, msg_dict):
-        """Extend msg_dict to include Mandrill per-message options set on message"""
-        # Mandrill attributes that can be copied directly:
-        mandrill_attrs = [
-            'from_name', # overrides display name parsed from from_email above
-            'important',
-            'auto_text', 'auto_html',
-            'inline_css', 'url_strip_qs',
-            'tracking_domain', 'signing_domain', 'return_path_domain',
-            'merge_language',
-            'preserve_recipients', 'view_content_link', 'subaccount',
-            'google_analytics_domains', 'google_analytics_campaign',
+    def set_recipient_metadata(self, recipient_metadata):
+        # For testing reproducibility, we sort the recipients
+        self.data['message']['recipient_metadata'] = [
+            {'rcpt': rcpt, 'values': recipient_metadata[rcpt]}
+            for rcpt in sorted(recipient_metadata.keys())
         ]
 
-        for attr in mandrill_attrs:
-            if attr in self.global_settings:
-                msg_dict[attr] = self.global_settings[attr]
-            if hasattr(message, attr):
-                msg_dict[attr] = getattr(message, attr)
-
-        # Allow simple python dicts in place of Mandrill
-        # [{name:name, value:value},...] arrays...
-
-        # Merge global and per message global_merge_vars
-        # (in conflicts, per-message vars win)
-        global_merge_vars = {}
-        if 'global_merge_vars' in self.global_settings:
-            global_merge_vars.update(self.global_settings['global_merge_vars'])
-        if hasattr(message, 'global_merge_vars'):
-            global_merge_vars.update(message.global_merge_vars)
-        if global_merge_vars:
-            msg_dict['global_merge_vars'] = \
-                self._expand_merge_vars(global_merge_vars)
-
-        if hasattr(message, 'merge_vars'):
-            # For testing reproducibility, we sort the recipients
-            msg_dict['merge_vars'] = [
-                { 'rcpt': rcpt,
-                  'vars': self._expand_merge_vars(message.merge_vars[rcpt]) }
-                for rcpt in sorted(message.merge_vars.keys())
-            ]
-        if hasattr(message, 'recipient_metadata'):
-            # For testing reproducibility, we sort the recipients
-            msg_dict['recipient_metadata'] = [
-                { 'rcpt': rcpt, 'values': message.recipient_metadata[rcpt] }
-                for rcpt in sorted(message.recipient_metadata.keys())
-            ]
-
-    def _expand_merge_vars(self, vardict):
-        """Convert a Python dict to an array of name-content used by Mandrill.
-
-        { name: value, ... } --> [ {'name': name, 'content': value }, ... ]
-        """
-        # For testing reproducibility, we sort the keys
-        return [{'name': name, 'content': vardict[name]}
-                for name in sorted(vardict.keys())]
+    # Set up simple set_<attr> functions for any missing esp_message_attrs attrs
+    # (avoids dozens of simple `self.data["message"][<attr>] = value` functions)
 
     @classmethod
-    def encode_date_for_mandrill(cls, dt):
-        """Format a date or datetime for use as a Mandrill API date field
+    def define_message_attr_setters(cls):
+        for (attr, _, _) in cls.esp_message_attrs:
+            setter_name = 'set_%s' % attr
+            try:
+                getattr(cls, setter_name)
+            except AttributeError:
+                setter = cls.make_setter(attr, setter_name)
+                setattr(cls, setter_name, setter)
 
-        datetime becomes "YYYY-MM-DD HH:MM:SS"
-                 converted to UTC, if timezone-aware
-                 microseconds removed
-        date     becomes "YYYY-MM-DD 00:00:00"
-        anything else gets returned intact
-        """
-        if isinstance(dt, datetime):
-            dt = dt.replace(microsecond=0)
-            if dt.utcoffset() is not None:
-                dt = (dt - dt.utcoffset()).replace(tzinfo=None)
-            return dt.isoformat(' ')
-        elif isinstance(dt, date):
-            return dt.isoformat() + ' 00:00:00'
-        else:
-            return dt
+    @staticmethod
+    def make_setter(attr, setter_name):
+        # sure wish we could use functools.partial to create instance methods (descriptors)
+        def setter(self, value):
+            self.data["message"][attr] = value
+        setter.__name__ = setter_name
+        return setter
+
+MandrillPayload.define_message_attr_setters()
