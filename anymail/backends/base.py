@@ -322,11 +322,16 @@ class BasePayload(object):
 
     def set_alternatives(self, alternatives):
         for content, mimetype in alternatives:
-            self.add_alternative(content, mimetype)
+            if mimetype == "text/html":
+                # This assumes that there's at most one html alternative,
+                # and so it should be the html body. (Most ESPs don't
+                # support multiple html alternative parts anyway.)
+                self.set_html_body(content)
+            else:
+                self.add_alternative(content, mimetype)
 
     def add_alternative(self, content, mimetype):
-        raise NotImplementedError("%s.%s must implement add_alternative or set_alternatives" %
-                                  (self.__class__.__module__, self.__class__.__name__))
+        self.unsupported_feature("alternative part with type '%s'" % mimetype)
 
     def set_attachments(self, attachments):
         for attachment in attachments:

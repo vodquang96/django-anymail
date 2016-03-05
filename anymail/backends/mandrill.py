@@ -117,15 +117,10 @@ class MandrillPayload(RequestsPayload):
         self.data["message"]["text"] = body
 
     def set_html_body(self, body):
-        self.data["message"]["html"] = body
-
-    def add_alternative(self, content, mimetype):
-        if mimetype != 'text/html':
-            self.unsupported_feature("alternative part with mimetype '%s'" % mimetype)
-        elif "html" in self.data["message"]:
+        if "html" in self.data["message"]:
+            # second html body could show up through multiple alternatives, or html body + alternative
             self.unsupported_feature("multiple html parts")
-        else:
-            self.set_html_body(content)
+        self.data["message"]["html"] = body
 
     def add_attachment(self, attachment):
         key = "images" if attachment.inline else "attachments"
