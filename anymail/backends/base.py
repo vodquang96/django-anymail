@@ -1,5 +1,8 @@
+from datetime import date, datetime
+
 from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
+from django.utils.timezone import is_naive, get_current_timezone, make_aware, utc
 
 from ..exceptions import AnymailError, AnymailUnsupportedFeature
 from ..utils import Attachment, ParsedEmail, UNSET, combine, last, get_anymail_setting
@@ -191,7 +194,7 @@ class BasePayload(object):
     anymail_message_attrs = (
         # Anymail expando-props
         ('metadata', combine, None),
-        ('send_at', last, None),  # normalize to datetime?
+        ('send_at', last, 'aware_datetime'),
         ('tags', combine, None),
         ('track_clicks', last, None),
         ('track_opens', last, None),
@@ -219,6 +222,7 @@ class BasePayload(object):
                     if not callable(converter):
                         converter = getattr(self, converter)
                     value = converter(value)
+            if value is not UNSET:
                 if attr == 'body':
                     setter = self.set_html_body if message.content_subtype == 'html' else self.set_text_body
                 else:
@@ -245,6 +249,29 @@ class BasePayload(object):
     def prepped_attachments(self, attachments):
         str_encoding = self.message.encoding or settings.DEFAULT_CHARSET
         return [Attachment(attachment, str_encoding) for attachment in attachments]
+
+    def aware_datetime(self, value):
+        """Converts a date or datetime or timestamp to an aware datetime.
+
+        Naive datetimes are assumed to be in Django's current_timezone.
+        Dates are interpreted as midnight that date, in Django's current_timezone.
+        Integers are interpreted as POSIX timestamps (which are inherently UTC).
+
+        Anything else (e.g., str) is returned unchanged, which won't be portable.
+        """
+        if isinstance(value, datetime):
+            dt = value
+        else:
+            if isinstance(value, date):
+                dt = datetime(value.year, value.month, value.day)  # naive, midnight
+            else:
+                try:
+                    dt = datetime.utcfromtimestamp(value).replace(tzinfo=utc)
+                except (TypeError, ValueError):
+                    return value
+        if is_naive(dt):
+            dt = make_aware(dt, get_current_timezone())
+        return dt
 
     #
     # Abstract implementation

@@ -57,21 +57,15 @@ def _expand_merge_vars(vardict):
 
 
 def encode_date_for_mandrill(dt):
-    """Format a date or datetime for use as a Mandrill API date field
+    """Format a datetime for use as a Mandrill API date field
 
-    datetime becomes "YYYY-MM-DD HH:MM:SS"
-             converted to UTC, if timezone-aware
-             microseconds removed
-    date     becomes "YYYY-MM-DD 00:00:00"
-    anything else gets returned intact
+    Mandrill expects "YYYY-MM-DD HH:MM:SS" in UTC
     """
     if isinstance(dt, datetime):
         dt = dt.replace(microsecond=0)
         if dt.utcoffset() is not None:
             dt = (dt - dt.utcoffset()).replace(tzinfo=None)
         return dt.isoformat(' ')
-    elif isinstance(dt, date):
-        return dt.isoformat() + ' 00:00:00'
     else:
         return dt
 
@@ -128,9 +122,10 @@ class MandrillPayload(RequestsPayload):
     def add_alternative(self, content, mimetype):
         if mimetype != 'text/html':
             self.unsupported_feature("alternative part with mimetype '%s'" % mimetype)
-        if "html" in self.data["message"]:
+        elif "html" in self.data["message"]:
             self.unsupported_feature("multiple html parts")
-        self.data["message"]["html"] = content
+        else:
+            self.set_html_body(content)
 
     def add_attachment(self, attachment):
         key = "images" if attachment.inline else "attachments"

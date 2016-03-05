@@ -8,7 +8,7 @@ import re
 import six
 import unittest
 from base64 import b64decode
-from datetime import date, datetime, timedelta, tzinfo
+from datetime import date, datetime
 from decimal import Decimal
 from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
@@ -18,6 +18,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.mail import make_msgid
 from django.test import TestCase
 from django.test.utils import override_settings
+from django.utils.timezone import get_fixed_timezone, override as override_current_timezone
 
 from anymail.exceptions import (AnymailAPIError, AnymailRecipientsRefused,
                                 AnymailSerializationError, AnymailUnsupportedFeature)
@@ -451,33 +452,39 @@ class DjrillMandrillFeatureTests(DjrillBackendMockAPITestCase):
             ])
 
     def test_send_at(self):
-        # String passed unchanged
-        self.message.send_at = "2013-11-12 01:02:03"
-        self.message.send()
-        data = self.get_api_call_data()
-        self.assertEqual(data['send_at'], "2013-11-12 01:02:03")
+        utc_plus_6 = get_fixed_timezone(6 * 60)
+        utc_minus_8 = get_fixed_timezone(-8 * 60)
 
-        # Timezone-naive datetime assumed to be UTC
-        self.message.send_at = datetime(2022, 10, 11, 12, 13, 14, 567)
-        self.message.send()
-        data = self.get_api_call_data()
-        self.assertEqual(data['send_at'], "2022-10-11 12:13:14")
+        with override_current_timezone(utc_plus_6):
+            # Timezone-naive datetime assumed to be Django current_timezone
+            self.message.send_at = datetime(2022, 10, 11, 12, 13, 14, 567)
+            self.message.send()
+            data = self.get_api_call_data()
+            self.assertEqual(data['send_at'], "2022-10-11 06:13:14")  # 12:13 UTC+6 == 06:13 UTC
 
-        # Timezone-aware datetime converted to UTC:
-        class GMTminus8(tzinfo):
-            def utcoffset(self, dt): return timedelta(hours=-8)
-            def dst(self, dt): return timedelta(0)
+            # Timezone-aware datetime converted to UTC:
+            self.message.send_at = datetime(2016, 3, 4, 5, 6, 7, tzinfo=utc_minus_8)
+            self.message.send()
+            data = self.get_api_call_data()
+            self.assertEqual(data['send_at'], "2016-03-04 13:06:07")  # 05:06 UTC-8 == 13:06 UTC
 
-        self.message.send_at = datetime(2016, 3, 4, 5, 6, 7, tzinfo=GMTminus8())
-        self.message.send()
-        data = self.get_api_call_data()
-        self.assertEqual(data['send_at'], "2016-03-04 13:06:07")
+            # Date-only treated as midnight in current timezone
+            self.message.send_at = date(2022, 10, 22)
+            self.message.send()
+            data = self.get_api_call_data()
+            self.assertEqual(data['send_at'], "2022-10-21 18:00:00")  # 00:00 UTC+6 == 18:00-1d UTC
 
-        # Date-only treated as midnight UTC
-        self.message.send_at = date(2022, 10, 22)
-        self.message.send()
-        data = self.get_api_call_data()
-        self.assertEqual(data['send_at'], "2022-10-22 00:00:00")
+            # POSIX timestamp
+            self.message.send_at = 1651820889  # 2022-05-06 07:08:09 UTC
+            self.message.send()
+            data = self.get_api_call_data()
+            self.assertEqual(data['send_at'], "2022-05-06 07:08:09")
+
+            # String passed unchanged (this is *not* portable between ESPs)
+            self.message.send_at = "2013-11-12 01:02:03"
+            self.message.send()
+            data = self.get_api_call_data()
+            self.assertEqual(data['send_at'], "2013-11-12 01:02:03")
 
     def test_default_omits_options(self):
         """Make sure by default we don't send any Mandrill-specific options.
