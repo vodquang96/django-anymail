@@ -3,7 +3,7 @@ from datetime import date, datetime
 from ..exceptions import AnymailRequestsAPIError, AnymailRecipientsRefused
 from ..utils import last, combine, get_anymail_setting
 
-from .base import AnymailRequestsBackend, RequestsPayload
+from .base_requests import AnymailRequestsBackend, RequestsPayload
 
 
 class MandrillBackend(AnymailRequestsBackend):

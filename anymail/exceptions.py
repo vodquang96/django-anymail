@@ -1,5 +1,14 @@
 import json
-from requests import HTTPError
+
+from django.core.exceptions import ImproperlyConfigured
+
+try:
+    from requests import HTTPError
+except ImportError:
+    # Backends that don't use requests aren't required to have it installed
+    # (and could never raise an AnymailRequestsAPIError)
+    class HTTPError(Exception):
+        pass
 
 
 class AnymailError(Exception):
@@ -121,3 +130,12 @@ class AnymailSerializationError(AnymailError, TypeError):
         if orig_err is not None:
             message += "\n%s" % str(orig_err)
         super(AnymailSerializationError, self).__init__(message, *args, **kwargs)
+
+
+# This deliberately doesn't inherit from AnymailError
+class AnymailImproperlyInstalled(ImproperlyConfigured, ImportError):
+    def __init__(self, missing_package):
+        message = "The %s package is required to use this backend, but isn't installed.\n" \
+                  "(Be sure to use `pip install anymail[<backend>]` with your desired backends)" % missing_package
+        super(AnymailImproperlyInstalled, self).__init__(message)
+
