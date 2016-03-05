@@ -4,6 +4,8 @@ from email.mime.base import MIMEBase
 from email.utils import parseaddr
 
 import six
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.core.mail.message import sanitize_address, DEFAULT_ATTACHMENT_MIME_TYPE
 
 
@@ -133,3 +135,43 @@ class Attachment(object):
         if isinstance(content, six.text_type):
             content = content.encode(self.encoding)
         return b64encode(content).decode("ascii")
+
+
+def get_anymail_setting(setting, default=UNSET, allow_bare=False):
+    """Returns a Django Anymail setting.
+
+    Returns first of:
+    - settings.ANYMAIL[setting]
+    - settings.ANYMAIL_<setting>
+    - settings.<setting> (only if allow_bare)
+    - default if provided; else raises ImproperlyConfigured
+
+    ANYMAIL = { "MAILGUN_SEND_DEFAULTS" : { ... }, ... }
+    ANYMAIL_MAILGUN_SEND_DEFAULTS = { ... }
+
+    If allow_bare, allows settings.<setting> without the ANYMAIL_ prefix:
+    ANYMAIL = { "MAILGUN_API_KEY": "xyz", ... }
+    ANYMAIL_MAILGUN_API_KEY = "xyz"
+    MAILGUN_API_KEY = "xyz"
+    """
+
+    anymail_setting = "ANYMAIL_%s" % setting
+    try:
+        return settings.ANYMAIL[setting]
+    except (AttributeError, KeyError):
+        try:
+            return getattr(settings, anymail_setting)
+        except AttributeError:
+            if allow_bare:
+                try:
+                    return getattr(settings, setting)
+                except AttributeError:
+                    pass
+            if default is UNSET:
+                message = "You must set %s or ANYMAIL = {'%s': ...}" % (anymail_setting, setting)
+                if allow_bare:
+                    message += " or %s" % setting
+                message += " in your Django settings"
+                raise ImproperlyConfigured(message)
+            else:
+                return default

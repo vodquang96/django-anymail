@@ -603,7 +603,7 @@ class DjrillRecipientsRefusedTests(DjrillBackendMockAPITestCase):
         sent = msg.send()
         self.assertEqual(sent, 1)  # one message sent, successfully, to 2 of 4 recipients
 
-    @override_settings(MANDRILL_IGNORE_RECIPIENT_STATUS=True)
+    @override_settings(ANYMAIL_IGNORE_RECIPIENT_STATUS=True)
     def test_settings_override(self):
         """Setting restores Djrill 1.x behavior"""
         self.mock_post.return_value = self.MockResponse(status_code=200, raw=b"""

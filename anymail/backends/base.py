@@ -8,7 +8,7 @@ from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
 
 from ..exceptions import AnymailError, AnymailRequestsAPIError, AnymailSerializationError, AnymailUnsupportedFeature
-from ..utils import Attachment, ParsedEmail, UNSET, combine, last
+from ..utils import Attachment, ParsedEmail, UNSET, combine, last, get_anymail_setting
 from .._version import __version__
 
 
@@ -19,7 +19,17 @@ class AnymailBaseBackend(BaseEmailBackend):
 
     def __init__(self, *args, **kwargs):
         super(AnymailBaseBackend, self).__init__(*args, **kwargs)
-        self.send_defaults = getattr(settings, "ANYMAIL_SEND_DEFAULTS", {})
+
+        self.unsupported_feature_errors = get_anymail_setting("UNSUPPORTED_FEATURE_ERRORS", True)
+        self.ignore_recipient_status = get_anymail_setting("IGNORE_RECIPIENT_STATUS", False)
+
+        # Merge SEND_DEFAULTS and <esp_name>_SEND_DEFAULTS settings
+        send_defaults = get_anymail_setting("SEND_DEFAULTS", {})
+        esp_send_defaults = get_anymail_setting("%s_SEND_DEFAULTS" % self.esp_name.upper(), None)
+        if esp_send_defaults is not None:
+            send_defaults = send_defaults.copy()
+            send_defaults.update(esp_send_defaults)
+        self.send_defaults = send_defaults
 
     def open(self):
         """
@@ -296,9 +306,9 @@ class BasePayload(object):
                 setter(value)
 
     def unsupported_feature(self, feature):
-        # future: check settings.ANYMAIL_UNSUPPORTED_FEATURE_ERRORS
-        raise AnymailUnsupportedFeature("%s does not support %s" % (self.esp_name, feature),
-                                        email_message=self.message)
+        if self.backend.unsupported_feature_errors:
+            raise AnymailUnsupportedFeature("%s does not support %s" % (self.esp_name, feature),
+                                            email_message=self.message, payload=self, backend=self.backend)
 
     #
     # Attribute converters

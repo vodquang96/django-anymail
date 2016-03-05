@@ -1,4 +1,3 @@
-from django.core.exceptions import ImproperlyConfigured
 import json
 from requests import HTTPError
 
@@ -66,10 +65,6 @@ class AnymailError(Exception):
             except AttributeError:
                 pass
         return description
-
-
-class AnymailImproperlyConfigured(AnymailError, ImproperlyConfigured):
-    """Exception for configuration problems"""
 
 
 class AnymailAPIError(AnymailError):

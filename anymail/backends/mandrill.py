@@ -1,10 +1,7 @@
 from datetime import date, datetime
 
-from django.conf import settings
-
-from ..exceptions import (AnymailImproperlyConfigured, AnymailRequestsAPIError,
-                          AnymailRecipientsRefused, AnymailUnsupportedFeature)
-from ..utils import last, combine
+from ..exceptions import AnymailRequestsAPIError, AnymailRecipientsRefused
+from ..utils import last, combine, get_anymail_setting
 
 from .base import AnymailRequestsBackend, RequestsPayload
 
@@ -16,32 +13,11 @@ class MandrillBackend(AnymailRequestsBackend):
 
     def __init__(self, **kwargs):
         """Init options from Django settings"""
-        api_url = getattr(settings, "MANDRILL_API_URL", "https://mandrillapp.com/api/1.0")
+        self.api_key = get_anymail_setting('MANDRILL_API_KEY', allow_bare=True)
+        api_url = get_anymail_setting("MANDRILL_API_URL", "https://mandrillapp.com/api/1.0")
         if not api_url.endswith("/"):
             api_url += "/"
-
         super(MandrillBackend, self).__init__(api_url, **kwargs)
-
-        try:
-            self.api_key = settings.MANDRILL_API_KEY
-        except AttributeError:
-            raise AnymailImproperlyConfigured("Set MANDRILL_API_KEY in settings.py to use Anymail Mandrill backend")
-
-        # Djrill compat! MANDRILL_SETTINGS
-        try:
-            self.send_defaults.update(settings.MANDRILL_SETTINGS)
-        except AttributeError:
-            pass  # no MANDRILL_SETTINGS setting
-        except (TypeError, ValueError):  # e.g., not enumerable
-            raise AnymailImproperlyConfigured("MANDRILL_SETTINGS must be a dict or mapping")
-
-        # Djrill compat! MANDRILL_SUBACCOUNT
-        try:
-            self.send_defaults["subaccount"] = settings.MANDRILL_SUBACCOUNT
-        except AttributeError:
-            pass  # no MANDRILL_SUBACCOUNT setting
-
-        self.ignore_recipient_status = getattr(settings, "MANDRILL_IGNORE_RECIPIENT_STATUS", False)
 
     def build_message_payload(self, message):
         return MandrillPayload(message, self.send_defaults, self)
@@ -151,18 +127,9 @@ class MandrillPayload(RequestsPayload):
 
     def add_alternative(self, content, mimetype):
         if mimetype != 'text/html':
-            raise AnymailUnsupportedFeature(
-                "Invalid alternative mimetype '%s'. "
-                "Mandrill only accepts plain text and html emails."
-                % mimetype,
-                email_message=self.message)
-
+            self.unsupported_feature("alternative part with mimetype '%s'" % mimetype)
         if "html" in self.data["message"]:
-            raise AnymailUnsupportedFeature(
-                "Too many alternatives attached to the message. "
-                "Mandrill only accepts plain text and html emails.",
-                email_message=self.message)
-
+            self.unsupported_feature("multiple html parts")
         self.data["message"]["html"] = content
 
     def add_attachment(self, attachment):
