@@ -1,6 +1,6 @@
 # python setup.py test
 #   or
-# python runtests.py
+# python runtests.py [anymail.tests.test_x anymail.tests.test_y.SomeTestCase ...]
 
 import sys
 from django.conf import settings
@@ -50,10 +50,11 @@ except ImportError:
     from django.test.simple import DjangoTestSuiteRunner as TestRunner  # Django -1.5
 
 
-def runtests():
+def runtests(*args):
     test_runner = TestRunner(verbosity=1)
-    failures = test_runner.run_tests([APP])
+    test_labels = args if len(args) > 0 else [APP]
+    failures = test_runner.run_tests(test_labels)
     sys.exit(failures)
 
 if __name__ == '__main__':
-    runtests()
+    runtests(*sys.argv[1:])
