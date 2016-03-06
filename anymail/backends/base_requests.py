@@ -74,10 +74,10 @@ class AnymailRequestsBackend(AnymailBaseBackend):
             raise AnymailRequestsAPIError(email_message=message, payload=payload, response=response)
         return response
 
-    def deserialize_response(self, response, payload, message):
-        """Return parsed ESP API response
+    def deserialize_json_response(self, response, payload, message):
+        """Deserialize an ESP API response that's in json.
 
-        Can raise AnymailRequestsAPIError if response is unparsable
+        Useful for implementing deserialize_response
         """
         try:
             return response.json()

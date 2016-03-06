@@ -4,8 +4,44 @@ from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
 from django.utils.timezone import is_naive, get_current_timezone, make_aware, utc
 
-from ..exceptions import AnymailError, AnymailUnsupportedFeature
+from ..exceptions import AnymailError, AnymailUnsupportedFeature, AnymailRecipientsRefused
 from ..utils import Attachment, ParsedEmail, UNSET, combine, last, get_anymail_setting
+
+
+# The AnymailStatus* stuff should get moved to an anymail.message module
+ANYMAIL_STATUSES = [
+    'sent',  # the ESP has sent the message (though it may or may not get delivered)
+    'queued',  # the ESP will try to send the message later
+    'invalid',  # the recipient email was not valid
+    'rejected',  # the recipient is blacklisted
+    'unknown',  # anything else
+]
+
+
+class AnymailRecipientStatus(object):
+    """Information about an EmailMessage's send status for a single recipient"""
+
+    def __init__(self, message_id, status):
+        self.message_id = message_id  # ESP message id
+        self.status = status  # one of ANYMAIL_STATUSES, or None for not yet sent to ESP
+
+
+class AnymailStatus(object):
+    """Information about an EmailMessage's send status for all recipients"""
+
+    def __init__(self):
+        self.message_id = None  # set of ESP message ids across all recipients, or bare id if only one, or None
+        self.status = None  # set of ANYMAIL_STATUSES across all recipients, or None for not yet sent to ESP
+        self.recipients = {}  # per-recipient: { email: AnymailRecipientStatus, ... }
+        self.esp_response = None
+
+    def set_recipient_status(self, recipients):
+        self.recipients.update(recipients)
+        recipient_statuses = self.recipients.values()
+        self.message_id = set([recipient.message_id for recipient in recipient_statuses])
+        if len(self.message_id) == 1:
+            self.message_id = self.message_id.pop()  # de-set-ify if single message_id
+        self.status = set([recipient.status for recipient in recipient_statuses])
 
 
 class AnymailBaseBackend(BaseEmailBackend):
@@ -100,24 +136,24 @@ class AnymailBaseBackend(BaseEmailBackend):
         Implementations must raise exceptions derived from AnymailError for
         anticipated failures that should be suppressed in fail_silently mode.
         """
-        message.anymail_status = None
-        esp_response_attr = "%s_response" % self.esp_name.lower()  # e.g., message.mandrill_response
-        setattr(message, esp_response_attr, None)  # until we have a response
+        message.anymail_status = AnymailStatus()
         if not message.recipients():
             return False
 
-        payload = self.build_message_payload(message)
+        payload = self.build_message_payload(message, self.send_defaults)
         # FUTURE: if pre-send-signal OK...
         response = self.post_to_esp(payload, message)
+        message.anymail_status.esp_response = response
 
-        parsed_response = self.deserialize_response(response, payload, message)
-        setattr(message, esp_response_attr, parsed_response)
-        message.anymail_status = self.validate_response(parsed_response, response, payload, message)
+        recipient_status = self.parse_recipient_status(response, payload, message)
+        message.anymail_status.set_recipient_status(recipient_status)
+
+        self.raise_for_recipient_status(message.anymail_status, response, payload, message)
         # FUTURE: post-send signal
 
         return True
 
-    def build_message_payload(self, message):
+    def build_message_payload(self, message, defaults):
         """Returns a payload that will allow message to be sent via the ESP.
 
         Derived classes must implement, and should subclass :class:BasePayload
@@ -127,6 +163,7 @@ class AnymailBaseBackend(BaseEmailBackend):
         cannot be communicated to the ESP.
 
         :param message: :class:EmailMessage
+        :param defaults: dict
         :return: :class:BasePayload
         """
         raise NotImplementedError("%s.%s must implement build_message_payload" %
@@ -144,27 +181,21 @@ class AnymailBaseBackend(BaseEmailBackend):
         raise NotImplementedError("%s.%s must implement post_to_esp" %
                                   (self.__class__.__module__, self.__class__.__name__))
 
-    def deserialize_response(self, response, payload, message):
-        """Deserialize a raw ESP response
+    def parse_recipient_status(self, response, payload, message):
+        """Return a dict mapping email to AnymailRecipientStatus for each recipient.
 
         Can raise AnymailAPIError (or derived exception) if response is unparsable
         """
-        raise NotImplementedError("%s.%s must implement deserialize_response" %
+        raise NotImplementedError("%s.%s must implement parse_recipient_status" %
                                   (self.__class__.__module__, self.__class__.__name__))
 
-    def validate_response(self, parsed_response, response, payload, message):
-        """Validate parsed_response, raising exceptions for any problems, and return normalized status.
-
-        Extend this to provide your own validation checks.
-        Validation exceptions should inherit from anymail.exceptions.AnymailError
-        for proper fail_silently behavior.
-
-        If *all* recipients are refused or invalid, should raise AnymailRecipientsRefused
-
-        Returns one of "sent", "queued", "refused", "error" or "multi"
-        """
-        raise NotImplementedError("%s.%s must implement validate_response" %
-                                  (self.__class__.__module__, self.__class__.__name__))
+    def raise_for_recipient_status(self, anymail_status, response, payload, message):
+        """If *all* recipients are refused or invalid, raises AnymailRecipientsRefused"""
+        if not self.ignore_recipient_status:
+            # Error if *all* recipients are invalid or refused
+            # (This behavior parallels smtplib.SMTPRecipientsRefused from Django's SMTP EmailBackend)
+            if anymail_status.status.issubset({"invalid", "rejected"}):
+                raise AnymailRecipientsRefused(email_message=message, payload=payload, response=response)
 
     @property
     def esp_name(self):

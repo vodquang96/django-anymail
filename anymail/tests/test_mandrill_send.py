@@ -525,39 +525,43 @@ class DjrillMandrillFeatureTests(DjrillBackendMockAPITestCase):
         self.assertFalse('async' in data)
         self.assertFalse('ip_pool' in data)
 
-    def test_send_attaches_mandrill_response(self):
-        """ The mandrill_response should be attached to the message when it is sent """
-        response = [{'email': 'to1@example.com', 'status': 'sent'}]
+    # noinspection PyUnresolvedReferences
+    def test_send_attaches_anymail_status(self):
+        """ The anymail_status should be attached to the message when it is sent """
+        response = [{'email': 'to1@example.com', 'status': 'sent', '_id': 'abc123'}]
         self.mock_post.return_value = self.MockResponse(raw=six.b(json.dumps(response)))
         msg = mail.EmailMessage('Subject', 'Message', 'from@example.com', ['to1@example.com'],)
         sent = msg.send()
         self.assertEqual(sent, 1)
-        # noinspection PyUnresolvedReferences
-        self.assertEqual(msg.mandrill_response, response)
-        # noinspection PyUnresolvedReferences
-        self.assertEqual(msg.anymail_status, "sent")
+        self.assertEqual(msg.anymail_status.status, {'sent'})
+        self.assertEqual(msg.anymail_status.message_id, 'abc123')
+        self.assertEqual(msg.anymail_status.recipients['to1@example.com'].status, 'sent')
+        self.assertEqual(msg.anymail_status.recipients['to1@example.com'].message_id, 'abc123')
+        self.assertEqual(msg.anymail_status.esp_response.json(), response)
 
-    def test_send_failed_mandrill_response(self):
-        """ If the send fails, mandrill_response should be set to None """
+    # noinspection PyUnresolvedReferences
+    def test_send_failed_anymail_status(self):
+        """ If the send fails, anymail_status should contain initial values"""
         self.mock_post.return_value = self.MockResponse(status_code=500)
         msg = mail.EmailMessage('Subject', 'Message', 'from@example.com', ['to1@example.com'],)
         sent = msg.send(fail_silently=True)
         self.assertEqual(sent, 0)
-        # noinspection PyUnresolvedReferences
-        self.assertIsNone(msg.mandrill_response)
-        # noinspection PyUnresolvedReferences
-        self.assertIsNone(msg.anymail_status)
+        self.assertIsNone(msg.anymail_status.status)
+        self.assertIsNone(msg.anymail_status.message_id)
+        self.assertEqual(msg.anymail_status.recipients, {})
+        self.assertIsNone(msg.anymail_status.esp_response)
 
+    # noinspection PyUnresolvedReferences
     def test_send_unparsable_mandrill_response(self):
         """If the send succeeds, but a non-JSON API response, should raise an API exception"""
-        self.mock_post.return_value = self.MockResponse(status_code=500, raw=b"this isn't json")
+        self.mock_post.return_value = self.MockResponse(status_code=200, raw=b"this isn't json")
         msg = mail.EmailMessage('Subject', 'Message', 'from@example.com', ['to1@example.com'],)
         with self.assertRaises(AnymailAPIError):
             msg.send()
-        # noinspection PyUnresolvedReferences
-        self.assertIsNone(msg.mandrill_response)
-        # noinspection PyUnresolvedReferences
-        self.assertIsNone(msg.anymail_status)
+        self.assertIsNone(msg.anymail_status.status)
+        self.assertIsNone(msg.anymail_status.message_id)
+        self.assertEqual(msg.anymail_status.recipients, {})
+        self.assertEqual(msg.anymail_status.esp_response, self.mock_post.return_value)
 
     def test_json_serialization_errors(self):
         """Try to provide more information about non-json-serializable data"""

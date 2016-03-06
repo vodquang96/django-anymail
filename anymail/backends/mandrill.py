@@ -1,6 +1,7 @@
-from datetime import date, datetime
+from datetime import datetime
 
-from ..exceptions import AnymailRequestsAPIError, AnymailRecipientsRefused
+from anymail.backends.base import AnymailRecipientStatus, ANYMAIL_STATUSES
+from ..exceptions import AnymailRequestsAPIError
 from ..utils import last, combine, get_anymail_setting
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload
@@ -19,31 +20,25 @@ class MandrillBackend(AnymailRequestsBackend):
             api_url += "/"
         super(MandrillBackend, self).__init__(api_url, **kwargs)
 
-    def build_message_payload(self, message):
-        return MandrillPayload(message, self.send_defaults, self)
+    def build_message_payload(self, message, defaults):
+        return MandrillPayload(message, defaults, self)
 
-    def validate_response(self, parsed_response, response, payload, message):
-        """Validate parsed_response, raising exceptions for any problems.
-        """
+    def parse_recipient_status(self, response, payload, message):
+        parsed_response = self.deserialize_json_response(response, payload, message)
+        recipient_status = {}
         try:
-            unique_statuses = set([item["status"] for item in parsed_response])
+            # Mandrill returns a list of { email, status, _id, reject_reason } for each recipient
+            for item in parsed_response:
+                email = item['email']
+                status = item['status']
+                if status not in ANYMAIL_STATUSES:
+                    status = 'unknown'
+                message_id = item.get('_id', None)  # can be missing for invalid/rejected recipients
+                recipient_status[email] = AnymailRecipientStatus(message_id=message_id, status=status)
         except (KeyError, TypeError):
             raise AnymailRequestsAPIError("Invalid Mandrill API response format",
                                           email_message=message, payload=payload, response=response)
-
-        if unique_statuses == {"sent"}:
-            return "sent"
-        elif unique_statuses == {"queued"}:
-            return "queued"
-        elif unique_statuses.issubset({"invalid", "rejected"}):
-            if self.ignore_recipient_status:
-                return "refused"
-            else:
-                # Error if *all* recipients are invalid or refused
-                # (This behavior parallels smtplib.SMTPRecipientsRefused from Django's SMTP EmailBackend)
-                raise AnymailRecipientsRefused(email_message=message, payload=payload, response=response)
-        else:
-            return "multi"
+        return recipient_status
 
 
 def _expand_merge_vars(vardict):

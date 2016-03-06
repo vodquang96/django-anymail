@@ -38,11 +38,17 @@ class DjrillIntegrationTests(TestCase):
         # Example of getting the Mandrill send status and _id from the message
         sent_count = self.message.send()
         self.assertEqual(sent_count, 1)
+
         # noinspection PyUnresolvedReferences
-        response = self.message.mandrill_response
-        self.assertIn(response[0]['status'], ['sent', 'queued'])  # successful send (could still bounce later)
-        self.assertEqual(response[0]['email'], 'to@example.com')
-        self.assertGreater(len(response[0]['_id']), 0)
+        anymail_status = self.message.anymail_status
+        sent_status = anymail_status.recipients['to@example.com'].status
+        message_id = anymail_status.recipients['to@example.com'].message_id
+
+        self.assertIn(sent_status, ['sent', 'queued'])  # successful send (could still bounce later)
+        self.assertGreater(len(message_id), 0)  # don't know what it'll be, but it should exist
+
+        self.assertEqual(anymail_status.status, {sent_status})  # set of all recipient statuses
+        self.assertEqual(anymail_status.message_id, message_id)  # because only a single recipient (else would be a set)
 
     def test_invalid_from(self):
         # Example of trying to send from an invalid address
@@ -61,15 +67,15 @@ class DjrillIntegrationTests(TestCase):
         try:
             self.message.send()
         except AnymailRecipientsRefused:
-            # Mandrill refused to deliver the mail -- message.mandrill_response will tell you why:
+            # Mandrill refused to deliver the mail -- message.anymail_status will tell you why:
             # noinspection PyUnresolvedReferences
-            response = self.message.mandrill_response
-            self.assertEqual(response[0]['status'], 'invalid')
+            anymail_status = self.message.anymail_status
+            self.assertEqual(anymail_status.recipients['invalid@localhost'].status, 'invalid')
+            self.assertEqual(anymail_status.status, {'invalid'})
         else:
             # Sometimes Mandrill queues these test sends
             # noinspection PyUnresolvedReferences
-            response = self.message.mandrill_response
-            if response[0]['status'] == 'queued':
+            if self.message.anymail_status.status == {'queued'}:
                 self.skipTest("Mandrill queued the send -- can't complete this test")
             else:
                 self.fail("Djrill did not raise AnymailRecipientsRefused for invalid recipient")
@@ -80,16 +86,15 @@ class DjrillIntegrationTests(TestCase):
         try:
             self.message.send()
         except AnymailRecipientsRefused:
-            # Mandrill refused to deliver the mail -- message.mandrill_response will tell you why:
+            # Mandrill refused to deliver the mail -- message.anymail_status will tell you why:
             # noinspection PyUnresolvedReferences
-            response = self.message.mandrill_response
-            self.assertEqual(response[0]['status'], 'rejected')
-            self.assertEqual(response[0]['reject_reason'], 'test')
+            anymail_status = self.message.anymail_status
+            self.assertEqual(anymail_status.recipients['reject@test.mandrillapp.com'].status, 'rejected')
+            self.assertEqual(anymail_status.status, {'rejected'})
         else:
             # Sometimes Mandrill queues these test sends
             # noinspection PyUnresolvedReferences
-            response = self.message.mandrill_response
-            if response[0]['status'] == 'queued':
+            if self.message.anymail_status.status == {'queued'}:
                 self.skipTest("Mandrill queued the send -- can't complete this test")
             else:
                 self.fail("Djrill did not raise AnymailRecipientsRefused for blacklist recipient")
