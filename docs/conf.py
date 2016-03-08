@@ -12,6 +12,7 @@
 # serve to show the default.
 
 import sys, os
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -20,6 +21,8 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # define __version__ and __minor_version__ from ../anymail/_version.py,
 # but without importing from anymail (which would make docs dependent on Django, etc.)
+__version__ = "UNSET"
+__minor_version__ = "UNSET"
 with open("../anymail/_version.py") as f:
     code = compile(f.read(), "../anymail/_version.py", 'exec')
     exec(code)
@@ -98,7 +101,11 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+if not on_rtd:  # only import and set the theme if we're building docs locally
+    import sphinx_rtd_theme  # this seems to come with sphinx; if not, pip install it
+    html_theme = 'sphinx_rtd_theme'
+    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+# if on_rtd, readthedocs.org uses their theme by default (and specifying it here breaks them)
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
