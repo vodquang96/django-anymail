@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 
 import json
 import os
-import re
 import six
 import unittest
 from base64 import b64decode
@@ -15,13 +14,13 @@ from email.mime.image import MIMEImage
 
 from django.core import mail
 from django.core.exceptions import ImproperlyConfigured
-from django.core.mail import make_msgid
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.utils.timezone import get_fixed_timezone, override as override_current_timezone
 
 from anymail.exceptions import (AnymailAPIError, AnymailRecipientsRefused,
                                 AnymailSerializationError, AnymailUnsupportedFeature)
+from anymail.message import attach_inline_image
 
 from .mock_backend import DjrillBackendMockAPITestCase
 
@@ -224,18 +223,14 @@ class DjrillBackendTests(DjrillBackendMockAPITestCase):
         self.assertEqual(len(attachments), 1)
 
     def test_embedded_images(self):
-        image_data = self.sample_image_content()  # Read from a png file
-        image_cid = make_msgid("img")  # Content ID per RFC 2045 section 7 (with <...>)
-        image_cid_no_brackets = image_cid[1:-1]  # Without <...>, for use as the <img> tag src
-
         text_content = 'This has an inline image.'
-        html_content = '<p>This has an <img src="cid:%s" alt="inline" /> image.</p>' % image_cid_no_brackets
         email = mail.EmailMultiAlternatives('Subject', text_content, 'from@example.com', ['to@example.com'])
-        email.attach_alternative(html_content, "text/html")
 
-        image = MIMEImage(image_data)
-        image.add_header('Content-ID', image_cid)
-        email.attach(image)
+        image_data = self.sample_image_content()  # Read from a png file
+        cid = attach_inline_image(email, image_data)
+
+        html_content = '<p>This has an <img src="cid:%s" alt="inline" /> image.</p>' % cid
+        email.attach_alternative(html_content, "text/html")
 
         email.send()
         data = self.get_api_call_data()
@@ -243,7 +238,7 @@ class DjrillBackendTests(DjrillBackendMockAPITestCase):
         self.assertEqual(data['message']['html'], html_content)
         self.assertEqual(len(data['message']['images']), 1)
         self.assertEqual(data['message']['images'][0]["type"], "image/png")
-        self.assertEqual(data['message']['images'][0]["name"], image_cid)
+        self.assertEqual(data['message']['images'][0]["name"], cid)
         self.assertEqual(decode_att(data['message']['images'][0]["content"]), image_data)
         # Make sure neither the html nor the inline image is treated as an attachment:
         self.assertFalse('attachments' in data['message'])
@@ -341,9 +336,6 @@ class DjrillMandrillFeatureTests(DjrillBackendMockAPITestCase):
         super(DjrillMandrillFeatureTests, self).setUp()
         self.message = mail.EmailMessage('Subject', 'Text Body',
             'from@example.com', ['to@example.com'])
-
-    def assertStrContains(self, haystack, needle, msg=None):
-        six.assertRegex(self, haystack, re.escape(needle), msg)
 
     def test_tracking(self):
         # First make sure we're not setting the API param if the track_click
@@ -570,8 +562,8 @@ class DjrillMandrillFeatureTests(DjrillBackendMockAPITestCase):
             self.message.send()
         err = cm.exception
         self.assertTrue(isinstance(err, TypeError))  # Djrill 1.x re-raised TypeError from json.dumps
-        self.assertStrContains(str(err), "Don't know how to send this data to Mandrill")  # our added context
-        self.assertStrContains(str(err), "Decimal('19.99') is not JSON serializable")  # original message
+        self.assertIn("Don't know how to send this data to Mandrill", str(err))  # our added context
+        self.assertIn("Decimal('19.99') is not JSON serializable", str(err))  # original message
 
     def test_dates_not_serialized(self):
         """Pre-2.0 Djrill accidentally serialized dates to ISO"""

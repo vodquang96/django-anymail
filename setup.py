@@ -31,10 +31,14 @@ setup(
     license="BSD License",
     packages=["anymail"],
     zip_safe=False,
-    install_requires=["requests>=1.0.0", "django>=1.4"],
+    install_requires=["django>=1.8", "six"],
+    extras_require={
+        "mailgun": ["requests>=2.4.3"],
+        "mandrill": ["requests>=1.0.0"],
+    },
     include_package_data=True,
     test_suite="runtests.runtests",
-    tests_require=["mock", "six"],
+    tests_require=["mock"],
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Programming Language :: Python",

@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from anymail.backends.base import AnymailRecipientStatus, ANYMAIL_STATUSES
 from ..exceptions import AnymailRequestsAPIError
+from ..message import AnymailRecipientStatus, ANYMAIL_STATUSES
 from ..utils import last, combine, get_anymail_setting
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload

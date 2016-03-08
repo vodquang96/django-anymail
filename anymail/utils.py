@@ -1,7 +1,8 @@
 import mimetypes
 from base64 import b64encode
+from calendar import timegm
 from email.mime.base import MIMEBase
-from email.utils import parseaddr
+from email.utils import parseaddr, formatdate
 
 import six
 from django.conf import settings
@@ -41,7 +42,7 @@ def combine(*args):
                 try:
                     result.update(value)  # shallow merge if dict-like
                 except AttributeError:
-                    result += value  # concatenate if sequence-like
+                    result = result + value  # concatenate if sequence-like
     return result
 
 
@@ -97,10 +98,11 @@ class Attachment(object):
     """A normalized EmailMessage.attachments item with additional functionality
 
     Normalized to have these properties:
-    name: attachment filename; may be empty string; will be Content-ID for inline attachments
+    name: attachment filename; may be empty string; will be Content-ID (without <>) for inline attachments
     content
     mimetype: the content type; guessed if not explicit
     inline: bool, True if attachment has a Content-ID header
+    content_id: for inline, the Content-ID (with <>)
     """
 
     def __init__(self, attachment, encoding):
@@ -109,6 +111,7 @@ class Attachment(object):
         self._attachment = attachment
         self.encoding = encoding  # should we be checking attachment["Content-Encoding"] ???
         self.inline = False
+        self.content_id = None
 
         if isinstance(attachment, MIMEBase):
             self.name = attachment.get_filename()
@@ -117,7 +120,8 @@ class Attachment(object):
             # Treat image attachments that have content ids as inline:
             if attachment.get_content_maintype() == "image" and attachment["Content-ID"] is not None:
                 self.inline = True
-                self.name = attachment["Content-ID"]
+                self.content_id = attachment["Content-ID"]  # including the <...>
+                self.name = self.content_id[1:-1]  # without the <, >
         else:
             (self.name, self.content, self.mimetype) = attachment
 
@@ -175,3 +179,11 @@ def get_anymail_setting(setting, default=UNSET, allow_bare=False):
                 raise ImproperlyConfigured(message)
             else:
                 return default
+
+
+def rfc2822date(dt):
+    """Turn an aware datetime into a date string as specified in RFC 2822."""
+    # This is the equivalent of Python 3.3's email.utils.format_datetime
+    assert dt.tzinfo is not None  # only aware datetimes allowed
+    timeval = timegm(dt.utctimetuple())
+    return formatdate(timeval, usegmt=True)

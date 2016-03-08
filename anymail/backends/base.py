@@ -5,43 +5,8 @@ from django.core.mail.backends.base import BaseEmailBackend
 from django.utils.timezone import is_naive, get_current_timezone, make_aware, utc
 
 from ..exceptions import AnymailError, AnymailUnsupportedFeature, AnymailRecipientsRefused
+from ..message import AnymailStatus
 from ..utils import Attachment, ParsedEmail, UNSET, combine, last, get_anymail_setting
-
-
-# The AnymailStatus* stuff should get moved to an anymail.message module
-ANYMAIL_STATUSES = [
-    'sent',  # the ESP has sent the message (though it may or may not get delivered)
-    'queued',  # the ESP will try to send the message later
-    'invalid',  # the recipient email was not valid
-    'rejected',  # the recipient is blacklisted
-    'unknown',  # anything else
-]
-
-
-class AnymailRecipientStatus(object):
-    """Information about an EmailMessage's send status for a single recipient"""
-
-    def __init__(self, message_id, status):
-        self.message_id = message_id  # ESP message id
-        self.status = status  # one of ANYMAIL_STATUSES, or None for not yet sent to ESP
-
-
-class AnymailStatus(object):
-    """Information about an EmailMessage's send status for all recipients"""
-
-    def __init__(self):
-        self.message_id = None  # set of ESP message ids across all recipients, or bare id if only one, or None
-        self.status = None  # set of ANYMAIL_STATUSES across all recipients, or None for not yet sent to ESP
-        self.recipients = {}  # per-recipient: { email: AnymailRecipientStatus, ... }
-        self.esp_response = None
-
-    def set_recipient_status(self, recipients):
-        self.recipients.update(recipients)
-        recipient_statuses = self.recipients.values()
-        self.message_id = set([recipient.message_id for recipient in recipient_statuses])
-        if len(self.message_id) == 1:
-            self.message_id = self.message_id.pop()  # de-set-ify if single message_id
-        self.status = set([recipient.status for recipient in recipient_statuses])
 
 
 class AnymailBaseBackend(BaseEmailBackend):

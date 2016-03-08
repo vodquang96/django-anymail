@@ -47,9 +47,9 @@ class DjrillBackendMockAPITestCase(TestCase):
             raise AssertionError("Mandrill API was not called")
         (args, kwargs) = self.mock_post.call_args
         try:
-            post_url = kwargs.get('url', None) or args[1]
+            post_url = kwargs.get('url', None) or args[2]
         except IndexError:
-            raise AssertionError("requests.post was called without an url (?!)")
+            raise AssertionError("requests.Session.request was called without an url (?!)")
         if not post_url.endswith(endpoint):
             raise AssertionError(
                 "requests.post was not called on %s\n(It was called on %s)"
@@ -64,9 +64,9 @@ class DjrillBackendMockAPITestCase(TestCase):
             raise AssertionError("Mandrill API was not called")
         (args, kwargs) = self.mock_post.call_args
         try:
-            post_data = kwargs.get('data', None) or args[2]
+            post_data = kwargs.get('data', None) or args[4]
         except IndexError:
-            raise AssertionError("requests.post was called without data")
+            raise AssertionError("requests.Session.request was called without data")
         return json.loads(post_data)
 
 
