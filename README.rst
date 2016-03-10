@@ -71,7 +71,7 @@ or any other supported ESP where you see "mailgun":
 
    .. code-block:: console
 
-        $ pip install anymail[mailgun]  # or anymail[postmark,sendgrid] or ...
+        $ pip install django-anymail[mailgun]  # or [postmark,sendgrid] or ...
 
 
 2. Edit your project's ``settings.py``:

@@ -27,7 +27,8 @@ Figuring out what's wrong
 **Double-check common issues**
 
   * Did you install Anymail with the ESPs you want available?
-    (E.g., `pip install anymail[mailgun,sendgrid]` -- *not* just `pip install anymail`.)
+    (E.g., `pip install django-anymail[mailgun,sendgrid]` --
+    *not* just `pip install django-anymail`.)
   * Did you add any required settings for those ESPs to your settings.py?
     (E.g., `ANYMAIL_MANDRILL_API_KEY`.)
   * Did you add ``'anymail'`` to the list of :setting:`INSTALLED_APPS` in settings.py?

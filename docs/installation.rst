@@ -17,13 +17,13 @@ E.g., for Anymail with Mailgun support:
 
     .. code-block:: console
 
-        $ pip install anymail[mailgun]
+        $ pip install django-anymail[mailgun]
 
 ...or with both Postmark and SendGrid support:
 
     .. code-block:: console
 
-        $ pip install anymail[postmark,sendgrid]
+        $ pip install django-anymail[postmark,sendgrid]
 
 
 .. _backend-configuration:
