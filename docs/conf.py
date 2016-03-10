@@ -259,7 +259,7 @@ texinfo_documents = [
 # -- Options for Intersphinx ------------------------------------------------
 
 intersphinx_mapping = {
-    'python': ('http://docs.python.org/2.7', None),
+    'python': ('http://docs.python.org/3.5', None),
     'django': ('http://docs.djangoproject.com/en/stable/', 'http://docs.djangoproject.com/en/stable/_objects/'),
     'requests': ('http://docs.python-requests.org/en/latest/', None),
 }
@@ -268,22 +268,22 @@ intersphinx_mapping = {
 def setup(app):
     # Django-specific roles, from https://github.com/django/django/blob/master/docs/_ext/djangodocs.py:
     app.add_crossref_type(
-        directivename = "setting",
-        rolename      = "setting",
-        indextemplate = "pair: %s; setting",
+        directivename="setting",
+        rolename="setting",
+        indextemplate="pair: %s; setting",
     )
     app.add_crossref_type(
-        directivename = "templatetag",
-        rolename      = "ttag",
-        indextemplate = "pair: %s; template tag"
+        directivename="templatetag",
+        rolename="ttag",
+        indextemplate="pair: %s; template tag"
     )
     app.add_crossref_type(
-        directivename = "templatefilter",
-        rolename      = "tfilter",
-        indextemplate = "pair: %s; template filter"
+        directivename="templatefilter",
+        rolename="tfilter",
+        indextemplate="pair: %s; template filter"
     )
     app.add_crossref_type(
-        directivename = "fieldlookup",
-        rolename      = "lookup",
-        indextemplate = "pair: %s; field lookup type",
+        directivename="fieldlookup",
+        rolename="lookup",
+        indextemplate="pair: %s; field lookup type",
     )

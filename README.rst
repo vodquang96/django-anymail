@@ -1,5 +1,5 @@
-Djrill: Mandrill Transactional Email for Django
-===============================================
+Anymail: Multi-ESP transactional email for Django
+=================================================
 
 ..  This README is reused in multiple places:
     * Github: project page, exactly as it appears here
@@ -17,53 +17,63 @@ Djrill: Mandrill Transactional Email for Django
 
 .. This shared-intro section is also included in docs/index.rst
 
-Djrill integrates the `Mandrill <http://mandrill.com>`_ transactional
-email service into Django.
+Anymail integrates several transactional email service providers (ESPs) into Django,
+using a consistent API that makes it (relatively) easy to switch between ESPs.
 
-**UPGRADING FROM DJRILL 1.x?**
-There are some **breaking changes in Djrill 2.0**. Please see the
-`upgrade instructions <http://djrill.readthedocs.org/en/latest/upgrading/>`_.
+It currently supports Mailgun and Mandrill. Postmark and SendGrid are coming soon.
+
+.. attention:: **EARLY DEVELOPMENT**
+
+   This project is undergoing rapid development to get to a 1.0 release.
+   You should expect frequent, possibly-breaking changes until 1.0 alpha.
+
+   If you are migrating to Anymail from `Djrill <https://github.com/brack3t/Djrill>`_,
+   there are `notes on porting <https://anymail.readthedocs.org/en/latest/esps/mandrill/#migrating-from-djrill>`_
 
 
-In general, Djrill "just works" with Django's built-in `django.core.mail`
-package. It includes:
+Anymail normalizes ESP functionality so it "just works" with Django's
+built-in `django.core.mail` package. It includes:
 
 * Support for HTML, attachments, extra headers, and other features of
   `Django's built-in email <https://docs.djangoproject.com/en/stable/topics/email/>`_
-* Mandrill-specific extensions like tags, metadata, tracking, and MailChimp templates
-* Optional support for Mandrill inbound email and other webhook notifications,
-  via Django signals
+* Extensions that make it easy to use extra ESP functionality, like tags, metadata,
+  and tracking, using code that's portable between ESPs
+* Optional support for ESP delivery status notification via webhooks and Django signals
+* Optional support for inbound email
 
-Djrill is released under the BSD license. It is tested against Django 1.4--1.9
-(including Python 3 with Django 1.6+, and PyPy support with Django 1.5+).
+Anymail is released under the BSD license. It is tested against Django 1.8--1.9
+(including Python 3 and PyPy).
 Djrill uses `semantic versioning <http://semver.org/>`_.
 
 .. END shared-intro
 
-.. image:: https://travis-ci.org/brack3t/Djrill.png?branch=master
-       :target: https://travis-ci.org/brack3t/Djrill
+.. image:: https://travis-ci.org/anymail/django-anymail.png?branch=master
+       :target: https://travis-ci.org/anymail/django-anymail
        :alt:    build status on Travis-CI
 
 
 **Resources**
 
-* Full documentation: https://djrill.readthedocs.org/en/latest/
-* Package on PyPI: https://pypi.python.org/pypi/djrill
-* Project on Github: https://github.com/brack3t/Djrill
+* Full documentation: https://anymail.readthedocs.org/en/latest/
+* Package on PyPI: https://pypi.python.org/pypi/django-anymail
+* Project on Github: https://github.com/anymail/django-anymail
 
 
-Djrill 1-2-3
-------------
+Anymail 1-2-3
+-------------
 
 .. _quickstart:
 
 .. This quickstart section is also included in docs/quickstart.rst
 
-1. Install Djrill from PyPI:
+This example uses Mailgun, but you can substitute Postmark or SendGrid
+or any other supported ESP where you see "mailgun":
+
+1. Install Anymail from PyPI, including the ESP(s) you want to use:
 
    .. code-block:: console
 
-        $ pip install djrill
+        $ pip install anymail[mailgun]  # or anymail[postmark,sendgrid] or ...
 
 
 2. Edit your project's ``settings.py``:
@@ -72,43 +82,53 @@ Djrill 1-2-3
 
         INSTALLED_APPS = (
             ...
-            "djrill"
+            "anymail"
         )
 
-        MANDRILL_API_KEY = "<your Mandrill key>"
-        EMAIL_BACKEND = "djrill.mail.backends.djrill.DjrillBackend"
+        ANYMAIL = {
+            "MAILGUN_API_KEY": "<your Mailgun key>",
+        }
+        EMAIL_BACKEND = "anymail.backends.mailgun.MailgunBackend"  # or sendgrid.SendGridBackend, or...
         DEFAULT_FROM_EMAIL = "you@example.com"  # if you don't already have this in settings
 
 
 3. Now the regular `Django email functions <https://docs.djangoproject.com/en/stable/topics/email/>`_
-   will send through Mandrill:
+   will send through your chosen ESP:
 
    .. code-block:: python
 
         from django.core.mail import send_mail
 
-        send_mail("It works!", "This will get sent through Mandrill",
-            "Djrill Sender <djrill@example.com>", ["to@example.com"])
+        send_mail("It works!", "This will get sent through Mailgun",
+                  "Anymail Sender <from@example.com>", ["to@example.com"])
 
 
-   You could send an HTML message, complete with custom Mandrill tags and metadata:
+   You could send an HTML message, complete with an inline image,
+   custom tags and metadata:
 
    .. code-block:: python
 
         from django.core.mail import EmailMultiAlternatives
+        from anymail.message import attach_inline_image
 
         msg = EmailMultiAlternatives(
-            subject="Djrill Message",
-            body="This is the text email body",
-            from_email="Djrill Sender <djrill@example.com>",
-            to=["Recipient One <someone@example.com>", "another.person@example.com"],
-            headers={'Reply-To': "Service <support@example.com>"} # optional extra headers
-        )
-        msg.attach_alternative("<p>This is the HTML email body</p>", "text/html")
+            subject="Please activate your account",
+            body="Click to activate your account: http://example.com/activate",
+            from_email="Example <admin@example.com>",
+            to=["New User <user1@example.com>", "account.manager@example.com"],
+            reply_to=["Helpdesk <support@example.com>"])
 
-        # Optional Mandrill-specific extensions:
-        msg.tags = ["one tag", "two tag", "red tag", "blue tag"]
-        msg.metadata = {'user_id': "8675309"}
+        # Include an inline image in the html:
+        logo_cid = attach_inline_image(msg, open("logo.jpg", "rb").read())
+        html = """<img alt="Logo" src="cid:{logo_cid}">
+                  <p>Please <a href="http://example.com/activate">activate</a>
+                  your account</p>""".format(logo_cid=logo_cid)
+        msg.attach_alternative(html, "text/html")
+
+        # Optional Anymail extensions:
+        msg.metadata = {"user_id": "8675309", "experiment_variation": 1}
+        msg.tags = ["activation", "onboarding"]
+        msg.track_clicks = True
 
         # Send it:
         msg.send()
@@ -116,5 +136,5 @@ Djrill 1-2-3
 .. END quickstart
 
 
-See the `full documentation <https://djrill.readthedocs.org/en/latest/>`_
+See the `full documentation <https://anymail.readthedocs.org/en/latest/>`_
 for more features and options.

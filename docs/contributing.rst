@@ -3,31 +3,45 @@
 Contributing
 ============
 
-Djrill is maintained by its users. Your contributions are encouraged!
+Anymail is maintained by its users. Your contributions are encouraged!
 
-The `Djrill source code`_ is on github. See `AUTHORS.txt`_ for a list
-of some of the people who have helped improve Djrill.
+The `Anymail source code`_ is on GitHub.
 
-.. _Djrill source code: https://github.com/brack3t/Djrill
-.. _AUTHORS.txt: https://github.com/brack3t/Djrill/blob/master/AUTHORS.txt
+.. _Anymail source code: https://github.com/anymail/django-anymail
+
+
+Contributors
+------------
+
+See `AUTHORS.txt`_ for a list of some of the people who have helped
+improve Anymail.
+
+Anymail evolved from the `Djrill`_ project. Special thanks to the
+folks from `brack3t`_ who developed the original version of Djrill.
+
+.. _AUTHORS.txt: https://github.com/anymail/django-anymail/blob/master/AUTHORS.txt
+.. _brack3t: http://brack3t.com/
+.. _Djrill: https://github.com/brack3t/Djrill
 
 
 Bugs
 ----
 
-You can report problems or request features in
-`Djrill's github issue tracker <https://github.com/brack3t/Djrill/issues>`_.
+You can report problems or request features in `Anymail's GitHub issue tracker`_.
 
 We also have some :ref:`troubleshooting` information that may be helpful.
 
+.. _Anymail's GitHub issue tracker: https://github.com/anymail/django-anymail/issues
 
-Pull Requests
+
+Pull requests
 -------------
 
-Pull requests are always welcome to fix bugs and improve support for Mandrill and Django features.
+Pull requests are always welcome to fix bugs and improve support for ESP and Django features.
 
 * Please include test cases.
-* We try to follow the `Django coding style`_ (basically, PEP 8 with longer lines OK).
+* We try to follow the `Django coding style`_
+  (basically, :pep:`8` with longer lines OK).
 * By submitting a pull request, you're agreeing to release your changes under under
   the same BSD license as the rest of this project.
 
@@ -39,27 +53,31 @@ Pull requests are always welcome to fix bugs and improve support for Mandrill an
 Testing
 -------
 
-Djrill is `tested on Travis <https://travis-ci.org/brack3t/Djrill>`_ against several
-combinations of Django and Python versions. (Full list in
-`.travis.yml <https://github.com/brack3t/Djrill/blob/master/.travis.yml>`_.)
+Anymail is `tested on Travis`_ against several combinations of Django
+and Python versions. (Full list in `.travis.yml`_.)
 
-Most of the included tests verify that Djrill constructs the expected Mandrill API
-calls, without actually calling Mandrill or sending any email. So these tests
-don't require a Mandrill API key, but they *do* require
-`mock <http://www.voidspace.org.uk/python/mock/index.html>`_
-and `six <https://pythonhosted.org/six/>`_ (``pip install mock six``).
+Most of the included tests verify that Anymail constructs the expected ESP API
+calls, without actually calling the ESP's API or sending any email. So these tests
+don't require API keys, but they *do* require `mock`_ (``pip install mock``).
 
-To run the tests, either::
+To run the tests, either:
 
-    python -Wall setup.py test
+    .. code-block:: console
 
-or::
+        $ python -Wall setup.py test
 
-    python -Wall runtests.py
+or:
 
+    .. code-block:: console
 
-If you set the environment variable `MANDRILL_TEST_API_KEY` to a valid Mandrill
-`test API key`_, there are also a handful of integration tests which will run against
-the live Mandrill API. (Otherwise these live API tests are skipped.)
+        $ python -Wall runtests.py
 
-.. _test API key: https://mandrill.zendesk.com/hc/en-us/articles/205582447#test_key
+Anymail also includes some integration tests, which do call the live ESP APIs.
+These integration tests require API keys (and sometimes other settings) they
+get from from environment variables. Look in the ``*_integration_tests.py``
+files in the `tests source`_ for specific requirements.
+
+.. _.travis.yml: https://github.com/anymail/django-anymail/blob/master/.travis.yml
+.. _tests source: https://github.com/anymail/django-anymail/blob/master/anymail/tests
+.. _mock: http://www.voidspace.org.uk/python/mock/index.html
+.. _tested on Travis: https://travis-ci.org/anymail/django-anymail

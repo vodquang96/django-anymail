@@ -1,117 +1,167 @@
-Installation
-============
+Installation and configuration
+==============================
 
-It's easiest to install Djrill from `PyPI <https://pypi.python.org/pypi/djrill>`_:
+.. _installation:
+
+Installing Anymail
+------------------
+
+Install Anymail from PyPI using pip.
+
+Anymail uses python setuptools' "extra features" to pull in dependencies
+for specific ESPs. (This avoids installing packages needed by ESPs
+you aren't using.)
+
+You'll want to include at least one ESP as an extra in your pip command.
+E.g., for Anymail with Mailgun support:
 
     .. code-block:: console
 
-        $ pip install djrill
+        $ pip install anymail[mailgun]
 
-If you decide to install Djrill some other way, you'll also need to install its
-one dependency (other than Django, of course): the `requests <http://docs.python-requests.org>`_
-library from Kenneth Reitz.
+...or with both Postmark and SendGrid support:
 
+    .. code-block:: console
 
-Configuration
--------------
-
-.. setting:: MANDRILL_API_KEY
-
-In your project's :file:`settings.py`:
-
-1. Add :mod:`djrill` to your :setting:`INSTALLED_APPS`::
-
-    INSTALLED_APPS = (
-        ...
-        "djrill"
-    )
-
-2. Add the following line, substituting your own :setting:`MANDRILL_API_KEY`::
-
-    MANDRILL_API_KEY = "brack3t-is-awesome"
-
-3. Override your existing :setting:`EMAIL_BACKEND` with the following line::
-
-    EMAIL_BACKEND = "djrill.mail.backends.djrill.DjrillBackend"
+        $ pip install anymail[postmark,sendgrid]
 
 
-Also, if you don't already have a :setting:`DEFAULT_FROM_EMAIL` in settings,
-this is a good time to add one. (Django's default is "webmaster@localhost",
-which won't work with Mandrill.)
+.. _backend-configuration:
+
+Configuring Django's email backend
+----------------------------------
+
+To use Anymail for sending email, edit your Django project's :file:`settings.py`:
+
+1. Add :mod:`anymail` to your :setting:`INSTALLED_APPS`:
+
+    .. code-block:: python
+
+        INSTALLED_APPS = (
+            ...
+            "anymail",
+        )
+
+2. Add an :setting:`ANYMAIL` settings dict, substituting the appropriate settings for
+   your ESP:
+
+    .. code-block:: python
+
+        ANYMAIL = {
+            "MAILGUN_API_KEY" = "<your Mailgun key>",
+        }
+
+3. Change your existing Django :setting:`EMAIL_BACKEND` to the Anymail backend
+   for your ESP. For example, to send using Mailgun by default:
+
+    .. code-block:: python
+
+        EMAIL_BACKEND = "anymail.backends.mailgun.MailgunBackend"
+
+   (:setting:`EMAIL_BACKEND` sets Django's default for sending emails; you can also
+   use :ref:`multiple Anymail backends <multiple-backends>` to send particular
+   messages through different ESPs.)
+
+   The exact backend name and required settings vary by ESP.
+   See the :ref:`supported ESPs <supported-esps>` section for specifics.
+
+Also, if you don't already have a :setting:`DEFAULT_FROM_EMAIL` in your settings,
+this is a good time to add one. (Django's default is "webmaster\@localhost",
+which some ESPs will reject.)
 
 
-Mandrill Webhooks (Optional)
-----------------------------
+Configuring status tracking webhooks
+------------------------------------
 
-Djrill includes optional support for Mandrill webhooks, including inbound email.
-See the Djrill :ref:`webhooks <webhooks>` section for configuration details.
+Anymail can optionally connect to your ESPs event webhooks to notify your app
+of status like bounced and rejected emails, successful delivery, message opens
+and clicks, and other tracking.
 
-
-Other Optional Settings
------------------------
-
-You can optionally add any of these Djrill settings to your :file:`settings.py`.
-
-
-.. setting:: MANDRILL_IGNORE_RECIPIENT_STATUS
-
-MANDRILL_IGNORE_RECIPIENT_STATUS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Set to ``True`` to disable :exc:`djrill.MandrillRecipientsRefused` exceptions
-on invalid or rejected recipients. (Default ``False``.)
-
-.. versionadded:: 2.0
+If you want to use Anymail's status tracking webhooks, follow the steps above
+to :ref:`configure an Anymail backend <backend-configuration>`, and then
+follow the instructions in the :ref:`event-tracking` section to set up
+the delivery webhooks.
 
 
-.. setting:: MANDRILL_SETTINGS
+Configuring inbound email
+-------------------------
 
-MANDRILL_SETTINGS
-~~~~~~~~~~~~~~~~~
+Anymail can optionally connect to your ESPs inbound webhook to notify your app
+of inbound messages.
 
-You can supply global default options to apply to all messages sent through Djrill.
-Set :setting:`!MANDRILL_SETTINGS` to a dict of these options. Example::
-
-    MANDRILL_SETTINGS = {
-        'subaccount': 'client-347',
-        'tracking_domain': 'example.com',
-        'track_opens': True,
-    }
-
-See :ref:`mandrill-send-support` for a list of available options. (Everything
-*except* :attr:`merge_vars`, :attr:`recipient_metadata`, and :attr:`send_at`
-can be used with :setting:`!MANDRILL_SETTINGS`.)
-
-Attributes set on individual EmailMessage objects will override the global
-:setting:`!MANDRILL_SETTINGS` for that message. :attr:`global_merge_vars`
-on an EmailMessage will be merged with any ``global_merge_vars`` in
-:setting:`!MANDRILL_SETTINGS` (with the ones on the EmailMessage taking
-precedence if there are conflicting var names).
-
-.. versionadded:: 2.0
+If you want to use inbound email with Anymail, first follow the first two
+:ref:`backend configuration <backend-configuration>` steps above. (You can
+skip changing your :setting:`EMAIL_BACKEND` if you don't want to us Anymail
+for *sending* messages.) Then follow the instructions in the
+:ref:`inbound-webhooks` section to set up the inbound webhooks.
 
 
-.. setting:: MANDRILL_API_URL
 
-MANDRILL_API_URL
-~~~~~~~~~~~~~~~~
+.. setting:: ANYMAIL
 
-The base url for calling the Mandrill API. The default is
-``MANDRILL_API_URL = "https://mandrillapp.com/api/1.0"``,
-which is the secure, production version of Mandrill's 1.0 API.
+Anymail settings reference
+--------------------------
 
-(It's unlikely you would need to change this.)
+You can add Anymail settings to your project's :file:`settings.py` either as
+a single ``ANYMAIL`` dict, or by breaking out individual settings prefixed with
+``ANYMAIL_``. So this settings dict:
+
+    .. code-block:: python
+
+        ANYMAIL = {
+            "MAILGUN_API_KEY": "12345",
+            "SEND_DEFAULTS": {
+                "tags": ["myapp"]
+            },
+        }
+
+...is equivalent to these individual settings:
+
+    .. code-block:: python
+
+        ANYMAIL_MAILGUN_API_KEY = "12345"
+        ANYMAIL_SEND_DEFAULTS = {"tags": ["myapp"]}
+
+In addition, for some ESP settings like API keys, Anymail will look for a setting
+without the ``ANYMAIL_`` prefix if it can't find the Anymail one. (This can be helpful
+if you are using other Django apps that work with the same ESP.)
+
+    .. code-block:: python
+
+        MAILGUN_API_KEY = "12345"  # used only if neither ANYMAIL["MAILGUN_API_KEY"]
+                                   # nor ANYMAIL_MAILGUN_API_KEY have been set
 
 
-.. setting:: MANDRILL_SUBACCOUNT
+There are specific Anymail settings for each ESP (like API keys and urls).
+See the :ref:`supported ESPs <supported-esps>` section for details.
+Here are the other settings Anymail supports:
 
-MANDRILL_SUBACCOUNT
-~~~~~~~~~~~~~~~~~~~
 
-Prior to Djrill 2.0, the :setting:`!MANDRILL_SUBACCOUNT` setting could
-be used to globally set the `Mandrill subaccount <subaccounts>`_.
-Although this is still supported for compatibility with existing code,
-new code should set a global subaccount in :setting:`MANDRILL_SETTINGS`
-as shown above.
+.. setting:: ANYMAIL_IGNORE_RECIPIENT_STATUS
 
-.. _subaccounts: http://help.mandrill.com/entries/25523278-What-are-subaccounts-
+.. rubric:: IGNORE_RECIPIENT_STATUS
+
+Set to `True` to disable :exc:`AnymailRecipientsRefused` exceptions
+on invalid or rejected recipients. (Default `False`.)
+See :ref:`recipients-refused`.
+
+  .. code-block:: python
+
+      ANYMAIL = {
+          ...
+          "IGNORE_RECIPIENT_STATUS": True,
+      }
+
+
+.. rubric:: SEND_DEFAULTS and *ESP*\ _SEND_DEFAULTS`
+
+A `dict` of default options to apply to all messages sent through Anymail.
+See :ref:`send-defaults`.
+
+
+.. rubric:: UNSUPPORTED_FEATURE_ERRORS
+
+Whether Anymail should raise :exc:`~anymail.exceptions.AnymailUnsupportedFeature`
+errors for email with features that can't be accurately communicated to the ESP.
+Set to `False` to ignore these problems and send the email anyway. See
+:ref:`unsupported-features`. (Default `True`.)

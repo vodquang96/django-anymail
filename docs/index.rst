@@ -1,10 +1,5 @@
-.. Djrill documentation master file, created by
-   sphinx-quickstart on Sat Mar  2 13:07:34 2013.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Djrill: Mandrill Transactional Email for Django
-===============================================
+Anymail: Multi-ESP transactional email for Django
+=================================================
 
 Version |release|
 
@@ -15,6 +10,8 @@ Version |release|
    :end-before:  END shared-intro
 
 
+.. _main-toc:
+
 Documentation
 -------------
 
@@ -23,21 +20,10 @@ Documentation
 
    quickstart
    installation
-   upgrading
-   usage/sending_mail
-   usage/templates
-   usage/multiple_backends
-   usage/webhooks
+   sending/index
+   inbound
+   esps/index
+   tips/index
    troubleshooting
    contributing
-   history
-
-
-Thanks
-------
-
-Thanks to the MailChimp team for asking us to build this nifty little app, and to all of Djrill's
-:doc:`contributors <contributing>`.
-Oh, and, of course, Kenneth Reitz for the awesome requests_ library.
-
-.. _requests: http://docs.python-requests.org
+   release_notes
