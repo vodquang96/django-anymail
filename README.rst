@@ -45,7 +45,7 @@ Djrill uses `semantic versioning <http://semver.org/>`_.
 
 .. END shared-intro
 
-.. image:: https://travis-ci.org/anymail/django-anymail.png?branch=master
+.. image:: https://travis-ci.org/anymail/django-anymail.svg?branch=master
        :target: https://travis-ci.org/anymail/django-anymail
        :alt:    build status on Travis-CI
 
