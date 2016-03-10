@@ -33,6 +33,8 @@ cache:
 install:
   - pip install --upgrade setuptools pip
   - pip install $DJANGO
-  - pip install .
+  # For now, install all ESPs and test at once
+  # (in future, might want to matrix ESPs to test cross-dependencies)
+  - pip install .[mailgun,mandrill]
   - pip list
 script: python -Wall setup.py test
