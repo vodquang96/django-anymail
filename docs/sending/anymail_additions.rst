@@ -60,6 +60,12 @@ ESP send options (AnymailMessage)
 
     .. rubric:: Attributes you can add to messages
 
+    .. note::
+
+        Anymail looks for these attributes on **any**
+        :class:`~django.core.mail.EmailMessage` you send.
+        (You don't have to use :class:`AnymailMessage`.)
+
     .. attribute:: metadata
 
         Set this to a `dict` of metadata values the ESP should store
@@ -89,7 +95,7 @@ ESP send options (AnymailMessage)
 
         ESPs have differing restrictions on tags. For portability,
         it's best to stick with strings that start with an alphanumeric
-        character. (Also, PostMark only allows a single tag per message.)
+        character. (Also, Postmark only allows a single tag per message.)
 
 
     .. caution::
