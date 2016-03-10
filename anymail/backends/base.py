@@ -17,7 +17,7 @@ class AnymailBaseBackend(BaseEmailBackend):
     def __init__(self, *args, **kwargs):
         super(AnymailBaseBackend, self).__init__(*args, **kwargs)
 
-        self.unsupported_feature_errors = get_anymail_setting("UNSUPPORTED_FEATURE_ERRORS", True)
+        self.ignore_unsupported_features = get_anymail_setting("IGNORE_UNSUPPORTED_FEATURES", False)
         self.ignore_recipient_status = get_anymail_setting("IGNORE_RECIPIENT_STATUS", False)
 
         # Merge SEND_DEFAULTS and <esp_name>_SEND_DEFAULTS settings
@@ -227,7 +227,7 @@ class BasePayload(object):
                 setter(value)
 
     def unsupported_feature(self, feature):
-        if self.backend.unsupported_feature_errors:
+        if not self.backend.ignore_unsupported_features:
             raise AnymailUnsupportedFeature("%s does not support %s" % (self.esp_name, feature),
                                             email_message=self.message, payload=self, backend=self.backend)
 

@@ -159,9 +159,9 @@ A `dict` of default options to apply to all messages sent through Anymail.
 See :ref:`send-defaults`.
 
 
-.. rubric:: UNSUPPORTED_FEATURE_ERRORS
+.. rubric:: IGNORE_UNSUPPORTED_FEATURES
 
 Whether Anymail should raise :exc:`~anymail.exceptions.AnymailUnsupportedFeature`
 errors for email with features that can't be accurately communicated to the ESP.
-Set to `False` to ignore these problems and send the email anyway. See
-:ref:`unsupported-features`. (Default `True`.)
+Set to `True` to ignore these problems and send the email anyway. See
+:ref:`unsupported-features`. (Default `False`.)

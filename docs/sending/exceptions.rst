@@ -8,12 +8,12 @@ Exceptions
 .. exception:: AnymailUnsupportedFeature
 
     If the email tries to use features that aren't supported by the ESP, the send
-    call will raise an :exc:`!AnymailUnsupportedFeature` error (a subclass
-    of :exc:`ValueError`), and the message won't be sent.
+    call will raise an :exc:`!AnymailUnsupportedFeature` error, and the message
+    won't be sent. See :ref:`unsupported-features`.
 
     You can disable this exception (ignoring the unsupported features and
     sending the message anyway, without them) by setting
-    :setting:`ANYMAIL_UNSUPPORTED_FEATURE_ERRORS` to ``False``.
+    :setting:`ANYMAIL_IGNORE_UNSUPPORTED_FEATURES` to `True`.
 
 
 .. exception:: AnymailRecipientsRefused

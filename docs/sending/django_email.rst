@@ -116,17 +116,17 @@ For example, very few ESPs support alternative message parts added with
 If you try to send a message with other alternative parts, Anymail will
 raise :exc:`~exceptions.AnymailUnsupportedFeature`.
 
-.. setting:: ANYMAIL_UNSUPPORTED_FEATURE_ERRORS
+.. setting:: ANYMAIL_IGNORE_UNSUPPORTED_FEATURES
 
 If you'd like to silently ignore :exc:`~exceptions.AnymailUnsupportedFeature`
-errors and send the messages anyway, set :setting:`!ANYMAIL_UNSUPPORTED_FEATURE_ERRORS`
-to `False` in your settings.py:
+errors and send the messages anyway, set :setting:`!ANYMAIL_IGNORE_UNSUPPORTED_FEATURES`
+to `True` in your settings.py:
 
   .. code-block:: python
 
       ANYMAIL = {
           ...
-          "UNSUPPORTED_FEATURE_ERRORS": False,
+          "IGNORE_UNSUPPORTED_FEATURES": True,
       }
 
 
