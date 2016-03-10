@@ -1,6 +1,11 @@
 Anymail: Multi-ESP transactional email for Django
 =================================================
 
+ **EARLY DEVELOPMENT**
+
+ This project is undergoing rapid development to get to a 1.0 release.
+ You should expect frequent, possibly-breaking changes until 1.0 alpha.
+
 ..  This README is reused in multiple places:
     * Github: project page, exactly as it appears here
     * Docs: shared-intro section gets included in docs/index.rst
@@ -9,6 +14,8 @@ Anymail: Multi-ESP transactional email for Django
             with several edits to freeze it to the specific PyPI release
             (see long_description_from_readme in setup.py)
     You can use docutils 1.0 markup, but *not* any Sphinx additions.
+    GitHub rst supports code-block, but *no other* block directives.
+
 
 .. default-role:: literal
 
@@ -21,15 +28,6 @@ Anymail integrates several transactional email service providers (ESPs) into Dja
 using a consistent API that makes it (relatively) easy to switch between ESPs.
 
 It currently supports Mailgun and Mandrill. Postmark and SendGrid are coming soon.
-
-.. attention:: **EARLY DEVELOPMENT**
-
-   This project is undergoing rapid development to get to a 1.0 release.
-   You should expect frequent, possibly-breaking changes until 1.0 alpha.
-
-   If you are migrating to Anymail from `Djrill <https://github.com/brack3t/Djrill>`_,
-   there are `notes on porting <https://anymail.readthedocs.org/en/latest/esps/mandrill/#migrating-from-djrill>`_
-
 
 Anymail normalizes ESP functionality so it "just works" with Django's
 built-in `django.core.mail` package. It includes:
