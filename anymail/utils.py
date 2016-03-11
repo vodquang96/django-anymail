@@ -100,11 +100,12 @@ class Attachment(object):
     """A normalized EmailMessage.attachments item with additional functionality
 
     Normalized to have these properties:
-    name: attachment filename; may be empty string; will be Content-ID (without <>) for inline attachments
-    content
+    name: attachment filename; may be empty string
+    content: bytestream
     mimetype: the content type; guessed if not explicit
     inline: bool, True if attachment has a Content-ID header
-    content_id: for inline, the Content-ID (with <>)
+    content_id: for inline, the Content-ID (*with* <>)
+    cid: for inline, the Content-ID *without* <>
     """
 
     def __init__(self, attachment, encoding):
@@ -114,6 +115,7 @@ class Attachment(object):
         self.encoding = encoding  # should we be checking attachment["Content-Encoding"] ???
         self.inline = False
         self.content_id = None
+        self.cid = ""
 
         if isinstance(attachment, MIMEBase):
             self.name = attachment.get_filename()
@@ -123,7 +125,7 @@ class Attachment(object):
             if attachment.get_content_maintype() == "image" and attachment["Content-ID"] is not None:
                 self.inline = True
                 self.content_id = attachment["Content-ID"]  # including the <...>
-                self.name = self.content_id[1:-1]  # without the <, >
+                self.cid = self.content_id[1:-1]  # without the <, >
         else:
             (self.name, self.content, self.mimetype) = attachment
 

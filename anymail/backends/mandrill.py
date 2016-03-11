@@ -118,10 +118,15 @@ class MandrillPayload(RequestsPayload):
         self.data["message"]["html"] = body
 
     def add_attachment(self, attachment):
-        key = "images" if attachment.inline else "attachments"
-        self.data["message"].setdefault(key, []).append({
+        if attachment.inline:
+            field = "images"
+            name = attachment.cid
+        else:
+            field = "attachments"
+            name = attachment.name or ""
+        self.data["message"].setdefault(field, []).append({
             "type": attachment.mimetype,
-            "name": attachment.name or "",
+            "name": name,
             "content": attachment.b64content
         })
 

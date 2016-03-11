@@ -111,9 +111,14 @@ class MailgunPayload(RequestsPayload):
 
     def add_attachment(self, attachment):
         # http://docs.python-requests.org/en/v2.4.3/user/advanced/#post-multiple-multipart-encoded-files
-        field = "inline" if attachment.inline else "attachment"
+        if attachment.inline:
+            field = "inline"
+            name = attachment.cid
+        else:
+            field = "attachment"
+            name = attachment.name
         self.files.append(
-            (field, (attachment.name, attachment.content, attachment.mimetype))
+            (field, (name, attachment.content, attachment.mimetype))
         )
 
     def set_metadata(self, metadata):
