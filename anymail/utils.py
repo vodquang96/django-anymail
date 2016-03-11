@@ -1,13 +1,15 @@
 import mimetypes
 from base64 import b64encode
-from calendar import timegm
+from datetime import datetime
 from email.mime.base import MIMEBase
 from email.utils import parseaddr, formatdate
+from time import mktime
 
 import six
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.core.mail.message import sanitize_address, DEFAULT_ATTACHMENT_MIME_TYPE
+from django.utils.timezone import utc
 
 
 UNSET = object()  # Used as non-None default value
@@ -181,9 +183,24 @@ def get_anymail_setting(setting, default=UNSET, allow_bare=False):
                 return default
 
 
+EPOCH = datetime(1970, 1, 1, tzinfo=utc)
+
+
+def timestamp(dt):
+    """Return the unix timestamp (seconds past the epoch) for datetime dt"""
+    # This is the equivalent of Python 3.3's datetime.timestamp
+    try:
+        return dt.timestamp()
+    except AttributeError:
+        if dt.tzinfo is None:
+            return mktime(dt.timetuple())
+        else:
+            return (dt - EPOCH).total_seconds()
+
+
 def rfc2822date(dt):
-    """Turn an aware datetime into a date string as specified in RFC 2822."""
-    # This is the equivalent of Python 3.3's email.utils.format_datetime
-    assert dt.tzinfo is not None  # only aware datetimes allowed
-    timeval = timegm(dt.utctimetuple())
+    """Turn a datetime into a date string as specified in RFC 2822."""
+    # This is almost the equivalent of Python 3.3's email.utils.format_datetime,
+    # but treats naive datetimes as local rather than "UTC with no information ..."
+    timeval = timestamp(dt)
     return formatdate(timeval, usegmt=True)
