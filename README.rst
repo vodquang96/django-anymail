@@ -41,7 +41,7 @@ built-in `django.core.mail` package. It includes:
 
 Anymail is released under the BSD license. It is tested against Django 1.8--1.9
 (including Python 3 and PyPy).
-Djrill uses `semantic versioning <http://semver.org/>`_.
+Anymail uses `semantic versioning <http://semver.org/>`_.
 
 .. END shared-intro
 
