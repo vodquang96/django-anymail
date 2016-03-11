@@ -35,8 +35,9 @@ class AnymailRequestsBackend(AnymailBaseBackend):
             if not self.fail_silently:
                 raise
         else:
-            self.session.headers["User-Agent"] = "Anymail/%s %s" % (
-                __version__, self.session.headers.get("User-Agent", ""))
+            self.session.headers["User-Agent"] = "django-anymail/{version}-{esp} {orig}".format(
+                esp=self.esp_name.lower(), version=__version__,
+                orig=self.session.headers.get("User-Agent", ""))
             return True
 
     def close(self):
