@@ -51,7 +51,7 @@ class SendGridBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         message_id = anymail_status.recipients['to@sink.sendgrid.net'].message_id
 
         self.assertEqual(sent_status, 'queued')  # SendGrid always queues
-        self.assertRegex(message_id, r'\<.+@example\.com/>')  # should use from_email's domain
+        self.assertRegex(message_id, r'\<.+@example\.com\>')  # should use from_email's domain
         self.assertEqual(anymail_status.status, {sent_status})  # set of all recipient statuses
         self.assertEqual(anymail_status.message_id, message_id)
 
