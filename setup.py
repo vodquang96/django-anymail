@@ -35,6 +35,7 @@ setup(
     extras_require={
         "mailgun": ["requests>=2.4.3"],
         "mandrill": ["requests>=1.0.0"],
+        "sendgrid": ["requests>=2.4.3"],
     },
     include_package_data=True,
     test_suite="runtests.runtests",
