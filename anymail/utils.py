@@ -2,7 +2,7 @@ import mimetypes
 from base64 import b64encode
 from datetime import datetime
 from email.mime.base import MIMEBase
-from email.utils import parseaddr, formatdate
+from email.utils import formatdate, parseaddr, unquote
 from time import mktime
 
 import six
@@ -100,12 +100,12 @@ class Attachment(object):
     """A normalized EmailMessage.attachments item with additional functionality
 
     Normalized to have these properties:
-    name: attachment filename; may be empty string
+    name: attachment filename; may be None
     content: bytestream
     mimetype: the content type; guessed if not explicit
     inline: bool, True if attachment has a Content-ID header
-    content_id: for inline, the Content-ID (*with* <>)
-    cid: for inline, the Content-ID *without* <>
+    content_id: for inline, the Content-ID (*with* <>); may be None
+    cid: for inline, the Content-ID *without* <>; may be empty string
     """
 
     def __init__(self, attachment, encoding):
@@ -121,11 +121,12 @@ class Attachment(object):
             self.name = attachment.get_filename()
             self.content = attachment.get_payload(decode=True)
             self.mimetype = attachment.get_content_type()
-            # Treat image attachments that have content ids as inline:
-            if attachment.get_content_maintype() == "image" and attachment["Content-ID"] is not None:
+
+            if get_content_disposition(attachment) == 'inline':
                 self.inline = True
-                self.content_id = attachment["Content-ID"]  # including the <...>
-                self.cid = self.content_id[1:-1]  # without the <, >
+                self.content_id = attachment["Content-ID"]  # probably including the <...>
+                if self.content_id is not None:
+                    self.cid = unquote(self.content_id)  # without the <, >
         else:
             (self.name, self.content, self.mimetype) = attachment
 
@@ -143,6 +144,18 @@ class Attachment(object):
         if isinstance(content, six.text_type):
             content = content.encode(self.encoding)
         return b64encode(content).decode("ascii")
+
+
+def get_content_disposition(mimeobj):
+    """Return the message's content-disposition if it exists, or None.
+
+    Backport of py3.5 :func:`~email.message.Message.get_content_disposition`
+    """
+    value = mimeobj.get('content-disposition')
+    if value is None:
+        return None
+    # _splitparam(value)[0].lower() :
+    return str(value).partition(';')[0].strip().lower()
 
 
 def get_anymail_setting(setting, default=UNSET, allow_bare=False):

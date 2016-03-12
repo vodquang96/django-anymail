@@ -182,7 +182,15 @@ ESP send options (AnymailMessage)
     :class:`AnymailMessageMixin` objects. Unlike the attributes above,
     they can't be used on an arbitrary :class:`~django.core.mail.EmailMessage`.)
 
-    .. method:: attach_inline_image(content, subtype=None, idstring="img", domain=None)
+    .. method:: attach_inline_image_file(path, subtype=None, idstring="img", domain=None)
+
+        Attach an inline (embedded) image to the message and return its :mailheader:`Content-ID`.
+
+        This calls :func:`attach_inline_image_file` on the message. See :ref:`inline-images`
+        for details and an example.
+
+
+    .. method:: attach_inline_image(content, filename=None, subtype=None, idstring="img", domain=None)
 
         Attach an inline (embedded) image to the message and return its :mailheader:`Content-ID`.
 
@@ -303,9 +311,17 @@ ESP send status
 Inline images
 -------------
 
-Anymail includes a convenience function to simplify attaching inline images to email.
+Anymail includes convenience functions to simplify attaching inline images to email.
 
-.. function:: attach_inline_image(message, content, subtype=None, idstring="img", domain=None)
+These functions work with *any* Django :class:`~django.core.mail.EmailMessage` --
+they're not specific to Anymail email backends. You can use them with messages sent
+through Django's SMTP backend or any other that properly supports MIME attachments.
+
+(Both functions are also available as convenience methods on Anymail's
+:class:`~anymail.message.AnymailMessage` and :class:`~anymail.message.AnymailMessageMixin`
+classes.)
+
+.. function:: attach_inline_image_file(message, path, subtype=None, idstring="img", domain=None)
 
     Attach an inline (embedded) image to the message and return its :mailheader:`Content-ID`.
 
@@ -315,23 +331,20 @@ Anymail includes a convenience function to simplify attaching inline images to e
     .. code-block:: python
 
         from django.core.mail import EmailMultiAlternatives
-        from anymail.message import attach_inline_image
-
-        # read image content -- be sure to open the file in binary mode:
-        with f = open("path/to/picture.jpg", "rb"):
-            raw_image_data = f.read()
+        from anymail.message import attach_inline_image_file
 
         message = EmailMultiAlternatives( ... )
-        cid = attach_inline_image(message, raw_image_data)
+        cid = attach_inline_image_file(message, 'path/to/picture.jpg')
         html = '... <img alt="Picture" src="cid:%s"> ...' % cid
-        message.attach_alternative(html, "text/html")
+        message.attach_alternative(html, 'text/html')
 
         message.send()
 
 
     `message` must be an :class:`~django.core.mail.EmailMessage` (or subclass) object.
 
-    `content` must be the binary image data (e.g., read from a file).
+    `path` must be the pathname to an image file. (Its basename will also be used as the
+    attachment's filename, which may be visible in some email clients.)
 
     `subtype` is an optional MIME :mimetype:`image` subtype, e.g., `"png"` or `"jpg"`.
     By default, this is determined automatically from the content.
@@ -342,14 +355,23 @@ Anymail includes a convenience function to simplify attaching inline images to e
     (But be aware the default `domain` can leak your server's local hostname
     in the resulting email.)
 
-    This function works with *any* Django :class:`~django.core.mail.EmailMessage` --
-    it's not specific to Anymail email backends. You can use it with messages sent
-    through Django's SMTP backend or any other that properly supports MIME attachments.
 
-    (This function is also available as the
-    :meth:`~anymail.message.AnymailMessage.attach_inline_image` method
-    on Anymail's :class:`~anymail.message.AnymailMessage` and
-    :class:`~anymail.message.AnymailMessageMixin` classes.)
+.. function:: attach_inline_image(message, content, filename=None, subtype=None, idstring="img", domain=None)
+
+    This is a version of :func:`attach_inline_image_file` that accepts raw
+    image data, rather than reading it from a file.
+
+    `message` must be an :class:`~django.core.mail.EmailMessage` (or subclass) object.
+
+    `content` must be the binary image data
+
+    `filename` is an optional `str` that will be used as as the attachment's
+    filename -- e.g., `"picture.jpg"`. This may be visible in email clients that
+    choose to display the image as an attachment as well as making it available
+    for inline use (this is up to the email client). It should be a base filename,
+    without any path info.
+
+    `subtype`, `idstring` and `domain` are as described in :func:`attach_inline_image_file`
 
 
 .. _send-defaults:

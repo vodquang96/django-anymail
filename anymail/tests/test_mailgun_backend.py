@@ -14,7 +14,7 @@ from django.test.utils import override_settings
 from django.utils.timezone import get_fixed_timezone, override as override_current_timezone
 
 from anymail.exceptions import AnymailAPIError, AnymailSerializationError, AnymailUnsupportedFeature
-from anymail.message import attach_inline_image
+from anymail.message import attach_inline_image_file
 
 from .mock_requests_backend import RequestsBackendMockAPITestCase
 from .utils import sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME, AnymailTestMixin
@@ -161,8 +161,11 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         self.assertEqual(len(attachments), 1)
 
     def test_embedded_images(self):
-        image_data = sample_image_content()  # Read from a png file
-        cid = attach_inline_image(self.message, image_data)
+        image_filename = SAMPLE_IMAGE_FILENAME
+        image_path = sample_image_path(image_filename)
+        image_data = sample_image_content(image_filename)
+
+        cid = attach_inline_image_file(self.message, image_path)
         html_content = '<p>This has an <img src="cid:%s" alt="inline" /> image.</p>' % cid
         self.message.attach_alternative(html_content, "text/html")
 

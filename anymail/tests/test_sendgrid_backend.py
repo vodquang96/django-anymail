@@ -16,7 +16,7 @@ from django.test.utils import override_settings
 from django.utils.timezone import get_fixed_timezone, override as override_current_timezone
 
 from anymail.exceptions import AnymailAPIError, AnymailSerializationError, AnymailUnsupportedFeature
-from anymail.message import attach_inline_image
+from anymail.message import attach_inline_image_file
 
 from .mock_requests_backend import RequestsBackendMockAPITestCase
 from .utils import sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME, AnymailTestMixin
@@ -209,8 +209,11 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
                          ('Une pièce jointe.html', '<p>\u2019</p>', 'text/html'))
 
     def test_embedded_images(self):
-        image_data = sample_image_content()  # Read from a png file
-        cid = attach_inline_image(self.message, image_data)
+        image_filename = SAMPLE_IMAGE_FILENAME
+        image_path = sample_image_path(image_filename)
+        image_data = sample_image_content(image_filename)
+
+        cid = attach_inline_image_file(self.message, image_path)  # Read from a png file
         html_content = '<p>This has an <img src="cid:%s" alt="inline" /> image.</p>' % cid
         self.message.attach_alternative(html_content, "text/html")
 
@@ -219,11 +222,10 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
         self.assertEqual(data['html'], html_content)
 
         files = self.get_api_call_files()
-        filename = cid  # (for now)
         self.assertEqual(files, {
-            'files[%s]' % filename: (filename, image_data, "image/png"),
+            'files[%s]' % image_filename: (image_filename, image_data, "image/png"),
         })
-        self.assertEqual(data['content[%s]' % filename], cid)
+        self.assertEqual(data['content[%s]' % image_filename], cid)
 
     def test_attached_images(self):
         image_filename = SAMPLE_IMAGE_FILENAME

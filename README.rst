@@ -107,7 +107,7 @@ or any other supported ESP where you see "mailgun":
    .. code-block:: python
 
         from django.core.mail import EmailMultiAlternatives
-        from anymail.message import attach_inline_image
+        from anymail.message import attach_inline_image_file
 
         msg = EmailMultiAlternatives(
             subject="Please activate your account",
@@ -117,7 +117,7 @@ or any other supported ESP where you see "mailgun":
             reply_to=["Helpdesk <support@example.com>"])
 
         # Include an inline image in the html:
-        logo_cid = attach_inline_image(msg, open("logo.jpg", "rb").read())
+        logo_cid = attach_inline_image_file(msg, "/path/to/logo.jpg")
         html = """<img alt="Logo" src="cid:{logo_cid}">
                   <p>Please <a href="http://example.com/activate">activate</a>
                   your account</p>""".format(logo_cid=logo_cid)

@@ -10,8 +10,7 @@ from django.test.utils import override_settings
 from anymail.exceptions import AnymailAPIError
 from anymail.message import AnymailMessage
 
-from .utils import sample_image_content, AnymailTestMixin
-
+from .utils import AnymailTestMixin, sample_image_path
 
 SENDGRID_TEST_API_KEY = os.getenv('SENDGRID_TEST_API_KEY')
 
@@ -75,7 +74,7 @@ class SendGridBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         )
         message.attach("attachment1.txt", "Here is some\ntext for you", "text/plain")
         message.attach("attachment2.csv", "ID,Name\n1,Amy Lina", "text/csv")
-        cid = message.attach_inline_image(sample_image_content())
+        cid = message.attach_inline_image_file(sample_image_path())
         message.attach_alternative(
             "<p><b>HTML:</b> with <a href='http://example.com'>link</a>"
             "and image: <img src='cid:%s'></div>" % cid,
@@ -83,8 +82,6 @@ class SendGridBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
 
         message.send()
         self.assertEqual(message.anymail_status.status, {'queued'})  # SendGrid always queues
-        message_id = message.anymail_status.message_id
-        print(message_id)
 
     @override_settings(ANYMAIL_SENDGRID_API_KEY="Hey, that's not an API key!")
     def test_invalid_api_key(self):

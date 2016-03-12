@@ -12,8 +12,7 @@ from django.test.utils import override_settings
 from anymail.exceptions import AnymailAPIError
 from anymail.message import AnymailMessage
 
-from .utils import sample_image_content, AnymailTestMixin
-
+from .utils import AnymailTestMixin, sample_image_path
 
 MAILGUN_TEST_API_KEY = os.getenv('MAILGUN_TEST_API_KEY')
 MAILGUN_TEST_DOMAIN = os.getenv('MAILGUN_TEST_DOMAIN')
@@ -105,7 +104,7 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         )
         message.attach("attachment1.txt", "Here is some\ntext for you", "text/plain")
         message.attach("attachment2.csv", "ID,Name\n1,3", "text/csv")
-        cid = message.attach_inline_image(sample_image_content(), domain=MAILGUN_TEST_DOMAIN)
+        cid = message.attach_inline_image_file(sample_image_path(), domain=MAILGUN_TEST_DOMAIN)
         message.attach_alternative(
             "<div>This is the <i>html</i> body <img src='cid:%s'></div>" % cid,
             "text/html")

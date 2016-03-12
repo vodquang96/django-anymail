@@ -88,14 +88,14 @@ Changes to settings
   the values from :setting:`ANYMAIL_SEND_DEFAULTS`.
 
 ``MANDRILL_SUBACCOUNT``
-  Use :attr:`esp_extra` in :setting:`ANYMAIL_MANDRILL_SEND_DEFAULTS`:
+  Use :setting:`ANYMAIL_MANDRILL_SEND_DEFAULTS`:
 
     .. code-block:: python
 
         ANYMAIL = {
             ...
             "MANDRILL_SEND_DEFAULTS": {
-                "esp_extra": {"subaccount": "<your subaccount>"}
+                "subaccount": "<your subaccount>"
             }
         }
 
@@ -149,3 +149,17 @@ Changes to EmailMessage attributes
   to your code. In the future, the Mandrill-only attributes
   will be moved into the
   :attr:`~anymail.message.AnymailMessage.esp_extra` dict.
+
+**Inline images**
+  Djrill (incorrectly) used the presence of a :mailheader:`Content-ID`
+  header to decide whether to treat an image as inline. Anymail
+  looks for :mailheader:`Content-Disposition: inline`.
+
+  If you were constructing MIMEImage inline image attachments
+  for your Djrill messages, in addition to setting the Content-ID,
+  you should also add::
+
+      image.add_header('Content-Disposition', 'inline')
+
+  Or better yet, use Anymail's new :ref:`inline-images`
+  helper functions to attach your inline images.

@@ -73,14 +73,20 @@ will send.
 
 .. rubric:: Inline images
 
-If your message has any image attachments with :mailheader:`Content-ID` headers,
-Anymail will tell your ESP to treat them as inline images rather than ordinary
-attached files.
+If your message has any attachments with :mailheader:`Content-Disposition: inline`
+headers, Anymail will tell your ESP to treat them as inline rather than ordinary
+attached files. If you want to reference an attachment from an `<img>` in your
+HTML source, the attachment also needs a :mailheader:`Content-ID` header.
 
-You can construct an inline image attachment yourself with Python's
-:class:`python:email.mime.image.MIMEImage`, or you can use the convenience
-function :func:`~message.attach_inline_image` included with
-Anymail. See :ref:`inline-images` in the "Anymail additions" section.
+Anymail's comes with :func:`~message.attach_inline_image` and
+:func:`~message.attach_inline_image_file` convenience functions that
+do the right thing. See :ref:`inline-images` in the "Anymail additions" section.
+
+(If you prefer to do the work yourself, Python's :class:`~email.mime.image.MIMEImage`
+and :meth:`~email.message.Message.add_header` should be helpful.)
+
+Even if you mark an attachment as inline, some email clients may decide to also
+display it as an attachment. This is largely outside your control.
 
 
 .. _message-headers:

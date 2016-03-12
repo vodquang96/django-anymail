@@ -1,4 +1,6 @@
 from email.mime.image import MIMEImage
+from email.utils import unquote
+import os
 
 from django.core.mail import EmailMessage, EmailMultiAlternatives, make_msgid
 
@@ -28,23 +30,37 @@ class AnymailMessageMixin(object):
         # noinspection PyArgumentList
         super(AnymailMessageMixin, self).__init__(*args, **kwargs)
 
-    def attach_inline_image(self, content, subtype=None, idstring="img", domain=None):
+    def attach_inline_image_file(self, path, subtype=None, idstring="img", domain=None):
+        """Add inline image from file path to an EmailMessage, and return its content id"""
+        assert isinstance(self, EmailMessage)
+        return attach_inline_image_file(self, path, subtype, idstring, domain)
+
+    def attach_inline_image(self, content, filename=None, subtype=None, idstring="img", domain=None):
         """Add inline image and return its content id"""
         assert isinstance(self, EmailMessage)
-        return attach_inline_image(self, content, subtype, idstring, domain)
+        return attach_inline_image(self, content, filename, subtype, idstring, domain)
 
 
 class AnymailMessage(AnymailMessageMixin, EmailMultiAlternatives):
     pass
 
 
-def attach_inline_image(message, content, subtype=None, idstring="img", domain=None):
+def attach_inline_image_file(message, path, subtype=None, idstring="img", domain=None):
+    """Add inline image from file path to an EmailMessage, and return its content id"""
+    filename = os.path.basename(path)
+    with open(path, 'rb') as f:
+        content = f.read()
+    return attach_inline_image(message, content, filename, subtype, idstring, domain)
+
+
+def attach_inline_image(message, content, filename=None, subtype=None, idstring="img", domain=None):
     """Add inline image to an EmailMessage, and return its content id"""
-    cid = make_msgid(idstring, domain)  # Content ID per RFC 2045 section 7 (with <...>)
+    content_id = make_msgid(idstring, domain)  # Content ID per RFC 2045 section 7 (with <...>)
     image = MIMEImage(content, subtype)
-    image.add_header('Content-ID', cid)
+    image.add_header('Content-Disposition', 'inline', filename=filename)
+    image.add_header('Content-ID', content_id)
     message.attach(image)
-    return cid[1:-1]  # Without <...>, for use as the <img> tag src
+    return unquote(content_id)  # Without <...>, for use as the <img> tag src
 
 
 ANYMAIL_STATUSES = [
