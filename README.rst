@@ -27,7 +27,7 @@ Anymail: Multi-ESP transactional email for Django
 Anymail integrates several transactional email service providers (ESPs) into Django,
 using a consistent API that makes it (relatively) easy to switch between ESPs.
 
-It currently supports Mailgun and Mandrill. Postmark and SendGrid are coming soon.
+It currently supports Mailgun, Mandrill, and SendGrid. Postmark is coming soon.
 
 Anymail normalizes ESP functionality so it "just works" with Django's
 built-in `django.core.mail` package. It includes:
