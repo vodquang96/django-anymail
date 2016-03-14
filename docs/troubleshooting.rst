@@ -19,18 +19,15 @@ Figuring out what's wrong
 
 **Check your ESPs API logs**
 
-  Many ESPs offer an incredibly-helpful log
-  of your recent API calls in their dashboards. Check the logs to see if the
+  Most ESPs offer some sort of API activity log in their dashboards.
+  Check the logs to see if the
   data you thought you were sending actually made it to your ESP, and
   if they recorded any errors there.
 
 **Double-check common issues**
 
-  * Did you install Anymail with the ESPs you want available?
-    (E.g., `pip install django-anymail[mailgun,sendgrid]` --
-    *not* just `pip install django-anymail`.)
-  * Did you add any required settings for those ESPs to your settings.py?
-    (E.g., `ANYMAIL_MANDRILL_API_KEY`.)
+  * Did you add any required settings for your ESP to your settings.py?
+    (E.g., `ANYMAIL_SENDGRID_API_KEY` for SendGrid.) See :ref:`supported-esps`.
   * Did you add ``'anymail'`` to the list of :setting:`INSTALLED_APPS` in settings.py?
   * Are you using a valid from address? Django's default is "webmaster@localhost",
     which won't cut it. Either specify the ``from_email`` explicitly on every message

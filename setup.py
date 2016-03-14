@@ -31,11 +31,15 @@ setup(
     license="BSD License",
     packages=["anymail"],
     zip_safe=False,
-    install_requires=["django>=1.8", "six"],
+    install_requires=["django>=1.8", "requests>=2.4.3", "six"],
     extras_require={
-        "mailgun": ["requests>=2.4.3"],
-        "mandrill": ["requests>=1.0.0"],
-        "sendgrid": ["requests>=2.4.3"],
+        # This can be used if particular backends have unique dependencies
+        # (e.g., AWS-SES would want boto).
+        # For simplicity, requests is included in the base requirements.
+        "mailgun": [],
+        "mandrill": [],
+        "postmark": [],
+        "sendgrid": [],
     },
     include_package_data=True,
     test_suite="runtests.runtests",

@@ -1,14 +1,7 @@
 import json
 
 from django.core.exceptions import ImproperlyConfigured
-
-try:
-    from requests import HTTPError
-except ImportError:
-    # Backends that don't use requests aren't required to have it installed
-    # (and could never raise an AnymailRequestsAPIError)
-    class HTTPError(Exception):
-        pass
+from requests import HTTPError
 
 
 class AnymailError(Exception):

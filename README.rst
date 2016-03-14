@@ -72,11 +72,11 @@ Anymail 1-2-3
 This example uses Mailgun, but you can substitute Postmark or SendGrid
 or any other supported ESP where you see "mailgun":
 
-1. Install Anymail from PyPI, including the ESP(s) you want to use:
+1. Install Anymail from PyPI:
 
    .. code-block:: console
 
-        $ pip install django-anymail[mailgun]  # or [postmark,sendgrid] or ...
+        $ pip install django-anymail
 
 
 2. Edit your project's ``settings.py``:

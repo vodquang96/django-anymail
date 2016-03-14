@@ -1,17 +1,12 @@
 import json
 
+import requests
 # noinspection PyUnresolvedReferences
 from six.moves.urllib.parse import urljoin
 
 from .base import AnymailBaseBackend, BasePayload
-from ..exceptions import AnymailImproperlyInstalled, AnymailRequestsAPIError, AnymailSerializationError
+from ..exceptions import AnymailRequestsAPIError, AnymailSerializationError
 from .._version import __version__
-
-try:
-    # noinspection PyUnresolvedReferences
-    import requests
-except ImportError:
-    raise AnymailImproperlyInstalled('requests')
 
 
 class AnymailRequestsBackend(AnymailBaseBackend):

@@ -1,17 +1,13 @@
 from django.core.exceptions import ImproperlyConfigured
 from django.core.mail import make_msgid
+from requests.structures import CaseInsensitiveDict
 
-from ..exceptions import AnymailImproperlyInstalled, AnymailRequestsAPIError
+from ..exceptions import AnymailRequestsAPIError
 from ..message import AnymailRecipientStatus
 from ..utils import get_anymail_setting, timestamp
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload
 
-try:
-    # noinspection PyUnresolvedReferences
-    from requests.structures import CaseInsensitiveDict
-except ImportError:
-    raise AnymailImproperlyInstalled('requests', backend="sendgrid")
 
 
 class SendGridBackend(AnymailRequestsBackend):

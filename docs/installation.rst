@@ -6,24 +6,14 @@ Installation and configuration
 Installing Anymail
 ------------------
 
-Install Anymail from PyPI using pip.
-
-Anymail uses python setuptools' "extra features" to pull in dependencies
-for specific ESPs. (This avoids installing packages needed by ESPs
-you aren't using.)
-
-You'll want to include at least one ESP as an extra in your pip command.
-E.g., for Anymail with Mailgun support:
+It's easiest to install Anymail from PyPI using pip.
 
     .. code-block:: console
 
-        $ pip install django-anymail[mailgun]
+        $ pip install django-anymail
 
-...or with both Postmark and SendGrid support:
-
-    .. code-block:: console
-
-        $ pip install django-anymail[postmark,sendgrid]
+If you don't want to use pip, you'll also need to install Anymail's
+dependencies (requests and six).
 
 
 .. _backend-configuration:
