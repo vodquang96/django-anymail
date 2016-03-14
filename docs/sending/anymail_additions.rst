@@ -27,6 +27,8 @@ helpful if you are working with Python development tools that
 offer type checking or other static code analysis.
 
 
+.. _anymail-send-options:
+
 ESP send options (AnymailMessage)
 ---------------------------------
 
