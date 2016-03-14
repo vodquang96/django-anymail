@@ -1,14 +1,14 @@
 .. _mandrill-backend:
 
 Mandrill
---------
+========
 
 Anymail integrates with the `Mandrill <http://mandrill.com/>`_
 transactional email service from MailChimp.
 
 
 Settings
-========
+--------
 
 .. rubric:: EMAIL_BACKEND
 
@@ -50,8 +50,10 @@ which is the secure, production version of Mandrill's 1.0 API.
 (It's unlikely you would need to change this.)
 
 
-Mandrill esp_extra
-==================
+.. _mandrill-esp-extra:
+
+esp_extra support
+-----------------
 
 Anymail's Mandrill backend does not yet implement the
 :attr:`~anymail.message.AnymailMessage.esp_extra` feature.
@@ -60,7 +62,7 @@ Anymail's Mandrill backend does not yet implement the
 .. _migrating-from-djrill:
 
 Migrating from Djrill
-=====================
+---------------------
 
 Anymail has its origins as a fork of the `Djrill`_
 package, which supported only Mandrill. If you are migrating

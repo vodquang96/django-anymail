@@ -88,6 +88,8 @@ The default is ``SENDGRID_API_URL = "https://api.sendgrid.com/api/"``
 (It's unlikely you would need to change this.)
 
 
+.. _sendgrid-esp-extra:
+
 esp_extra support
 -----------------
 
@@ -132,7 +134,7 @@ Limitations and quirks
 
 **Message-ID**
   SendGrid does not return any sort of unique id from its send API call.
-  Knowing a sent message's ID can important for later queries about
+  Knowing a sent message's ID can be important for later queries about
   the message's status.
 
   To work around this, Anymail generates a new Message-ID for each

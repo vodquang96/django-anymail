@@ -1,7 +1,7 @@
 .. _mailgun-backend:
 
 Mailgun
--------
+=======
 
 Anymail integrates with the `Mailgun <https://mailgun.com>`_
 transactional email service from Rackspace, using their
@@ -9,7 +9,7 @@ REST API.
 
 
 Settings
-========
+--------
 
 .. rubric:: EMAIL_BACKEND
 
@@ -56,7 +56,7 @@ The default is ``MAILGUN_API_URL = "https://api.mailgun.net/v3"``
 .. _mailgun-sender-domain:
 
 Email sender domain
-===================
+-------------------
 
 Mailgun's API requires a sender domain `in the API url <base-url>`_.
 By default, Anymail will use the domain of each email's from address
@@ -86,8 +86,10 @@ to all messages:
 .. _base-url: https://documentation.mailgun.com/api-intro.html#base-url
 
 
-Mailgun esp_extra
-=================
+.. _mailgun-esp-extra:
+
+exp_extra support
+-----------------
 
 Anymail's Mailgun backend will pass all :attr:`~anymail.message.AnymailMessage.esp_extra`
 values directly to Mailgun. You can use any of the (non-file) parameters listed in the
