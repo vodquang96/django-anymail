@@ -1,3 +1,4 @@
+from django.core.exceptions import ImproperlyConfigured
 from django.core.mail import make_msgid
 
 from ..exceptions import AnymailImproperlyInstalled, AnymailRequestsAPIError
@@ -20,7 +21,16 @@ class SendGridBackend(AnymailRequestsBackend):
 
     def __init__(self, **kwargs):
         """Init options from Django settings"""
-        self.api_key = get_anymail_setting('SENDGRID_API_KEY', allow_bare=True)
+        # Auth requires *either* SENDGRID_API_KEY or SENDGRID_USERNAME+SENDGRID_PASSWORD
+        self.api_key = get_anymail_setting('SENDGRID_API_KEY', default=None, allow_bare=True)
+        self.username = get_anymail_setting('SENDGRID_USERNAME', default=None, allow_bare=True)
+        self.password = get_anymail_setting('SENDGRID_PASSWORD', default=None, allow_bare=True)
+        if self.api_key is None and self.username is None and self.password is None:
+            raise ImproperlyConfigured(
+                "You must set either SENDGRID_API_KEY or both SENDGRID_USERNAME and "
+                "SENDGRID_PASSWORD in your Django ANYMAIL settings."
+            )
+
         # This is SendGrid's Web API v2 (because the Web API v3 doesn't support sending)
         api_url = get_anymail_setting("SENDGRID_API_URL", "https://api.sendgrid.com/api/")
         if not api_url.endswith("/"):
@@ -53,9 +63,16 @@ class SendGridPayload(RequestsPayload):
         self.message_id = None  # Message-ID -- assigned in serialize_data unless provided in headers
         self.smtpapi = {}  # SendGrid x-smtpapi field
 
-        auth_headers = {'Authorization': 'Bearer ' + backend.api_key}
+        http_headers = kwargs.pop('headers', {})
+        query_params = kwargs.pop('params', {})
+        if backend.api_key is not None:
+            http_headers['Authorization'] = 'Bearer %s' % backend.api_key
+        else:
+            query_params['api_user'] = backend.username
+            query_params['api_key'] = backend.password
         super(SendGridPayload, self).__init__(message, defaults, backend,
-                                              headers=auth_headers, *args, **kwargs)
+                                              params=query_params, headers=http_headers,
+                                              *args, **kwargs)
 
     def get_api_endpoint(self):
         return "mail.send.json"

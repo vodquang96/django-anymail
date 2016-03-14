@@ -48,16 +48,35 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
         mail.send_mail('Subject here', 'Here is the message.',
                        'from@sender.example.com', ['to@example.com'], fail_silently=False)
         self.assert_esp_called('/api/mail.send.json')
-        headers = self.get_api_call_headers()
-        self.assertEqual(headers["Authorization"], "Bearer test_api_key")
+        http_headers = self.get_api_call_headers()
+        self.assertEqual(http_headers["Authorization"], "Bearer test_api_key")
+
+        query = self.get_api_call_params(required=False)
+        if query:
+            self.assertNotIn('api_user', query)
+            self.assertNotIn('api_key', query)
+
         data = self.get_api_call_data()
         self.assertEqual(data['subject'], "Subject here")
         self.assertEqual(data['text'], "Here is the message.")
         self.assertEqual(data['from'], "from@sender.example.com")
         self.assertEqual(data['to'], ["to@example.com"])
         # make sure backend assigned a Message-ID for event tracking
-        headers = json.loads(data['headers'])
-        self.assertRegex(headers['Message-ID'], r'\<.+@sender\.example\.com\>')  # id uses from_email's domain
+        email_headers = json.loads(data['headers'])
+        self.assertRegex(email_headers['Message-ID'], r'\<.+@sender\.example\.com\>')  # id uses from_email's domain
+
+    @override_settings(ANYMAIL={'SENDGRID_USERNAME': 'sg_username', 'SENDGRID_PASSWORD': 'sg_password'})
+    def test_user_pass_auth(self):
+        """Make sure alternative USERNAME/PASSWORD auth works"""
+        mail.send_mail('Subject here', 'Here is the message.',
+                       'from@sender.example.com', ['to@example.com'], fail_silently=False)
+        self.assert_esp_called('/api/mail.send.json')
+        query = self.get_api_call_params()
+        self.assertEqual(query['api_user'], 'sg_username')
+        self.assertEqual(query['api_key'], 'sg_password')
+        http_headers = self.get_api_call_headers(required=False)
+        if http_headers:
+            self.assertNotIn('Authorization', http_headers)
 
     def test_name_addr(self):
         """Make sure RFC2822 name-addr format (with display-name) is allowed
@@ -534,9 +553,11 @@ class SendGridBackendSendDefaultsTests(SendGridBackendMockAPITestCase):
 class SendGridBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin):
     """Test ESP backend without required settings in place"""
 
-    def test_missing_api_key(self):
+    def test_missing_auth(self):
         with self.assertRaises(ImproperlyConfigured) as cm:
             mail.send_mail('Subject', 'Message', 'from@example.com', ['to@example.com'])
         errmsg = str(cm.exception)
+        # Make sure the exception mentions all the auth keys:
         self.assertRegex(errmsg, r'\bSENDGRID_API_KEY\b')
-        self.assertRegex(errmsg, r'\bANYMAIL_SENDGRID_API_KEY\b')
+        self.assertRegex(errmsg, r'\bSENDGRID_USERNAME\b')
+        self.assertRegex(errmsg, r'\bSENDGRID_PASSWORD\b')

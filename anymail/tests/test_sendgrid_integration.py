@@ -4,6 +4,7 @@ import os
 import unittest
 from datetime import datetime, timedelta
 
+from django.core.mail import send_mail
 from django.test import SimpleTestCase
 from django.test.utils import override_settings
 
@@ -12,7 +13,12 @@ from anymail.message import AnymailMessage
 
 from .utils import AnymailTestMixin, sample_image_path
 
+# For API_KEY auth tests:
 SENDGRID_TEST_API_KEY = os.getenv('SENDGRID_TEST_API_KEY')
+
+# For USERNAME/PASSWORD auth tests:
+SENDGRID_TEST_USERNAME = os.getenv('SENDGRID_TEST_USERNAME')
+SENDGRID_TEST_PASSWORD = os.getenv('SENDGRID_TEST_PASSWORD')
 
 
 @unittest.skipUnless(SENDGRID_TEST_API_KEY,
@@ -91,3 +97,31 @@ class SendGridBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         self.assertEqual(err.status_code, 400)
         # Make sure the exception message includes SendGrid's response:
         self.assertIn("authorization grant is invalid", str(err))
+
+
+@unittest.skipUnless(SENDGRID_TEST_USERNAME and SENDGRID_TEST_PASSWORD,
+                     "Set SENDGRID_TEST_USERNAME and SENDGRID_TEST_PASSWORD"
+                     "environment variables to run SendGrid integration tests")
+@override_settings(ANYMAIL_SENDGRID_USERNAME=SENDGRID_TEST_USERNAME,
+                   ANYMAIL_SENDGRID_PASSWORD=SENDGRID_TEST_PASSWORD,
+                   EMAIL_BACKEND="anymail.backends.sendgrid.SendGridBackend")
+class SendGridBackendUserPassIntegrationTests(SimpleTestCase, AnymailTestMixin):
+    """SendGrid username/password API integration tests
+
+    (See notes above for the API-key tests)
+    """
+
+    def test_valid_auth(self):
+        sent_count = send_mail('Anymail SendGrid username/password integration test',
+                               'Text content', 'from@example.com', ['to@sink.sendgrid.net'])
+        self.assertEqual(sent_count, 1)
+
+    @override_settings(ANYMAIL_SENDGRID_PASSWORD="Hey, this isn't the password!")
+    def test_invalid_auth(self):
+        with self.assertRaises(AnymailAPIError) as cm:
+            send_mail('Anymail SendGrid username/password integration test',
+                      'Text content', 'from@example.com', ['to@sink.sendgrid.net'])
+        err = cm.exception
+        self.assertEqual(err.status_code, 400)
+        # Make sure the exception message includes SendGrid's response:
+        self.assertIn("Bad username / password", str(err))

@@ -31,10 +31,10 @@ their name with an uppercase "G", so Anymail does too.)
 
 .. rubric:: SENDGRID_API_KEY
 
-Required. A SendGrid API key with "Mail Send" permission.
-(Manage API keys in your `SendGrid API key settings`_.
-Anymail does not support SendGrid's earlier username/password
-authentication.)
+A SendGrid API key with "Mail Send" permission.
+(Manage API keys in your `SendGrid API key settings`_.)
+Either an API key or both :setting:`SENDGRID_USERNAME <ANYMAIL_SENDGRID_USERNAME>`
+and :setting:`SENDGRID_PASSWORD <ANYMAIL_SENDGRID_PASSWORD>` are required.
 
   .. code-block:: python
 
@@ -48,6 +48,34 @@ root of the settings file if neither ``ANYMAIL["SENDGRID_API_KEY"]``
 nor ``ANYMAIL_SENDGRID_API_KEY`` is set.
 
 .. _SendGrid API key settings: https://app.sendgrid.com/settings/api_keys
+
+
+.. setting:: ANYMAIL_SENDGRID_USERNAME
+.. setting:: ANYMAIL_SENDGRID_PASSWORD
+
+.. rubric:: SENDGRID_USERNAME and SENDGRID_PASSWORD
+
+SendGrid credentials with the "Mail" permission. You should **not**
+use the username/password that you use to log into SendGrid's
+dashboard. Create credentials specifically for sending mail in the
+`SendGrid credentials settings`_.
+
+  .. code-block:: python
+
+      ANYMAIL = {
+          ...
+          "SENDGRID_USERNAME": "<sendgrid credential with Mail permission>",
+          "SENDGRID_PASSWORD": "<password for that credential>",
+      }
+
+Either username/password or :setting:`SENDGRID_API_KEY <ANYMAIL_SENDGRID_API_KEY>`
+are required (but not both).
+
+Anymail will also look for ``SENDGRID_USERNAME`` and ``SENDGRID_PASSWORD`` at the
+root of the settings file if neither ``ANYMAIL["SENDGRID_USERNAME"]``
+nor ``ANYMAIL_SENDGRID_USERNAME`` is set.
+
+.. _SendGrid credentials settings: https://app.sendgrid.com/settings/credentials
 
 
 .. setting:: ANYMAIL_SENDGRID_API_URL
