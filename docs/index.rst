@@ -1,12 +1,14 @@
-Anymail: Multi-ESP transactional email for Django
-=================================================
+Anymail: Django email backends for Mailgun, Postmark, SendGrid and more
+=======================================================================
 
 Version |release|
 
 .. attention:: **EARLY DEVELOPMENT**
 
    This project is undergoing rapid development to get to a 1.0 release.
-   You should expect frequent, possibly-breaking changes until 1.0 alpha.
+   Before 1.0, minor version bumps might include breaking changes.
+   Please check the
+   `release notes <https://github.com/anymail/django-anymail/releases>`_
 
    If you are switching to Anymail from `Djrill`_,
    see the notes on :ref:`migrating-from-djrill`

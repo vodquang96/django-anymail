@@ -23,8 +23,8 @@ with open('README.rst') as f:
 setup(
     name="django-anymail",
     version=__version__,
-    description='Multi-ESP transactional email for Django',
-    keywords="django, email, email backend, mailgun, mandrill, postmark, sendgrid",
+    description='Django email backends for Mailgun, Postmark, SendGrid and other transactional ESPs',
+    keywords="django, email, email backend, ESP, transactional mail, mailgun, mandrill, postmark, sendgrid",
     author="Mike Edmunds <medmunds@gmail.com>",
     author_email="medmunds@gmail.com",
     url="https://github.com/anymail/anymail/",
