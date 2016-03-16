@@ -56,6 +56,9 @@ Anymail releases follow `semantic versioning <http://semver.org/>`_.
        :target: https://travis-ci.org/anymail/django-anymail
        :alt:    build status on Travis-CI
 
+.. image:: https://readthedocs.org/projects/anymail/badge/?version=latest
+       :target: http://anymail.readthedocs.org/en/latest/
+       :alt:    documentation on ReadTheDocs
 
 **Resources**
 
