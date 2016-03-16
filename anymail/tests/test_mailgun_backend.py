@@ -16,7 +16,7 @@ from django.utils.timezone import get_fixed_timezone, override as override_curre
 from anymail.exceptions import AnymailAPIError, AnymailSerializationError, AnymailUnsupportedFeature
 from anymail.message import attach_inline_image_file
 
-from .mock_requests_backend import RequestsBackendMockAPITestCase
+from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
 from .utils import sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME, AnymailTestMixin
 
 
@@ -437,6 +437,11 @@ class MailgunBackendRecipientsRefusedTests(MailgunBackendMockAPITestCase):
         sent = mail.send_mail('Subject', 'Body', 'from@example.com', ['not a valid email'],
                               fail_silently=True)
         self.assertEqual(sent, 0)
+
+
+class MailgunBackendSessionSharingTestCase(SessionSharingTestCasesMixin, MailgunBackendMockAPITestCase):
+    """Requests session sharing tests"""
+    pass  # tests are defined in the mixin
 
 
 @override_settings(ANYMAIL_SEND_DEFAULTS={

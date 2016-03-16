@@ -4,20 +4,22 @@ import os
 import unittest
 
 from django.core import mail
-from django.test import TestCase
+from django.test import SimpleTestCase
 from django.test.utils import override_settings
 
 from anymail.exceptions import AnymailAPIError, AnymailRecipientsRefused
+from anymail.message import AnymailMessage
 
+from .utils import AnymailTestMixin, sample_image_path
 
 MANDRILL_TEST_API_KEY = os.getenv('MANDRILL_TEST_API_KEY')
 
 
 @unittest.skipUnless(MANDRILL_TEST_API_KEY,
-            "Set MANDRILL_TEST_API_KEY environment variable to run integration tests")
+                     "Set MANDRILL_TEST_API_KEY environment variable to run integration tests")
 @override_settings(MANDRILL_API_KEY=MANDRILL_TEST_API_KEY,
                    EMAIL_BACKEND="anymail.backends.mandrill.MandrillBackend")
-class DjrillIntegrationTests(TestCase):
+class MandrillBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     """Mandrill API integration tests
 
     These tests run against the **live** Mandrill API, using the
@@ -30,11 +32,12 @@ class DjrillIntegrationTests(TestCase):
     """
 
     def setUp(self):
-        self.message = mail.EmailMultiAlternatives(
-            'Subject', 'Text content', 'from@example.com', ['to@example.com'])
+        super(MandrillBackendIntegrationTests, self).setUp()
+        self.message = mail.EmailMultiAlternatives('Anymail Mandrill integration test', 'Text content',
+                                                   'from@example.com', ['to@example.com'])
         self.message.attach_alternative('<p>HTML content</p>', "text/html")
 
-    def test_send_mail(self):
+    def test_simple_send(self):
         # Example of getting the Mandrill send status and _id from the message
         sent_count = self.message.send()
         self.assertEqual(sent_count, 1)
@@ -50,16 +53,41 @@ class DjrillIntegrationTests(TestCase):
         self.assertEqual(anymail_status.status, {sent_status})  # set of all recipient statuses
         self.assertEqual(anymail_status.message_id, message_id)  # because only a single recipient (else would be a set)
 
+    def test_all_options(self):
+        message = AnymailMessage(
+            subject="Anymail all-options integration test",
+            body="This is the text body",
+            from_email="Test From <from@example.com>",
+            to=["to1@example.com", "Recipient 2 <to2@example.com>"],
+            cc=["cc1@example.com", "Copy 2 <cc2@example.com>"],
+            bcc=["bcc1@example.com", "Blind Copy 2 <bcc2@example.com>"],
+            reply_to=["reply1@example.com", "Reply 2 <reply2@example.com>"],
+            headers={"X-Anymail-Test": "value"},
+
+            # no metadata, send_at, track_clicks support
+            tags=["tag 1"],  # max one tag
+            track_opens=True,
+        )
+        message.attach("attachment1.txt", "Here is some\ntext for you", "text/plain")
+        message.attach("attachment2.csv", "ID,Name\n1,Amy Lina", "text/csv")
+        cid = message.attach_inline_image_file(sample_image_path())
+        message.attach_alternative(
+            "<p><b>HTML:</b> with <a href='http://example.com'>link</a>"
+            "and image: <img src='cid:%s'></div>" % cid,
+            "text/html")
+
+        message.send()
+        self.assertTrue(message.anymail_status.status.issubset({'queued', 'sent'}))
+
     def test_invalid_from(self):
         # Example of trying to send from an invalid address
         # Mandrill returns a 500 response (which raises a MandrillAPIError)
         self.message.from_email = 'webmaster@localhost'  # Django default DEFAULT_FROM_EMAIL
-        try:
+        with self.assertRaises(AnymailAPIError) as cm:
             self.message.send()
-            self.fail("This line will not be reached, because send() raised an exception")
-        except AnymailAPIError as err:
-            self.assertEqual(err.status_code, 500)
-            self.assertIn("email address is invalid", str(err))
+        err = cm.exception
+        self.assertEqual(err.status_code, 500)
+        self.assertIn("email address is invalid", str(err))
 
     def test_invalid_to(self):
         # Example of detecting when a recipient is not a valid email address
@@ -102,9 +130,9 @@ class DjrillIntegrationTests(TestCase):
     @override_settings(MANDRILL_API_KEY="Hey, that's not an API key!")
     def test_invalid_api_key(self):
         # Example of trying to send with an invalid MANDRILL_API_KEY
-        try:
+        with self.assertRaises(AnymailAPIError) as cm:
             self.message.send()
-            self.fail("This line will not be reached, because send() raised an exception")
-        except AnymailAPIError as err:
-            self.assertEqual(err.status_code, 500)
-            self.assertIn("Invalid API key", str(err))
+        err = cm.exception
+        self.assertEqual(err.status_code, 500)
+        # Make sure the exception message includes Mandrill's response:
+        self.assertIn("Invalid API key", str(err))

@@ -1,9 +1,12 @@
 import json
 
+from django.core import mail
 from django.test import SimpleTestCase
 import requests
 import six
 from mock import patch
+
+from anymail.exceptions import AnymailAPIError
 
 from .utils import AnymailTestMixin
 
@@ -25,9 +28,9 @@ class RequestsBackendMockAPITestCase(SimpleTestCase, AnymailTestMixin):
 
     def setUp(self):
         super(RequestsBackendMockAPITestCase, self).setUp()
-        self.patch = patch('requests.Session.request', autospec=True)
-        self.mock_request = self.patch.start()
-        self.addCleanup(self.patch.stop)
+        self.patch_request = patch('requests.Session.request', autospec=True)
+        self.mock_request = self.patch_request.start()
+        self.addCleanup(self.patch_request.stop)
         self.set_mock_response()
 
     def set_mock_response(self, status_code=200, raw=UNSET, encoding='utf-8'):
@@ -101,3 +104,73 @@ class RequestsBackendMockAPITestCase(SimpleTestCase, AnymailTestMixin):
     def assert_esp_not_called(self, msg=None):
         if self.mock_request.called:
             raise AssertionError(msg or "ESP API was called and shouldn't have been")
+
+
+# noinspection PyUnresolvedReferences
+class SessionSharingTestCasesMixin(object):
+    """Mixin that tests connection sharing in any RequestsBackendMockAPITestCase
+
+    (Contains actual test cases, so can't be included in RequestsBackendMockAPITestCase
+    itself, as that would re-run these tests several times for each backend, in
+    each TestCase for the backend.)
+    """
+
+    def setUp(self):
+        super(SessionSharingTestCasesMixin, self).setUp()
+        self.patch_close = patch('requests.Session.close', autospec=True)
+        self.mock_close = self.patch_close.start()
+        self.addCleanup(self.patch_close.stop)
+
+    def test_connection_sharing(self):
+        """RequestsBackend reuses one requests session when sending multiple messages"""
+        datatuple = (
+            ('Subject 1', 'Body 1', 'from@example.com', ['to@example.com']),
+            ('Subject 2', 'Body 2', 'from@example.com', ['to@example.com']),
+        )
+        mail.send_mass_mail(datatuple)
+        self.assertEqual(self.mock_request.call_count, 2)
+        session1 = self.mock_request.call_args_list[0][0]  # arg[0] (self) is session
+        session2 = self.mock_request.call_args_list[1][0]
+        self.assertEqual(session1, session2)
+        self.assertEqual(self.mock_close.call_count, 1)
+
+    def test_caller_managed_connections(self):
+        """Calling code can created long-lived connection that it opens and closes"""
+        connection = mail.get_connection()
+        connection.open()
+        mail.send_mail('Subject 1', 'body', 'from@example.com', ['to@example.com'], connection=connection)
+        session1 = self.mock_request.call_args[0]
+        self.assertEqual(self.mock_close.call_count, 0)  # shouldn't be closed yet
+
+        mail.send_mail('Subject 2', 'body', 'from@example.com', ['to@example.com'], connection=connection)
+        self.assertEqual(self.mock_close.call_count, 0)  # still shouldn't be closed
+        session2 = self.mock_request.call_args[0]
+        self.assertEqual(session1, session2)  # should have reused same session
+
+        connection.close()
+        self.assertEqual(self.mock_close.call_count, 1)
+
+    def test_session_closed_after_exception(self):
+        self.set_mock_response(status_code=500)
+        with self.assertRaises(AnymailAPIError):
+            mail.send_mail('Subject', 'Message', 'from@example.com', ['to@example.com'])
+        self.assertEqual(self.mock_close.call_count, 1)
+
+    def test_session_closed_after_fail_silently_exception(self):
+        self.set_mock_response(status_code=500)
+        sent = mail.send_mail('Subject', 'Message', 'from@example.com', ['to@example.com'],
+                              fail_silently=True)
+        self.assertEqual(sent, 0)
+        self.assertEqual(self.mock_close.call_count, 1)
+
+    def test_caller_managed_session_closed_after_exception(self):
+        connection = mail.get_connection()
+        connection.open()
+        self.set_mock_response(status_code=500)
+        with self.assertRaises(AnymailAPIError):
+            mail.send_mail('Subject', 'Message', 'from@example.com', ['to@example.com'],
+                           connection=connection)
+        self.assertEqual(self.mock_close.call_count, 0)  # wait for us to close it
+
+        connection.close()
+        self.assertEqual(self.mock_close.call_count, 1)

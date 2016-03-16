@@ -16,7 +16,7 @@ from anymail.exceptions import (AnymailAPIError, AnymailSerializationError,
                                 AnymailUnsupportedFeature, AnymailRecipientsRefused)
 from anymail.message import attach_inline_image_file
 
-from .mock_requests_backend import RequestsBackendMockAPITestCase
+from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
 from .utils import sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME, AnymailTestMixin, decode_att
 
 
@@ -515,6 +515,11 @@ class PostmarkBackendRecipientsRefusedTests(PostmarkBackendMockAPITestCase):
         self.assertEqual(status.recipients['hardbounce@example.com'].status, 'rejected')
         self.assertEqual(status.recipients['valid@example.com'].status, 'sent')
         self.assertEqual(status.recipients['spam@example.com'].status, 'rejected')
+
+
+class PostmarkBackendSessionSharingTestCase(SessionSharingTestCasesMixin, PostmarkBackendMockAPITestCase):
+    """Requests session sharing tests"""
+    pass  # tests are defined in the mixin
 
 
 @override_settings(ANYMAIL_SEND_DEFAULTS={
