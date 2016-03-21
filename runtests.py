@@ -52,7 +52,7 @@ except ImportError:
 
 def runtests(*args):
     test_runner = TestRunner(verbosity=1)
-    test_labels = args if len(args) > 0 else [APP]
+    test_labels = args if len(args) > 0 else ['tests']
     failures = test_runner.run_tests(test_labels)
     sys.exit(failures)
 

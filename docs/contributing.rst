@@ -78,6 +78,6 @@ get from from environment variables. Look in the ``*_integration_tests.py``
 files in the `tests source`_ for specific requirements.
 
 .. _.travis.yml: https://github.com/anymail/django-anymail/blob/master/.travis.yml
-.. _tests source: https://github.com/anymail/django-anymail/blob/master/anymail/tests
+.. _tests source: https://github.com/anymail/django-anymail/blob/master/tests
 .. _mock: http://www.voidspace.org.uk/python/mock/index.html
 .. _tested on Travis: https://travis-ci.org/anymail/django-anymail
