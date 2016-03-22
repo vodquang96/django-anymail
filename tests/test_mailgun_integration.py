@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 
 import os
+import logging
 import unittest
 from datetime import datetime, timedelta
 from time import mktime, sleep
@@ -43,7 +44,7 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         self.message.attach_alternative('<p>HTML content</p>', "text/html")
 
     def fetch_mailgun_events(self, message_id, event=None,
-                             initial_delay=2, retry_delay=1, max_retries=5):
+                             initial_delay=2, retry_delay=2, max_retries=5):
         """Return list of Mailgun events related to message_id"""
         url = "https://api.mailgun.net/v3/%s/events" % MAILGUN_TEST_DOMAIN
         auth = ("api", MAILGUN_TEST_API_KEY)
@@ -58,14 +59,28 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         # It can take a few seconds for the events to show up
         # in Mailgun's logs, so retry a few times if necessary:
         sleep(initial_delay)
+        response = None
         for retry in range(max_retries):
             if retry > 0:
                 sleep(retry_delay)
             response = requests.get(url, auth=auth, params=params)
-            response.raise_for_status()
-            items = response.json()["items"]
-            if len(items) > 0:
-                return items
+            if 200 == response.status_code:
+                items = response.json()["items"]
+                if len(items) > 0:
+                    return items
+                # else no matching events found yet, so try again after delay
+            elif 500 <= response.status_code < 600:
+                # server error (hopefully transient); try again after delay
+                pass
+            elif 403 == response.status_code:
+                # "forbidden": this may be related to API throttling; try again after delay
+                pass
+            else:
+                response.raise_for_status()
+        # Max retries exceeded:
+        if response is not None and 200 != response.status_code:
+            logging.warning("Ignoring Mailgun events API error %d:\n%s"
+                            % (response.status_code, response.text))
         return None
 
     def test_simple_send(self):
