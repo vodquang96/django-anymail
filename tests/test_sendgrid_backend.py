@@ -64,6 +64,9 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
         # make sure backend assigned a Message-ID for event tracking
         email_headers = json.loads(data['headers'])
         self.assertRegex(email_headers['Message-ID'], r'\<.+@sender\.example\.com\>')  # id uses from_email's domain
+        # make sure we added the unquoted Message-ID to unique_args for event notification
+        smtpapi = self.get_smtpapi()
+        self.assertEqual(email_headers['Message-ID'], '<{}>'.format(smtpapi['unique_args']['smtp-id']))
 
     @override_settings(ANYMAIL={'SENDGRID_USERNAME': 'sg_username', 'SENDGRID_PASSWORD': 'sg_password'})
     def test_user_pass_auth(self):
@@ -123,6 +126,10 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
             'Message-ID': 'mycustommsgid@sales.example.com',
             'Reply-To': 'another@example.com',
             'X-MyHeader': 'my value',
+        })
+        # make sure custom Message-ID also added to unique_args
+        self.assertJSONEqual(data['x-smtpapi'], {
+            'unique_args': {'smtp-id': 'mycustommsgid@sales.example.com'}
         })
 
     def test_html_message(self):
@@ -347,6 +354,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         self.message.metadata = {'user_id': "12345", 'items': 6}
         self.message.send()
         smtpapi = self.get_smtpapi()
+        smtpapi['unique_args'].pop('smtp-id', None)  # remove Message-ID we added as tracking workaround
         self.assertEqual(smtpapi['unique_args'], {'user_id': "12345", 'items': 6})
 
     def test_send_at(self):
@@ -401,6 +409,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         self.assertEqual(smtpapi['filters']['clicktrack'], {'settings': {'enable': 1}})
         self.assertEqual(smtpapi['filters']['opentrack'], {'settings': {'enable': 0}})
 
+    @override_settings(ANYMAIL_SENDGRID_GENERATE_MESSAGE_ID=False)  # else we force unique_args
     def test_default_omits_options(self):
         """Make sure by default we don't send any ESP-specific options.
 
@@ -508,6 +517,7 @@ class SendGridBackendSendDefaultsTests(SendGridBackendMockAPITestCase):
         data = self.get_api_call_data()
         smtpapi = self.get_smtpapi()
         # All these values came from ANYMAIL_SEND_DEFAULTS:
+        smtpapi['unique_args'].pop('smtp-id', None)  # remove Message-ID we added as tracking workaround
         self.assertEqual(smtpapi['unique_args'], {'global': 'globalvalue', 'other': 'othervalue'})
         self.assertEqual(smtpapi['category'], ['globaltag'])
         self.assertEqual(smtpapi['filters']['clicktrack']['settings']['enable'], 1)
@@ -525,6 +535,7 @@ class SendGridBackendSendDefaultsTests(SendGridBackendMockAPITestCase):
         data = self.get_api_call_data()
         smtpapi = self.get_smtpapi()
         # All these values came from ANYMAIL_SEND_DEFAULTS + message.*:
+        smtpapi['unique_args'].pop('smtp-id', None)  # remove Message-ID we added as tracking workaround
         self.assertEqual(smtpapi['unique_args'], {
             'global': 'globalvalue',
             'message': 'messagevalue',  # additional metadata
@@ -547,6 +558,7 @@ class SendGridBackendSendDefaultsTests(SendGridBackendMockAPITestCase):
         data = self.get_api_call_data()
         smtpapi = self.get_smtpapi()
         # All these values came from ANYMAIL_SEND_DEFAULTS plus ANYMAIL_SENDGRID_SEND_DEFAULTS:
+        smtpapi['unique_args'].pop('smtp-id', None)  # remove Message-ID we added as tracking workaround
         self.assertEqual(smtpapi['unique_args'], {'esp': 'espvalue'})  # entire metadata overridden
         self.assertCountEqual(smtpapi['category'], ['esptag'])  # entire tags overridden
         self.assertEqual(smtpapi['filters']['clicktrack']['settings']['enable'], 1)  # no override

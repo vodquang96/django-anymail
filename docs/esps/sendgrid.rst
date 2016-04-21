@@ -78,6 +78,17 @@ nor ``ANYMAIL_SENDGRID_USERNAME`` is set.
 .. _SendGrid credentials settings: https://app.sendgrid.com/settings/credentials
 
 
+.. setting:: ANYMAIL_SENDGRID_GENERATE_MESSAGE_ID
+
+.. rubric:: SENDGRID_GENERATE_MESSAGE_ID
+
+Whether Anymail should generate a Message-ID for messages sent
+through SendGrid, to facilitate event tracking.
+
+Default ``True``. You can set to ``False`` to disable this behavior.
+See :ref:`Message-ID quirks <sendgrid-message-id>` below.
+
+
 .. setting:: ANYMAIL_SENDGRID_API_URL
 
 .. rubric:: SENDGRID_API_URL
@@ -132,22 +143,29 @@ Limitations and quirks
   make sure each one has a unique, non-empty filename.
 
 
+.. _sendgrid-message-id:
+
 **Message-ID**
   SendGrid does not return any sort of unique id from its send API call.
   Knowing a sent message's ID can be important for later queries about
   the message's status.
 
-  To work around this, Anymail generates a new Message-ID for each
+  To work around this, Anymail by default generates a new Message-ID for each
   outgoing message, provides it to SendGrid, and includes it in the
   :attr:`~anymail.message.AnymailMessage.anymail_status`
   attribute after you send the message.
 
   In later SendGrid API calls, you can match that Message-ID
-  to SendGrid's ``smtp-id`` event field.
+  to SendGrid's ``smtp-id`` event field. (Anymail uses an additional
+  workaround to ensure smtp-id is included in all SendGrid events,
+  even those that aren't documented to include it.)
 
   Anymail will use the domain of the message's :attr:`from_email`
   to generate the Message-ID. (If this isn't desired, you can supply
   your own Message-ID in the message's :attr:`extra_headers`.)
+
+  To disable all of these Message-ID workarounds, set
+  :setting:`ANYMAIL_SENDGRID_GENERATE_MESSAGE_ID` to False in your settings.
 
 
 **Invalid Addresses**

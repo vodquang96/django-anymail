@@ -1,3 +1,5 @@
+from email.utils import unquote
+
 from django.core.exceptions import ImproperlyConfigured
 from django.core.mail import make_msgid
 from requests.structures import CaseInsensitiveDict
@@ -7,7 +9,6 @@ from ..message import AnymailRecipientStatus
 from ..utils import get_anymail_setting, timestamp
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload
-
 
 
 class SendGridBackend(AnymailRequestsBackend):
@@ -26,6 +27,8 @@ class SendGridBackend(AnymailRequestsBackend):
                 "You must set either SENDGRID_API_KEY or both SENDGRID_USERNAME and "
                 "SENDGRID_PASSWORD in your Django ANYMAIL settings."
             )
+
+        self.generate_message_id = get_anymail_setting('SENDGRID_GENERATE_MESSAGE_ID', default=True)
 
         # This is SendGrid's Web API v2 (because the Web API v3 doesn't support sending)
         api_url = get_anymail_setting("SENDGRID_API_URL", "https://api.sendgrid.com/api/")
@@ -56,6 +59,7 @@ class SendGridPayload(RequestsPayload):
 
     def __init__(self, message, defaults, backend, *args, **kwargs):
         self.all_recipients = []  # used for backend.parse_recipient_status
+        self.generate_message_id = backend.generate_message_id
         self.message_id = None  # Message-ID -- assigned in serialize_data unless provided in headers
         self.smtpapi = {}  # SendGrid x-smtpapi field
 
@@ -76,6 +80,9 @@ class SendGridPayload(RequestsPayload):
     def serialize_data(self):
         """Performs any necessary serialization on self.data, and returns the result."""
 
+        if self.generate_message_id:
+            self.ensure_message_id()
+
         # Serialize x-smtpapi to json:
         if len(self.smtpapi) > 0:
             # If esp_extra was also used to set x-smtpapi, need to merge it
@@ -86,15 +93,25 @@ class SendGridPayload(RequestsPayload):
         elif "x-smtpapi" in self.data:
             self.data["x-smtpapi"] = self.serialize_json(self.data["x-smtpapi"])
 
-        # Add our own message_id, and serialize extra headers to json:
+        # Serialize extra headers to json:
         headers = self.data["headers"]
-        try:
-            self.message_id = headers["Message-ID"]
-        except KeyError:
-            self.message_id = headers["Message-ID"] = self.make_message_id()
         self.data["headers"] = self.serialize_json(dict(headers.items()))
 
         return self.data
+
+    def ensure_message_id(self):
+        """Ensure message has a known Message-ID for later event tracking"""
+        headers = self.data["headers"]
+        if "Message-ID" not in headers:
+            # Only make our own if caller hasn't already provided one
+            headers["Message-ID"] = self.make_message_id()
+        self.message_id = headers["Message-ID"]
+
+        # Workaround for missing message ID (smtp-id) in SendGrid engagement events
+        # (click and open tracking): because unique_args get merged into the raw event
+        # record, we can supply the 'smtp-id' field for any events missing it.
+        # Must use the unquoted (no <angle brackets>) version to match other SendGrid APIs.
+        self.smtpapi.setdefault('unique_args', {})['smtp-id'] = unquote(self.message_id)
 
     def make_message_id(self):
         """Returns a Message-ID that could be used for this payload
