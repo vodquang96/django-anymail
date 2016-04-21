@@ -79,4 +79,4 @@ class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         err = cm.exception
         self.assertEqual(err.status_code, 401)
         # Make sure the exception message includes Postmark's response:
-        self.assertIn("Bad or missing Server API token", str(err))
+        self.assertIn("Please verify that you are using a valid token", str(err))
