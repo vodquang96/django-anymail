@@ -70,6 +70,29 @@ def last(*args):
     return UNSET
 
 
+def getfirst(dct, keys, default=UNSET):
+    """Returns the value of the first of keys found in dict dct.
+
+    >>> getfirst({'a': 1, 'b': 2}, ['c', 'a'])
+    1
+    >>> getfirst({'a': 1, 'b': 2}, ['b', 'a'])
+    2
+    >>> getfirst({'a': 1, 'b': 2}, ['c'])
+    KeyError
+    >>> getfirst({'a': 1, 'b': 2}, ['c'], None)
+    None
+    """
+    for key in keys:
+        try:
+            return dct[key]
+        except KeyError:
+            pass
+    if default is UNSET:
+        raise KeyError("None of %s found in dict" % ', '.join(keys))
+    else:
+        return default
+
+
 class ParsedEmail(object):
     """A sanitized, full email address with separate name and email properties"""
 
@@ -213,6 +236,27 @@ def get_anymail_setting(name, default=UNSET, esp_name=None, kwargs=None, allow_b
                 raise AnymailConfigurationError(message)
             else:
                 return default
+
+
+def collect_all_methods(cls, method_name):
+    """Return list of all `method_name` methods for cls and its superclass chain.
+
+    List is in MRO order, with no duplicates. Methods are unbound.
+
+    (This is used to simplify mixins and subclasses that contribute to a method set,
+    without requiring superclass chaining, and without requiring cooperating
+    superclasses.)
+    """
+    methods = []
+    for ancestor in cls.__mro__:
+        try:
+            validator = getattr(ancestor, method_name)
+        except AttributeError:
+            pass
+        else:
+            if validator not in methods:
+                methods.append(validator)
+    return methods
 
 
 EPOCH = datetime(1970, 1, 1, tzinfo=utc)

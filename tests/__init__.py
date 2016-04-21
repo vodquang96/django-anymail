@@ -11,8 +11,8 @@ from .test_postmark_backend import *
 from .test_postmark_integration import *
 
 from .test_sendgrid_backend import *
+from .test_sendgrid_webhooks import *
 from .test_sendgrid_integration import *
 
 # Djrill leftovers:
 from .test_mandrill_djrill_features import *
-from .test_mandrill_webhook import *

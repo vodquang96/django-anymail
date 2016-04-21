@@ -36,13 +36,13 @@ Email Service Provider                        |Mailgun|  |Mandrill|  |Postmark| 
 :attr:`~AnymailMessage.track_clicks`          Yes        Yes         No          Yes
 :attr:`~AnymailMessage.track_opens`           Yes        Yes         Yes         Yes
 
-.. rubric:: :ref:`Status <esp-send-status>` and tracking
+.. rubric:: :ref:`Status <esp-send-status>` and :ref:`event tracking <event-tracking>`
 -------------------------------------------------------------------------------------------
 :attr:`~AnymailMessage.anymail_status`        Yes        Yes         Yes         Yes
+|AnymailTrackingEvent| from webhooks          Yes        Yes         Yes         Yes
 ===========================================   =========  ==========  ==========  ==========
 
 
-.. Status tracking webhooks                  (coming)...
 .. .. rubric:: :ref:`inbound`
 .. -------------------------------------------------------------------------------------------
 .. Inbound webhooks                          (coming)...
@@ -56,6 +56,7 @@ meaningless. (And even specific features don't matter if you don't plan to use t
 .. |Mandrill| replace:: :ref:`mandrill-backend`
 .. |Postmark| replace:: :ref:`postmark-backend`
 .. |SendGrid| replace:: :ref:`sendgrid-backend`
+.. |AnymailTrackingEvent| replace:: :class:`~anymail.signals.AnymailTrackingEvent`
 
 
 Other ESPs

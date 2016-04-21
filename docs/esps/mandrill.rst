@@ -56,6 +56,31 @@ root of the settings file if neither ``ANYMAIL["MANDRILL_API_KEY"]``
 nor ``ANYMAIL_MANDRILL_API_KEY`` is set.
 
 
+.. setting:: ANYMAIL_MANDRILL_WEBHOOK_KEY
+
+.. rubric:: MANDRILL_WEBHOOK_KEY
+
+Required if using Anymail's webhooks. The "webhook authentication key"
+issued by Mandrill.
+`More info <https://mandrill.zendesk.com/hc/en-us/articles/205583257>`_
+in Mandrill's KB.
+
+
+.. setting:: ANYMAIL_MANDRILL_WEBHOOK_URL
+
+.. rubric:: MANDRILL_WEBHOOK_URL
+
+Required only if using Anymail's webhooks *and* the hostname your
+Django server sees is different from the public webhook URL
+you provided Mandrill. (E.g., if you have a proxy in front
+of your Django server that forwards
+"https\://yoursite.example.com" to "http\://localhost:8000/").
+
+If you are seeing :exc:`AnymailWebhookValidationFailure` errors
+from your webhooks, set this to the exact webhook URL you entered
+in Mandrill's settings.
+
+
 .. setting:: ANYMAIL_MANDRILL_API_URL
 
 .. rubric:: MANDRILL_API_URL
@@ -74,6 +99,41 @@ esp_extra support
 
 Anymail's Mandrill backend does not yet implement the
 :attr:`~anymail.message.AnymailMessage.esp_extra` feature.
+
+
+.. _mandrill-webhooks:
+
+Status tracking webhooks
+------------------------
+
+If you are using Anymail's normalized :ref:`status tracking <event-tracking>`,
+follow `Mandrill's instructions`_ to add Anymail's webhook URL:
+
+   :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/mandrill/tracking/`
+
+     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
+     * *yoursite.example.com* is your Django site
+
+Be sure to check the boxes in the Mandrill settings for the event types you want to receive.
+The same Anymail tracking URL can handle all Mandrill "message" and "sync" events.
+
+Mandrill implements webhook signing on the entire event payload, and Anymail will
+verify the signature. You must set :setting:`ANYMAIL_MANDRILL_WEBHOOK_KEY` to the
+webhook key authentication key issued by Mandrill. You may also need to set
+:setting:`ANYMAIL_MANDRILL_WEBHOOK_URL` depending on your server config.
+
+Mandrill will report these Anymail :attr:`~anymail.signals.AnymailTrackingEvent.event_type`\s:
+sent, rejected, deferred, bounced, opened, clicked, complained, unsubscribed. Mandrill does
+not support delivered events. Mandrill "whitelist" and "blacklist" sync events will show up
+as Anymail's unknown event_type.
+
+The event's :attr:`~anymail.signals.AnymailTrackingEvent.esp_event` field will be
+a `dict` of Mandrill event fields, for a single event. (Although Mandrill calls
+webhooks with batches of events, Anymail will invoke your signal receiver separately
+for each event in the batch.)
+
+.. _Mandrill's instructions:
+    https://mandrill.zendesk.com/hc/en-us/articles/205583217-Introduction-to-Webhooks
 
 
 .. _migrating-from-djrill:
@@ -122,6 +182,16 @@ Changes to settings
   Renamed to :setting:`ANYMAIL_IGNORE_RECIPIENT_STATUS`
   (or just `IGNORE_RECIPIENT_STATUS` in the :setting:`ANYMAIL`
   settings dict).
+
+``DJRILL_WEBHOOK_SECRET`` and ``DJRILL_WEBHOOK_SECRET_NAME``
+  Replaced with HTTP basic auth. See :ref:`securing-webhooks`.
+
+``DJRILL_WEBHOOK_SIGNATURE_KEY``
+  Use :setting:`ANYMAIL_MANDRILL_WEBHOOK_KEY` instead.
+
+``DJRILL_WEBHOOK_URL``
+  Use :setting:`ANYMAIL_MANDRILL_WEBHOOK_URL`, or eliminate if
+  your Django server is not behind a proxy that changes hostnames.
 
 
 Changes to EmailMessage attributes
@@ -182,3 +252,25 @@ Changes to EmailMessage attributes
 
   Or better yet, use Anymail's new :ref:`inline-images`
   helper functions to attach your inline images.
+
+
+Changes to webhooks
+~~~~~~~~~~~~~~~~~~~
+
+Anymail uses HTTP basic auth as a shared secret for validating webhook
+calls, rather than Djrill's "secret" query parameter. See
+:ref:`securing-webhooks`. (A slight advantage of basic auth over query
+parameters is that most logging and analytics systems are aware of the
+need to keep auth secret.)
+
+Anymail replaces `djrill.signals.webhook_event` with
+`anymail.signals.tracking` and (in a future release)
+`anymail.signals.inbound`. Anymail parses and normalizes
+the event data passed to the signal receiver: see :ref:`event-tracking`.
+
+The equivalent of Djrill's ``data`` parameter is available
+to your signal receiver as
+:attr:`event.esp_event <anymail.signals.AnymailTrackingEvent.esp_event>`,
+and for most events, the equivalent of Djrill's ``event_type`` parameter
+is `event.esp_event['event']`. But consider working with Anymail's
+normalized :class:`~anymail.signals.AnymailTrackingEvent` instead.

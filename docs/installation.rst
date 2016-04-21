@@ -41,6 +41,9 @@ To use Anymail for sending email, edit your Django project's :file:`settings.py`
             "MAILGUN_API_KEY" = "<your Mailgun key>",
         }
 
+   The exact settings vary by ESP.
+   See the :ref:`supported ESPs <supported-esps>` section for specifics.
+
 3. Change your existing Django :setting:`EMAIL_BACKEND` to the Anymail backend
    for your ESP. For example, to send using Mailgun by default:
 
@@ -52,39 +55,140 @@ To use Anymail for sending email, edit your Django project's :file:`settings.py`
    use :ref:`multiple Anymail backends <multiple-backends>` to send particular
    messages through different ESPs.)
 
-   The exact backend name and required settings vary by ESP.
-   See the :ref:`supported ESPs <supported-esps>` section for specifics.
-
-Also, if you don't already have a :setting:`DEFAULT_FROM_EMAIL` in your settings,
+Finally, if you don't already have a :setting:`DEFAULT_FROM_EMAIL` in your settings,
 this is a good time to add one. (Django's default is "webmaster\@localhost",
 which some ESPs will reject.)
 
+With the settings above, you are ready to send outgoing email through your ESP.
+If you also want to enable status tracking or inbound email, continue with the
+optional settings below. Otherwise, skip ahead to :ref:`sending-email`.
 
-Configuring status tracking webhooks
-------------------------------------
 
-Anymail can optionally connect to your ESPs event webhooks to notify your app
+.. _webhooks-configuration:
+
+Configuring status tracking webhooks (optional)
+-----------------------------------------------
+
+Anymail can optionally connect to your ESP's event webhooks to notify your app
 of status like bounced and rejected emails, successful delivery, message opens
 and clicks, and other tracking.
 
+If you aren't using Anymail's webhooks, skip this section.
+
+.. warning::
+
+    Webhooks are ordinary urls, and are wide open to the internet.
+    You must use care to **avoid creating security vulnerabilities**
+    that could expose your users' emails and other private information,
+    or subject your app to malicious input data.
+
+    At a minimum, your site should **use SSL** (https), and you should
+    configure **webhook authorization** as described below.
+
+    See :ref:`securing-webhooks` for additional information.
+
+
 If you want to use Anymail's status tracking webhooks, follow the steps above
-to :ref:`configure an Anymail backend <backend-configuration>`, and then
-follow the instructions in the :ref:`event-tracking` section to set up
-the delivery webhooks.
+to :ref:`configure an Anymail backend <backend-configuration>`, and then:
+
+1. In your :file:`settings.py`, add
+   :setting:`WEBHOOK_AUTHORIZATION <ANYMAIL_WEBHOOK_AUTHORIZATION>`
+   to the ``ANYMAIL`` block:
+
+   .. code-block:: python
+
+      ANYMAIL = {
+          ...
+          'WEBHOOK_AUTHORIZATION': '<a random string>:<another random string>',
+      }
+
+   This setting should be a string with two sequences of random characters,
+   separated by a colon. It is used as a shared secret, known only to your ESP
+   and your Django app, to ensure nobody else can call your webhooks.
+
+   We suggest using 16 characters (or more) for each half of the
+   secret. Always generate a new, random secret just for this purpose.
+   (*Don't* use your Django secret key or ESP's API key.)
+
+   An easy way to generate a random secret is to run this command in
+   a shell:
+
+   .. code-block:: console
+
+      $ python -c "from django.utils import crypto; print(':'.join(crypto.get_random_string(16) for _ in range(2)))"
+
+   (This setting is actually an HTTP basic auth string. You can also set it
+   to a list of auth strings, to simplify credential rotation or use different auth
+   with different ESPs. See :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` in the
+   :ref:`securing-webhooks` docs for more details.)
 
 
-Configuring inbound email
--------------------------
+2. In your project's :file:`urls.py`, add routing for the Anymail webhook urls:
 
-Anymail can optionally connect to your ESPs inbound webhook to notify your app
-of inbound messages.
+   .. code-block:: python
 
-If you want to use inbound email with Anymail, first follow the first two
-:ref:`backend configuration <backend-configuration>` steps above. (You can
-skip changing your :setting:`EMAIL_BACKEND` if you don't want to us Anymail
-for *sending* messages.) Then follow the instructions in the
-:ref:`inbound-webhooks` section to set up the inbound webhooks.
+      from django.conf.urls import include, url
 
+      urlpatterns = [
+          ...
+          url(r'^anymail/', include('anymail.urls')),
+      ]
+
+   (You can change the "anymail" prefix in the first parameter to
+   :func:`~django.conf.urls.url` if you'd like the webhooks to be served
+   at some other URL. Just match whatever you use in the webhook URL you give
+   your ESP in the next step.)
+
+
+3. Enter the webhook URL(s) into your ESP's dashboard or control panel.
+   In most cases, the URL will be:
+
+   :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/{esp}/tracking/`
+
+     * "https" (rather than http) is *strongly recommended*
+     * *random:random* is the WEBHOOK_AUTHORIZATION string you created in step 1
+     * *yoursite.example.com* is your Django site
+     * "anymail" is the url prefix (from step 2)
+     * *esp* is the lowercase name of your ESP (e.g., "sendgrid" or "mailgun")
+     * "tracking" is used for Anymail's sent-mail event tracking webhooks
+
+   Some ESPs support different webhooks for different tracking events. You can
+   usually enter the same Anymail webhook URL for all of them (or all that you
+   want to receive). But be sure to check the specific details for your ESP
+   under :ref:`supported-esps`.
+
+   Also, some ESPs try to validate the webhook URL immediately when you enter it.
+   If so, you'll need to deploy your Django project to your live server before you
+   can complete this step.
+
+See :ref:`event-tracking` for information on creating signal handlers and the
+status tracking events you can receive.
+
+
+.. _inbound-configuration:
+
+Configuring inbound email (optional)
+------------------------------------
+
+(Coming soon -- not yet implemented)
+
+.. Anymail can optionally connect to your ESP's inbound webhook to notify your app
+.. of incoming messages.
+..
+.. If you aren't using your EPS's inbound email, skip this section.
+..
+.. If you want to use inbound email with Anymail, follow the steps above
+.. for setting up :ref:`status tracking webhooks <webhooks-configuration>`,
+.. but enter the webhook URL in your ESP's "inbound email" settings,
+.. substituting "inbound" for "tracking" at the end of the url:
+..
+..    :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/{esp}/inbound/`
+..
+.. Then see :ref:`inbound` for information on creating a signal handler
+.. for receiving inbound email notifications in your code.
+..
+.. (Note: if you are only using your ESP for inbound email, not sending messages,
+.. there's no need to change your project's EMAIL_BACKEND.)
 
 
 .. setting:: ANYMAIL
@@ -163,3 +267,19 @@ Whether Anymail should raise :exc:`~anymail.exceptions.AnymailUnsupportedFeature
 errors for email with features that can't be accurately communicated to the ESP.
 Set to `True` to ignore these problems and send the email anyway. See
 :ref:`unsupported-features`. (Default `False`.)
+
+
+.. rubric:: WEBHOOK_AUTHORIZATION
+
+A `'random:random'` shared secret string. Anymail will reject incoming webhook calls
+from your ESP that don't include this authorization. You can also give a list of
+shared secret strings, and Anymail will allow ESP webhook calls that match any of them
+(to facilitate credential rotation). See :ref:`securing-webhooks`.
+
+Default is unset, which leaves your webhooks insecure. Anymail
+will warn if you try to use webhooks with setting up authorization.
+
+This is actually implemented using HTTP basic authorization, and the string is
+technically a "username:password" format. But you should *not* use any real
+username or password for this shared secret.
+

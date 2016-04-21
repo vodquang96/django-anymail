@@ -24,6 +24,8 @@ folks from `brack3t`_ who developed the original version of Djrill.
 .. _Djrill: https://github.com/brack3t/Djrill
 
 
+.. _reporting-bugs:
+
 Bugs
 ----
 

@@ -1,9 +1,13 @@
 # Anymail test utils
-import os
+import sys
 import unittest
-from base64 import b64decode
 
+import os
+import re
 import six
+import warnings
+from base64 import b64decode
+from contextlib import contextmanager
 
 
 def decode_att(att):
@@ -28,10 +32,34 @@ def sample_image_content(filename=SAMPLE_IMAGE_FILENAME):
         return f.read()
 
 
+# noinspection PyUnresolvedReferences
 class AnymailTestMixin:
     """Helpful additional methods for Anymail tests"""
 
-    pass
+    def assertWarns(self, expected_warning, msg=None):
+        # We only support the context-manager version
+        try:
+            return super(AnymailTestMixin, self).assertWarns(expected_warning, msg=msg)
+        except TypeError:
+            # Python 2.x: use our backported assertWarns
+            return _AssertWarnsContext(expected_warning, self, msg=msg)
+
+    def assertWarnsRegex(self, expected_warning, expected_regex, msg=None):
+        # We only support the context-manager version
+        try:
+            return super(AnymailTestMixin, self).assertWarnsRegex(expected_warning, expected_regex, msg=msg)
+        except TypeError:
+            # Python 2.x: use our backported assertWarns
+            return _AssertWarnsContext(expected_warning, self, expected_regex=expected_regex, msg=msg)
+
+    @contextmanager
+    def assertDoesNotWarn(self):
+        try:
+            warnings.simplefilter("error")
+            yield
+        finally:
+            warnings.resetwarnings()
+
     # Plus these methods added below:
     # assertCountEqual
     # assertRaisesRegex
@@ -45,3 +73,64 @@ for method in ('assertCountEqual', 'assertRaisesRegex', 'assertRegex'):
         getattr(unittest.TestCase, method)
     except AttributeError:
         setattr(AnymailTestMixin, method, getattr(six, method))
+
+
+# Backported from python 3.5
+class _AssertWarnsContext(object):
+    """A context manager used to implement TestCase.assertWarns* methods."""
+
+    def __init__(self, expected, test_case, expected_regex=None, msg=None):
+        self.test_case = test_case
+        self.expected = expected
+        self.test_case = test_case
+        if expected_regex is not None:
+            expected_regex = re.compile(expected_regex)
+        self.expected_regex = expected_regex
+        self.msg = msg
+
+    def _raiseFailure(self, standardMsg):
+        # msg = self.test_case._formatMessage(self.msg, standardMsg)
+        msg = self.msg or standardMsg
+        raise self.test_case.failureException(msg)
+
+    def __enter__(self):
+        # The __warningregistry__'s need to be in a pristine state for tests
+        # to work properly.
+        for v in sys.modules.values():
+            if getattr(v, '__warningregistry__', None):
+                v.__warningregistry__ = {}
+        self.warnings_manager = warnings.catch_warnings(record=True)
+        self.warnings = self.warnings_manager.__enter__()
+        warnings.simplefilter("always", self.expected)
+        return self
+
+    def __exit__(self, exc_type, exc_value, tb):
+        self.warnings_manager.__exit__(exc_type, exc_value, tb)
+        if exc_type is not None:
+            # let unexpected exceptions pass through
+            return
+        try:
+            exc_name = self.expected.__name__
+        except AttributeError:
+            exc_name = str(self.expected)
+        first_matching = None
+        for m in self.warnings:
+            w = m.message
+            if not isinstance(w, self.expected):
+                continue
+            if first_matching is None:
+                first_matching = w
+            if (self.expected_regex is not None and
+                not self.expected_regex.search(str(w))):
+                continue
+            # store warning for later retrieval
+            self.warning = w
+            self.filename = m.filename
+            self.lineno = m.lineno
+            return
+        # Now we simply try to choose a helpful failure message
+        if first_matching is not None:
+            self._raiseFailure('"{}" does not match "{}"'.format(
+                     self.expected_regex.pattern, str(first_matching)))
+        self._raiseFailure("{} not triggered".format(exc_name))
+

@@ -174,3 +174,31 @@ Limitations and quirks
   actually OK with that.)
 
   (Tested March, 2016)
+
+
+.. _sendgrid-webhooks:
+
+Status tracking webhooks
+------------------------
+
+If you are using Anymail's normalized :ref:`status tracking <event-tracking>`, enter
+the url in your `SendGrid mail settings`_, under "Event Notification":
+
+   :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/sendgrid/tracking/`
+
+     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
+     * *yoursite.example.com* is your Django site
+
+Be sure to check the boxes in the SendGrid settings for the event types you want to receive.
+
+SendGrid will report these Anymail :attr:`~anymail.signals.AnymailTrackingEvent.event_type`\s:
+queued, rejected, bounced, deferred, delivered, opened, clicked, complained, unsubscribed,
+subscribed.
+
+The event's :attr:`~anymail.signals.AnymailTrackingEvent.esp_event` field will be
+a `dict` of `Sendgrid event`_ fields, for a single event. (Although SendGrid calls
+webhooks with batches of events, Anymail will invoke your signal receiver separately
+for each event in the batch.)
+
+.. _SendGrid mail settings: https://app.sendgrid.com/settings/mail_settings
+.. _Sendgrid event: https://sendgrid.com/docs/API_Reference/Webhooks/event.html

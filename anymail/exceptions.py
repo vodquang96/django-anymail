@@ -1,6 +1,6 @@
 import json
 
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, SuspiciousOperation
 from requests import HTTPError
 
 
@@ -125,6 +125,14 @@ class AnymailSerializationError(AnymailError, TypeError):
         super(AnymailSerializationError, self).__init__(message, *args, **kwargs)
 
 
+class AnymailWebhookValidationFailure(AnymailError, SuspiciousOperation):
+    """Exception when a webhook cannot be validated.
+
+    Django's SuspiciousOperation turns into
+    an HTTP 400 error in production.
+    """
+
+
 class AnymailConfigurationError(ImproperlyConfigured):
     """Exception for Anymail configuration or installation issues"""
     # This deliberately doesn't inherit from AnymailError,
@@ -140,3 +148,12 @@ class AnymailImproperlyInstalled(AnymailConfigurationError, ImportError):
                   "with your desired backends)" % (missing_package, backend)
         super(AnymailImproperlyInstalled, self).__init__(message)
 
+
+# Warnings
+
+class AnymailWarning(Warning):
+    """Base warning for Anymail"""
+
+
+class AnymailInsecureWebhookWarning(AnymailWarning):
+    """Warns when webhook configured without any validation"""

@@ -9,6 +9,7 @@ done with Anymail:
 
    multiple_backends
    django_templates
+   securing_webhooks
 
 .. TODO:
 ..    Working with django-mailer(2)

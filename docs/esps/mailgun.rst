@@ -103,3 +103,35 @@ values directly to Mailgun. You can use any of the (non-file) parameters listed 
       }
 
 .. _Mailgun sending docs: https://documentation.mailgun.com/api-sending.html#sending
+
+
+.. _mailgun-webhooks:
+
+Status tracking webhooks
+------------------------
+
+If you are using Anymail's normalized :ref:`status tracking <event-tracking>`, enter
+the url in your `Mailgun dashboard`_ on the "Webhooks" tab. Mailgun allows you to enter
+a different URL for each event type: just enter this same Anymail tracking URL
+for all events you want to receive:
+
+   :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/mailgun/tracking/`
+
+     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
+     * *yoursite.example.com* is your Django site
+
+If you use multiple Mailgun sending domains, you'll need to enter the webhook
+URLs for each of them, using the selector on the left side of Mailgun's dashboard.
+
+Mailgun implements a limited form of webhook signing, and Anymail will verify
+these signatures (based on your :setting:`MAILGUN_API_KEY <ANYMAIL_MAILGUN_API_KEY>`
+Anymail setting).
+
+Mailgun will report these Anymail :attr:`~anymail.signals.AnymailTrackingEvent.event_type`\s:
+delivered, rejected, bounced, complained, unsubscribed, opened, clicked.
+
+The event's :attr:`~anymail.signals.AnymailTrackingEvent.esp_event` field will be
+a Django :class:`~django.http.QueryDict` object of `Mailgun event fields`_.
+
+.. _Mailgun dashboard: https://mailgun.com/app/dashboard
+.. _Mailgun event fields: https://documentation.mailgun.com/user_manual.html#webhooks
