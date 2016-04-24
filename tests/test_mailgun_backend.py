@@ -3,7 +3,6 @@
 from __future__ import unicode_literals
 
 from datetime import date, datetime
-from decimal import Decimal
 from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
 
@@ -13,7 +12,7 @@ from django.test import SimpleTestCase
 from django.test.utils import override_settings
 from django.utils.timezone import get_fixed_timezone, override as override_current_timezone
 
-from anymail.exceptions import AnymailAPIError, AnymailSerializationError, AnymailUnsupportedFeature
+from anymail.exceptions import AnymailAPIError, AnymailUnsupportedFeature
 from anymail.message import attach_inline_image_file
 
 from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
@@ -270,12 +269,13 @@ class MailgunBackendAnymailFeatureTests(MailgunBackendMockAPITestCase):
     """Test backend support for Anymail added features"""
 
     def test_metadata(self):
-        self.message.metadata = {'user_id': "12345", 'items': ['mail', 'gun']}
+        # Each metadata value is just a string; you can serialize your own JSON if you'd like.
+        # (The Mailgun docs are a little confusing on this point.)
+        self.message.metadata = {'user_id': "12345", 'items': '["mail","gun"]'}
         self.message.send()
         data = self.get_api_call_data()
-        # note values get serialized to json:
-        self.assertEqual(data['v:user_id'], '12345')  # simple values are transmitted as-is
-        self.assertEqual(data['v:items'], '["mail", "gun"]')  # complex values get json-serialized
+        self.assertEqual(data['v:user_id'], '12345')
+        self.assertEqual(data['v:items'], '["mail","gun"]')
 
     def test_send_at(self):
         utc_plus_6 = get_fixed_timezone(6 * 60)
@@ -401,16 +401,8 @@ class MailgunBackendAnymailFeatureTests(MailgunBackendMockAPITestCase):
         self.assertEqual(self.message.anymail_status.recipients, {})
         self.assertEqual(self.message.anymail_status.esp_response, mock_response)
 
-    def test_json_serialization_errors(self):
-        """Try to provide more information about non-json-serializable data"""
-        self.message.metadata = {'total': Decimal('19.99')}
-        with self.assertRaises(AnymailSerializationError) as cm:
-            self.message.send()
-            print(self.get_api_call_data())
-        err = cm.exception
-        self.assertIsInstance(err, TypeError)  # compatibility with json.dumps
-        self.assertIn("Don't know how to send this data to Mailgun", str(err))  # our added context
-        self.assertIn("Decimal('19.99') is not JSON serializable", str(err))  # original message
+    # test_json_serialization_errors: Mailgun payload isn't JSON, so we don't test this.
+    # (Anything that requests can serialize as a form field will work with Mailgun)
 
 
 class MailgunBackendRecipientsRefusedTests(MailgunBackendMockAPITestCase):

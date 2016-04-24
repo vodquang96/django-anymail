@@ -111,7 +111,7 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
             reply_to=["reply1@example.com", "Reply 2 <reply2@example.com>"],
             headers={"X-Anymail-Test": "value"},
 
-            metadata={"meta1": "simple string", "meta2": 2, "meta3": {"complex": "value"}},
+            metadata={"meta1": "simple string", "meta2": 2},
             send_at=send_at,
             tags=["tag 1", "tag 2"],
             track_clicks=False,
@@ -136,9 +136,7 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         event = events.pop()
         self.assertCountEqual(event["tags"], ["tag 1", "tag 2"])  # don't care about order
         self.assertEqual(event["user-variables"],
-                         {"meta1": "simple string",
-                          "meta2": "2",  # numbers become strings
-                          "meta3": '{"complex": "value"}'})  # complex values become json
+                         {"meta1": "simple string", "meta2": "2"})  # all metadata values become strings
 
         self.assertEqual(event["message"]["scheduled-for"], send_at_timestamp)
         self.assertCountEqual(event["message"]["recipients"],

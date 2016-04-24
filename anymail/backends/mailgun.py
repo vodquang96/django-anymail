@@ -122,18 +122,8 @@ class MailgunPayload(RequestsPayload):
         )
 
     def set_metadata(self, metadata):
-        # The Mailgun docs are a little unclear on whether to send each var as a separate v: field,
-        # or to send a single 'v:my-custom-data' field with a json blob of all vars.
-        # (https://documentation.mailgun.com/user_manual.html#attaching-data-to-messages)
-        # From experimentation, it seems like the first option works:
         for key, value in metadata.items():
-            # Ensure the value is json-serializable (for Mailgun storage)
-            json = self.serialize_json(value)  # will raise AnymailSerializationError
-            # Special case: a single string value should be sent bare (without quotes),
-            # because Mailgun will add quotes when querying the value as json.
-            if json.startswith('"'):  # only a single string could be serialized as "...
-                json = value
-            self.data["v:%s" % key] = json
+            self.data["v:%s" % key] = value
 
     def set_send_at(self, send_at):
         # Mailgun expects RFC-2822 format dates
