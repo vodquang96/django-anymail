@@ -16,18 +16,21 @@ to rewrite your email templates if you switch ESPs.
 better, portable and maintainable option.
 
 
-.. note::
-
-    Normalized merge variables and template identification
-    are coming to Anymail soon.
-
-
 .. currentmodule:: anymail.message
 
 .. _esp-templates:
 
 ESP templates
 -------------
+
+.. warning::
+
+    These normalized ESP-template attributes aren't implemented yet.
+    but are planned for a future Anymail update. If you are using
+    your ESP's transactional templates, 
+    `your input <https://github.com/anymail/django-anymail/issues/5>`_
+    would be appreciated.
+
 
 .. To use a *Mandrill* (MailChimp) template stored in your Mandrill account,
 .. set a :attr:`template_name` and (optionally) :attr:`template_content`
@@ -58,10 +61,13 @@ ESP templates
 .. can be used with templates.
 
 
-.. attribute:: AnymailMessage.template_name
+.. attribute:: AnymailMessage.template_id
 
+    (not yet implemented)
 
 .. attribute:: AnymailMessage.global_merge_vars
+
+    (not yet implemented)
 
 ..     ``dict``: merge variables to use for all recipients (most useful with :ref:`mandrill-templates`). ::
 ..
@@ -71,6 +77,8 @@ ESP templates
 ..     (See :ref:`formatting-merge-data` for details.)
 
 .. attribute:: AnymailMessage.merge_vars
+
+    (not yet implemented)
 
 ..     ``dict``: per-recipient merge variables (most useful with :ref:`mandrill-templates`). The keys
 ..     in the dict are the recipient email addresses, and the values are dicts of merge vars for
