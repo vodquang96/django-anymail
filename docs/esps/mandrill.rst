@@ -6,6 +6,23 @@ Mandrill
 Anymail integrates with the `Mandrill <http://mandrill.com/>`_
 transactional email service from MailChimp.
 
+.. note:: **Limited Support for Mandrill**
+
+    Anymail is developed to the public Mandrill documentation, but unlike
+    other supported ESPs, we are unable to test or debug against the live
+    Mandrill APIs. (MailChimp discourages use of Mandrill by "developers,"
+    and doesn't offer testing access for packages like Anymail.)
+
+    As a result, Anymail bugs with Mandrill will generally be discovered
+    by Anymail's users, in production; Anymail's maintainers often won't
+    be able to answer Mandrill-specific questions; and fixes and improvements
+    for Mandrill will tend to lag other ESPs.
+
+    If you are integrating only Mandrill, and not considering one of Anymail's
+    other ESPs, you might prefer using MailChimp's official
+    `mandrill <https://pypi.python.org/pypi/mandrill/>`_ python package
+    instead of Anymail.
+
 
 Settings
 --------
