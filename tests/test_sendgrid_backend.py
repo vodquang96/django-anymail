@@ -64,9 +64,9 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
         # make sure backend assigned a Message-ID for event tracking
         email_headers = json.loads(data['headers'])
         self.assertRegex(email_headers['Message-ID'], r'\<.+@sender\.example\.com\>')  # id uses from_email's domain
-        # make sure we added the unquoted Message-ID to unique_args for event notification
+        # make sure we added the Message-ID to unique_args for event notification
         smtpapi = self.get_smtpapi()
-        self.assertEqual(email_headers['Message-ID'], '<{}>'.format(smtpapi['unique_args']['smtp-id']))
+        self.assertEqual(email_headers['Message-ID'], smtpapi['unique_args']['smtp-id'])
 
     @override_settings(ANYMAIL={'SENDGRID_USERNAME': 'sg_username', 'SENDGRID_PASSWORD': 'sg_password'})
     def test_user_pass_auth(self):
@@ -110,7 +110,7 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
             cc=['cc1@example.com', 'Also CC <cc2@example.com>'],
             headers={'Reply-To': 'another@example.com',
                      'X-MyHeader': 'my value',
-                     'Message-ID': 'mycustommsgid@sales.example.com'})  # should override backend msgid
+                     'Message-ID': '<mycustommsgid@sales.example.com>'})  # should override backend msgid
         email.send()
         data = self.get_api_call_data()
         self.assertEqual(data['subject'], "Subject")
@@ -123,13 +123,13 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
         self.assertEqual(data['cc'], ['cc1@example.com', 'cc2@example.com'])
         self.assertEqual(data['ccname'], [' ', 'Also CC'])
         self.assertJSONEqual(data['headers'], {
-            'Message-ID': 'mycustommsgid@sales.example.com',
+            'Message-ID': '<mycustommsgid@sales.example.com>',
             'Reply-To': 'another@example.com',
             'X-MyHeader': 'my value',
         })
         # make sure custom Message-ID also added to unique_args
         self.assertJSONEqual(data['x-smtpapi'], {
-            'unique_args': {'smtp-id': 'mycustommsgid@sales.example.com'}
+            'unique_args': {'smtp-id': '<mycustommsgid@sales.example.com>'}
         })
 
     def test_html_message(self):

@@ -1,5 +1,3 @@
-from email.utils import unquote
-
 from django.core.mail import make_msgid
 from requests.structures import CaseInsensitiveDict
 
@@ -115,8 +113,7 @@ class SendGridPayload(RequestsPayload):
         # Workaround for missing message ID (smtp-id) in SendGrid engagement events
         # (click and open tracking): because unique_args get merged into the raw event
         # record, we can supply the 'smtp-id' field for any events missing it.
-        # Must use the unquoted (no <angle brackets>) version to match other SendGrid APIs.
-        self.smtpapi.setdefault('unique_args', {})['smtp-id'] = unquote(self.message_id)
+        self.smtpapi.setdefault('unique_args', {})['smtp-id'] = self.message_id
 
     def make_message_id(self):
         """Returns a Message-ID that could be used for this payload
