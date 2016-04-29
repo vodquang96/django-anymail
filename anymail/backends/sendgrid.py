@@ -1,10 +1,9 @@
 from email.utils import unquote
 
-from django.core.exceptions import ImproperlyConfigured
 from django.core.mail import make_msgid
 from requests.structures import CaseInsensitiveDict
 
-from ..exceptions import AnymailRequestsAPIError
+from ..exceptions import AnymailConfigurationError, AnymailRequestsAPIError
 from ..message import AnymailRecipientStatus
 from ..utils import get_anymail_setting, timestamp
 
@@ -19,19 +18,25 @@ class SendGridBackend(AnymailRequestsBackend):
     def __init__(self, **kwargs):
         """Init options from Django settings"""
         # Auth requires *either* SENDGRID_API_KEY or SENDGRID_USERNAME+SENDGRID_PASSWORD
-        self.api_key = get_anymail_setting('SENDGRID_API_KEY', default=None, allow_bare=True)
-        self.username = get_anymail_setting('SENDGRID_USERNAME', default=None, allow_bare=True)
-        self.password = get_anymail_setting('SENDGRID_PASSWORD', default=None, allow_bare=True)
-        if self.api_key is None and self.username is None and self.password is None:
-            raise ImproperlyConfigured(
+        esp_name = self.esp_name
+        self.api_key = get_anymail_setting('api_key', esp_name=esp_name, kwargs=kwargs,
+                                           default=None, allow_bare=True)
+        self.username = get_anymail_setting('username', esp_name=esp_name, kwargs=kwargs,
+                                            default=None, allow_bare=True)
+        self.password = get_anymail_setting('password', esp_name=esp_name, kwargs=kwargs,
+                                            default=None, allow_bare=True)
+        if self.api_key is None and (self.username is None or self.password is None):
+            raise AnymailConfigurationError(
                 "You must set either SENDGRID_API_KEY or both SENDGRID_USERNAME and "
                 "SENDGRID_PASSWORD in your Django ANYMAIL settings."
             )
 
-        self.generate_message_id = get_anymail_setting('SENDGRID_GENERATE_MESSAGE_ID', default=True)
+        self.generate_message_id = get_anymail_setting('generate_message_id', esp_name=esp_name,
+                                                       kwargs=kwargs, default=True)
 
         # This is SendGrid's Web API v2 (because the Web API v3 doesn't support sending)
-        api_url = get_anymail_setting("SENDGRID_API_URL", "https://api.sendgrid.com/api/")
+        api_url = get_anymail_setting('api_url', esp_name=esp_name, kwargs=kwargs,
+                                      default="https://api.sendgrid.com/api/")
         if not api_url.endswith("/"):
             api_url += "/"
         super(SendGridBackend, self).__init__(api_url, **kwargs)

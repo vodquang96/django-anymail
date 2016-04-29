@@ -14,8 +14,10 @@ class PostmarkBackend(AnymailRequestsBackend):
 
     def __init__(self, **kwargs):
         """Init options from Django settings"""
-        self.server_token = get_anymail_setting('POSTMARK_SERVER_TOKEN', allow_bare=True)
-        api_url = get_anymail_setting("POSTMARK_API_URL", "https://api.postmarkapp.com/")
+        esp_name = self.esp_name
+        self.server_token = get_anymail_setting('server_token', esp_name=esp_name, kwargs=kwargs, allow_bare=True)
+        api_url = get_anymail_setting('api_url', esp_name=esp_name, kwargs=kwargs,
+                                      default="https://api.postmarkapp.com/")
         if not api_url.endswith("/"):
             api_url += "/"
         super(PostmarkBackend, self).__init__(api_url, **kwargs)

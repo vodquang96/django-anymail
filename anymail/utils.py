@@ -7,10 +7,10 @@ from time import mktime
 
 import six
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
 from django.core.mail.message import sanitize_address, DEFAULT_ATTACHMENT_MIME_TYPE
 from django.utils.timezone import utc
 
+from .exceptions import AnymailConfigurationError
 
 UNSET = object()  # Used as non-None default value
 
@@ -158,25 +158,42 @@ def get_content_disposition(mimeobj):
     return str(value).partition(';')[0].strip().lower()
 
 
-def get_anymail_setting(setting, default=UNSET, allow_bare=False):
-    """Returns a Django Anymail setting.
+def get_anymail_setting(name, default=UNSET, esp_name=None, kwargs=None, allow_bare=False):
+    """Returns an Anymail option from kwargs or Django settings.
 
     Returns first of:
-    - settings.ANYMAIL[setting]
-    - settings.ANYMAIL_<setting>
-    - settings.<setting> (only if allow_bare)
-    - default if provided; else raises ImproperlyConfigured
+    - kwargs[name] -- e.g., kwargs['api_key'] -- and name key will be popped from kwargs
+    - settings.ANYMAIL['<ESP_NAME>_<NAME>'] -- e.g., settings.ANYMAIL['MAILGUN_API_KEY']
+    - settings.ANYMAIL_<ESP_NAME>_<NAME> -- e.g., settings.ANYMAIL_MAILGUN_API_KEY
+    - settings.<ESP_NAME>_<NAME> (only if allow_bare) -- e.g., settings.MAILGUN_API_KEY
+    - default if provided; else raises AnymailConfigurationError
 
-    ANYMAIL = { "MAILGUN_SEND_DEFAULTS" : { ... }, ... }
-    ANYMAIL_MAILGUN_SEND_DEFAULTS = { ... }
-
-    If allow_bare, allows settings.<setting> without the ANYMAIL_ prefix:
+    If allow_bare, allows settings.<ESP_NAME>_<NAME> without the ANYMAIL_ prefix:
     ANYMAIL = { "MAILGUN_API_KEY": "xyz", ... }
     ANYMAIL_MAILGUN_API_KEY = "xyz"
     MAILGUN_API_KEY = "xyz"
     """
 
+    try:
+        value = kwargs.pop(name)
+        if name in ['username', 'password']:
+            # Work around a problem in django.core.mail.send_mail, which calls
+            # get_connection(... username=None, password=None) by default.
+            # We need to ignore those None defaults (else settings like
+            # 'SENDGRID_USERNAME' get unintentionally overridden from kwargs).
+            if value is not None:
+                return value
+        else:
+            return value
+    except (AttributeError, KeyError):
+        pass
+
+    if esp_name is not None:
+        setting = "{}_{}".format(esp_name.upper(), name.upper())
+    else:
+        setting = name.upper()
     anymail_setting = "ANYMAIL_%s" % setting
+
     try:
         return settings.ANYMAIL[setting]
     except (AttributeError, KeyError):
@@ -193,7 +210,7 @@ def get_anymail_setting(setting, default=UNSET, allow_bare=False):
                 if allow_bare:
                     message += " or %s" % setting
                 message += " in your Django settings"
-                raise ImproperlyConfigured(message)
+                raise AnymailConfigurationError(message)
             else:
                 return default
 

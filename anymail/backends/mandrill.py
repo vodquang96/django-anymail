@@ -14,8 +14,10 @@ class MandrillBackend(AnymailRequestsBackend):
 
     def __init__(self, **kwargs):
         """Init options from Django settings"""
-        self.api_key = get_anymail_setting('MANDRILL_API_KEY', allow_bare=True)
-        api_url = get_anymail_setting("MANDRILL_API_URL", "https://mandrillapp.com/api/1.0")
+        esp_name = self.esp_name
+        self.api_key = get_anymail_setting('api_key', esp_name=esp_name, kwargs=kwargs, allow_bare=True)
+        api_url = get_anymail_setting('api_url', esp_name=esp_name, kwargs=kwargs,
+                                      default="https://mandrillapp.com/api/1.0")
         if not api_url.endswith("/"):
             api_url += "/"
         super(MandrillBackend, self).__init__(api_url, **kwargs)

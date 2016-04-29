@@ -13,7 +13,7 @@ This could be useful, for example, to deliver customer emails with the ESP,
 but send admin emails directly through an SMTP server:
 
 .. code-block:: python
-    :emphasize-lines: 8,10,13,15
+    :emphasize-lines: 8,10,13,15,19-20,22
 
     from django.core.mail import send_mail, get_connection
 
@@ -28,8 +28,16 @@ but send admin emails directly through an SMTP server:
 
     # You can even use multiple Anymail backends in the same app:
     sendgrid_backend = get_connection('anymail.backends.sendgrid.SendGridBackend')
-    send_mail("Password reset", "Here you go", "user@example.com", ["noreply@example.com"],
+    send_mail("Password reset", "Here you go", "noreply@example.com", ["user@example.com"],
               connection=sendgrid_backend)
+
+    # You can override settings.py settings with kwargs to get_connection.
+    # This example supplies credentials to use a SendGrid subuser acccount:
+    alt_sendgrid_backend = get_connection('anymail.backends.sendgrid.SendGridBackend',
+                                          username='marketing_subuser', password='abc123')
+    send_mail("Here's that info", "you wanted", "marketing@example.com", ["prospect@example.com"],
+              connection=alt_sendgrid_backend)
+
 
 You can supply a different connection to Django's
 :func:`~django.core.mail.send_mail` and :func:`~django.core.mail.send_mass_mail` helpers,
@@ -39,6 +47,3 @@ and in the constructor for an
 
 (See the :class:`django.utils.log.AdminEmailHandler` docs for more information
 on Django's admin error logging.)
-
-.. _django.utils.log.AdminEmailHandler:
-    https://docs.djangoproject.com/en/stable/topics/logging/#django.utils.log.AdminEmailHandler

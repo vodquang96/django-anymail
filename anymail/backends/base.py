@@ -17,12 +17,15 @@ class AnymailBaseBackend(BaseEmailBackend):
     def __init__(self, *args, **kwargs):
         super(AnymailBaseBackend, self).__init__(*args, **kwargs)
 
-        self.ignore_unsupported_features = get_anymail_setting("IGNORE_UNSUPPORTED_FEATURES", False)
-        self.ignore_recipient_status = get_anymail_setting("IGNORE_RECIPIENT_STATUS", False)
+        self.ignore_unsupported_features = get_anymail_setting('ignore_unsupported_features',
+                                                               kwargs=kwargs, default=False)
+        self.ignore_recipient_status = get_anymail_setting('ignore_recipient_status',
+                                                           kwargs=kwargs, default=False)
 
         # Merge SEND_DEFAULTS and <esp_name>_SEND_DEFAULTS settings
-        send_defaults = get_anymail_setting("SEND_DEFAULTS", {})
-        esp_send_defaults = get_anymail_setting("%s_SEND_DEFAULTS" % self.esp_name.upper(), None)
+        send_defaults = get_anymail_setting('send_defaults', default={})  # but not from kwargs
+        esp_send_defaults = get_anymail_setting('send_defaults', esp_name=self.esp_name,
+                                                kwargs=kwargs, default=None)
         if esp_send_defaults is not None:
             send_defaults = send_defaults.copy()
             send_defaults.update(esp_send_defaults)

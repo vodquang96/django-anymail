@@ -125,8 +125,15 @@ class AnymailSerializationError(AnymailError, TypeError):
         super(AnymailSerializationError, self).__init__(message, *args, **kwargs)
 
 
-# This deliberately doesn't inherit from AnymailError
-class AnymailImproperlyInstalled(ImproperlyConfigured, ImportError):
+class AnymailConfigurationError(ImproperlyConfigured):
+    """Exception for Anymail configuration or installation issues"""
+    # This deliberately doesn't inherit from AnymailError,
+    # because we don't want it to be swallowed by backend fail_silently
+
+
+class AnymailImproperlyInstalled(AnymailConfigurationError, ImportError):
+    """Exception for Anymail missing package dependencies"""
+
     def __init__(self, missing_package, backend="<backend>"):
         message = "The %s package is required to use this backend, but isn't installed.\n" \
                   "(Be sure to use `pip install django-anymail[%s]` " \

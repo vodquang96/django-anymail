@@ -122,6 +122,14 @@ if you are using other Django apps that work with the same ESP.)
                                    # nor ANYMAIL_MAILGUN_API_KEY have been set
 
 
+Finally, for complex use cases, you can override most settings on a per-instance
+basis by providing keyword args where the instance is initialized (e.g., in a
+:func:`~django.core.mail.get_connection` call to create an email backend instance,
+or in `View.as_view()` call to set up webhooks in a custom urls.py). To get the kwargs
+parameter for a setting, drop "ANYMAIL" and the ESP name, and lowercase the rest:
+e.g., you can override ANYMAIL_MAILGUN_API_KEY by passing `api_key="abc"` to
+:func:`~django.core.mail.get_connection`. See :ref:`multiple-backends` for an example.
+
 There are specific Anymail settings for each ESP (like API keys and urls).
 See the :ref:`supported ESPs <supported-esps>` section for details.
 Here are the other settings Anymail supports:

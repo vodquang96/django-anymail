@@ -14,8 +14,10 @@ class MailgunBackend(AnymailRequestsBackend):
 
     def __init__(self, **kwargs):
         """Init options from Django settings"""
-        self.api_key = get_anymail_setting('MAILGUN_API_KEY', allow_bare=True)
-        api_url = get_anymail_setting("MAILGUN_API_URL", "https://api.mailgun.net/v3")
+        esp_name = self.esp_name
+        self.api_key = get_anymail_setting('api_key', esp_name=esp_name, kwargs=kwargs, allow_bare=True)
+        api_url = get_anymail_setting('api_url', esp_name=esp_name, kwargs=kwargs,
+                                      default="https://api.mailgun.net/v3")
         if not api_url.endswith("/"):
             api_url += "/"
         super(MailgunBackend, self).__init__(api_url, **kwargs)
