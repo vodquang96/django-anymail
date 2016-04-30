@@ -30,7 +30,8 @@ Anymail integrates several transactional email service providers (ESPs) into Dja
 with a consistent API that lets you use ESP-added features without locking your code
 to a particular ESP.
 
-It currently supports Mailgun, Postmark, SendGrid, and Mandrill.
+It currently fully supports Mailgun, Postmark, and SendGrid,
+and has limited support for Mandrill.
 
 Anymail normalizes ESP functionality so it "just works" with Django's
 built-in `django.core.mail` package. It includes:
@@ -40,10 +41,13 @@ built-in `django.core.mail` package. It includes:
 * Extensions that make it easy to use extra ESP functionality, like tags, metadata,
   and tracking, with code that's portable between ESPs
 * Simplified inline images for HTML email
+* Normalized sent-message status and tracking notification, by connecting
+  your ESP's webhooks to Django signals
 
 Support is planned for:
 
-* Normalized sent-message tracking status notification via webhooks and Django signals
+* "Bulk-transactional" sends using your ESP's template facility,
+  with portable declaration of substitution/merge data
 * Normalized inbound email processing through your ESP
 
 Anymail is released under the BSD license. It is extensively tested against Django 1.8--1.9
