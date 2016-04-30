@@ -111,15 +111,9 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         self.assertEqual(data['html'], html_content)
 
     def test_reply_to(self):
-        # reply_to is new in Django 1.8 -- before that, you can simply include it in headers
-        try:
-            # noinspection PyArgumentList
-            email = mail.EmailMessage('Subject', 'Body goes here', 'from@example.com', ['to1@example.com'],
-                                      reply_to=['reply@example.com', 'Other <reply2@example.com>'],
-                                      headers={'X-Other': 'Keep'})
-        except TypeError:
-            # Pre-Django 1.8
-            return self.skipTest("Django version doesn't support EmailMessage(reply_to)")
+        email = mail.EmailMessage('Subject', 'Body goes here', 'from@example.com', ['to1@example.com'],
+                                  reply_to=['reply@example.com', 'Other <reply2@example.com>'],
+                                  headers={'X-Other': 'Keep'})
         email.send()
         data = self.get_api_call_data()
         self.assertEqual(data['h:Reply-To'], 'reply@example.com, Other <reply2@example.com>')

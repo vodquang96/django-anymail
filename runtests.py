@@ -3,7 +3,11 @@
 # python runtests.py [anymail.tests.test_x anymail.tests.test_y.SomeTestCase ...]
 
 import sys
+
+from django import setup
 from django.conf import settings
+from django.test.runner import DiscoverRunner as TestRunner
+
 
 APP = 'anymail'
 
@@ -37,17 +41,8 @@ settings.configure(
     ],
 )
 
-try:
-    # Django 1.7+ initialize app registry
-    from django import setup
-    setup()
-except ImportError:
-    pass
-
-try:
-    from django.test.runner import DiscoverRunner as TestRunner  # Django 1.6+
-except ImportError:
-    from django.test.simple import DjangoTestSuiteRunner as TestRunner  # Django -1.5
+# Initialize Django app registry
+setup()
 
 
 def runtests(*args):
