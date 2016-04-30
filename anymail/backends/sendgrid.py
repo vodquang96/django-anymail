@@ -91,7 +91,13 @@ class SendGridPayload(RequestsPayload):
             # If esp_extra was also used to set x-smtpapi, need to merge it
             if "x-smtpapi" in self.data:
                 esp_extra_smtpapi = self.data["x-smtpapi"]
-                self.smtpapi.update(esp_extra_smtpapi)  # need to make this deep merge (for filters)!
+                for key, value in esp_extra_smtpapi.items():
+                    if key == "filters":
+                        # merge filters (else it's difficult to mix esp_extra with other features)
+                        self.smtpapi.setdefault(key, {}).update(value)
+                    else:
+                        # all other keys replace any current value
+                        self.smtpapi[key] = value
             self.data["x-smtpapi"] = self.serialize_json(self.smtpapi)
         elif "x-smtpapi" in self.data:
             self.data["x-smtpapi"] = self.serialize_json(self.data["x-smtpapi"])

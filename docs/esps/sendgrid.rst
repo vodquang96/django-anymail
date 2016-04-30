@@ -117,7 +117,16 @@ Example:
         message.esp_extra = {
             'x-smtpapi': {
                 "asm_group": 1,  # Assign SendGrid unsubscribe group for this message
-                "asm_groups_to_display": [1, 2, 3]
+                "asm_groups_to_display": [1, 2, 3],
+                "filters": {
+                    "subscriptiontrack": {  # Insert SendGrid subscription management links
+                        "settings": {
+                            "text/html": "If you would like to unsubscribe <% click here %>.",
+                            "text/plain": "If you would like to unsubscribe click here: <% %>.",
+                            "enable": 1
+                        }
+                    }
+                }
             }
         }
 

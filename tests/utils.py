@@ -1,10 +1,8 @@
 # Anymail test utils
 import sys
-import unittest
 
 import os
 import re
-import six
 import warnings
 from base64 import b64decode
 from contextlib import contextmanager
@@ -60,19 +58,23 @@ class AnymailTestMixin:
         finally:
             warnings.resetwarnings()
 
-    # Plus these methods added below:
-    # assertCountEqual
-    # assertRaisesRegex
-    # assertRegex
+    def assertCountEqual(self, *args, **kwargs):
+        try:
+            return super(AnymailTestMixin, self).assertCountEqual(*args, **kwargs)
+        except TypeError:
+            return self.assertItemsEqual(*args, **kwargs)  # Python 2
 
-# Add the Python 3 TestCase assertions, if they're not already there.
-# (The six implementations cause infinite recursion if installed on
-# a py3 TestCase.)
-for method in ('assertCountEqual', 'assertRaisesRegex', 'assertRegex'):
-    try:
-        getattr(unittest.TestCase, method)
-    except AttributeError:
-        setattr(AnymailTestMixin, method, getattr(six, method))
+    def assertRaisesRegex(self, *args, **kwargs):
+        try:
+            return super(AnymailTestMixin, self).assertRaisesRegex(*args, **kwargs)
+        except TypeError:
+            return self.assertRaisesRegexp(*args, **kwargs)  # Python 2
+
+    def assertRegex(self, *args, **kwargs):
+        try:
+            return super(AnymailTestMixin, self).assertRegex(*args, **kwargs)
+        except TypeError:
+            return self.assertRegexpMatches(*args, **kwargs)  # Python 2
 
 
 # Backported from python 3.5

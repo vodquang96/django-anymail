@@ -423,18 +423,35 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
 
     def test_esp_extra(self):
         self.message.tags = ["tag"]
+        self.message.track_clicks = True
         self.message.esp_extra = {
-            'x-smtpapi': {'asm_group_id': 1},
+            'x-smtpapi': {
+                # Most SendMail options go in the 'x-smtpapi' block...
+                'asm_group_id': 1,
+                'filters': {
+                    # If you add a filter, you must supply all required settings for it.
+                    'subscriptiontrack': {
+                        'settings': {
+                            'enable': 1,
+                            'replace': '[unsubscribe_url]',
+                        },
+                    },
+                },
+            },
             'newthing': "some param not supported by Anymail",
         }
         self.message.send()
         # Additional send params:
         data = self.get_api_call_data()
         self.assertEqual(data['newthing'], "some param not supported by Anymail")
-        # Should merge x-smtpapi
+        # Should merge x-smtpapi, and merge filters within x-smtpapi
         smtpapi = self.get_smtpapi()
         self.assertEqual(smtpapi['category'], ["tag"])
         self.assertEqual(smtpapi['asm_group_id'], 1)
+        self.assertEqual(smtpapi['filters']['subscriptiontrack'],
+                         {'settings': {'enable': 1, 'replace': '[unsubscribe_url]'}})  # esp_extra merged
+        self.assertEqual(smtpapi['filters']['clicktrack'],
+                         {'settings': {'enable': 1}})  # Anymail message option preserved
 
     # noinspection PyUnresolvedReferences
     def test_send_attaches_anymail_status(self):
