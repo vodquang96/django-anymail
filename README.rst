@@ -43,11 +43,10 @@ built-in `django.core.mail` package. It includes:
 * Simplified inline images for HTML email
 * Normalized sent-message status and tracking notification, by connecting
   your ESP's webhooks to Django signals
+* "Batch transactional" sends using your ESP's merge and template features
 
-Support is planned for:
+Support is also planned for:
 
-* "Bulk-transactional" sends using your ESP's template facility,
-  with portable declaration of substitution/merge data
 * Normalized inbound email processing through your ESP
 
 Anymail is released under the BSD license. It is extensively tested against Django 1.8--1.9

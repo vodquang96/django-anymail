@@ -15,7 +15,7 @@ from django.test import SimpleTestCase
 from django.test.utils import override_settings
 from django.utils.timezone import get_fixed_timezone, override as override_current_timezone
 
-from anymail.exceptions import AnymailAPIError, AnymailSerializationError, AnymailUnsupportedFeature
+from anymail.exceptions import AnymailAPIError, AnymailSerializationError, AnymailUnsupportedFeature, AnymailWarning
 from anymail.message import attach_inline_image_file
 
 from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
@@ -402,6 +402,91 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         smtpapi = self.get_smtpapi()
         self.assertEqual(smtpapi['filters']['clicktrack'], {'settings': {'enable': 1}})
         self.assertEqual(smtpapi['filters']['opentrack'], {'settings': {'enable': 0}})
+
+    def test_template_id(self):
+        self.message.template_id = "5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f"
+        self.message.send()
+        smtpapi = self.get_smtpapi()
+        self.assertEqual(smtpapi['filters']['templates'], {
+            'settings': {'enable': 1,
+                         'template_id': "5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f"}
+        })
+
+    def test_merge_data(self):
+        self.message.to = ['alice@example.com', 'Bob <bob@example.com>']
+        # SendGrid template_id is not required to use merge.
+        # You can just supply template content as the message (e.g.):
+        self.message.body = "Hi :name. Welcome to :group at :site."
+        self.message.merge_data = {
+            # You must either include merge field delimiters in the keys (':name' rather than just 'name')
+            # as shown here, or use one of the merge_field_format options shown in the test cases below
+            'alice@example.com': {':name': "Alice", ':group': "Developers"},
+            'bob@example.com': {':name': "Bob"},  # and leave :group undefined
+        }
+        self.message.merge_global_data = {
+            ':group': "Users",
+            ':site': "ExampleCo",
+        }
+        self.message.send()
+
+        data = self.get_api_call_data()
+        smtpapi = self.get_smtpapi()
+        self.assertNotIn('to', data)  # recipients should be moved to smtpapi-to with merge_data
+        self.assertNotIn('toname', data)
+        self.assertEqual(smtpapi['to'], ['alice@example.com', 'Bob <bob@example.com>'])
+        self.assertEqual(smtpapi['sub'], {
+            ':name': ["Alice", "Bob"],
+            ':group': ["Developers", ":group"],  # missing value gets replaced with var name...
+        })
+        self.assertEqual(smtpapi['section'], {
+            ':group': "Users",  # ... which SG should then try to resolve from here
+            ':site': "ExampleCo",
+        })
+
+    @override_settings(ANYMAIL_SENDGRID_MERGE_FIELD_FORMAT=":{}")  # :field as shown in SG examples
+    def test_merge_field_format_setting(self):
+        # Provide merge field delimiters in settings.py
+        self.message.to = ['alice@example.com', 'Bob <bob@example.com>']
+        self.message.merge_data = {
+            'alice@example.com': {'name': "Alice", 'group': "Developers"},
+            'bob@example.com': {'name': "Bob"},  # and leave group undefined
+        }
+        self.message.merge_global_data = {'site': "ExampleCo"}
+        self.message.send()
+        smtpapi = self.get_smtpapi()
+        self.assertEqual(smtpapi['sub'], {
+            ':name': ["Alice", "Bob"],
+            ':group': ["Developers", ":group"]  # substitutes formatted field name if missing for recipient
+        })
+        self.assertEqual(smtpapi['section'], {':site': "ExampleCo"})
+
+    def test_merge_field_format_esp_extra(self):
+        # Provide merge field delimiters for an individual message
+        self.message.to = ['alice@example.com', 'Bob <bob@example.com>']
+        self.message.merge_data = {
+            'alice@example.com': {'name': "Alice", 'group': "Developers"},
+            'bob@example.com': {'name': "Bob"},  # and leave group undefined
+        }
+        self.message.merge_global_data = {'site': "ExampleCo"}
+        self.message.esp_extra = {'merge_field_format': '*|{}|*'}  # match Mandrill/MailChimp delimiters
+        self.message.send()
+        smtpapi = self.get_smtpapi()
+        self.assertEqual(smtpapi['sub'], {
+            '*|name|*': ["Alice", "Bob"],
+            '*|group|*': ["Developers", '*|group|*']  # substitutes formatted field name if missing for recipient
+        })
+        self.assertEqual(smtpapi['section'], {'*|site|*': "ExampleCo"})
+        # Make sure our esp_extra merge_field_format doesn't get sent to SendGrid API:
+        data = self.get_api_call_data()
+        self.assertNotIn('merge_field_format', data)
+
+    def test_warn_if_no_merge_field_delimiters(self):
+        self.message.to = ['alice@example.com']
+        self.message.merge_data = {
+            'alice@example.com': {'name': "Alice", 'group': "Developers"},
+        }
+        with self.assertWarnsRegex(AnymailWarning, r'SENDGRID_MERGE_FIELD_FORMAT'):
+            self.message.send()
 
     @override_settings(ANYMAIL_SENDGRID_GENERATE_MESSAGE_ID=False)  # else we force unique_args
     def test_default_omits_options(self):

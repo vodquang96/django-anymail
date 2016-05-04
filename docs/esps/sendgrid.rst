@@ -89,6 +89,34 @@ Default ``True``. You can set to ``False`` to disable this behavior.
 See :ref:`Message-ID quirks <sendgrid-message-id>` below.
 
 
+.. setting:: ANYMAIL_SENDGRID_MERGE_FIELD_FORMAT
+
+.. rubric:: SENDGRID_MERGE_FIELD_FORMAT
+
+If you use :ref:`merge data <merge-data>`, set this to a :meth:`str.format`
+formatting string that indicates how merge fields are delimited
+in your SendGrid templates.
+For example, if your templates use the ``-field-`` hyphen delimiters
+suggested in some SendGrid docs, you would set:
+
+  .. code-block:: python
+
+      ANYMAIL = {
+          ...
+          "SENDGRID_MERGE_FIELD_FORMAT": "-{}-",
+      }
+
+The placeholder `{}` will become the merge field name. If you need to include
+a literal brace character, double it up. (For example, Handlebars-style
+``{{field}}`` delimiters would take the format string `"{{{{{}}}}}"`.)
+
+The default `None` requires you include the delimiters directly in your
+:attr:`~anymail.message.AnymailMessage.merge_data` keys.
+You can also override this setting for individual messages.
+See the notes on SendGrid :ref:`templates and merge <sendgrid-templates>`
+below.
+
+
 .. setting:: ANYMAIL_SENDGRID_API_URL
 
 .. rubric:: SENDGRID_API_URL
@@ -183,6 +211,84 @@ Limitations and quirks
   actually OK with that.)
 
   (Tested March, 2016)
+
+
+.. _sendgrid-templates:
+
+Batch sending/merge and ESP templates
+-------------------------------------
+
+SendGrid offers both :ref:`ESP stored templates <esp-stored-templates>`
+and :ref:`batch sending <batch-send>` with per-recipient merge data.
+
+You can use a SendGrid stored template by setting a message's
+:attr:`~anymail.message.AnymailMessage.template_id` to the
+template's unique id. Alternatively, you can refer to merge fields
+directly in an EmailMessage's subject and body---the message itself
+is used as an on-the-fly template.
+
+In either case, supply the merge data values with Anymail's
+normalized :attr:`~anymail.message.AnymailMessage.merge_data`
+and :attr:`~anymail.message.AnymailMessage.merge_global_data`
+message attributes.
+
+  .. code-block:: python
+
+      message = EmailMessage(
+          ...
+          subject="",  # don't add any additional subject content to the template
+          body="",  # (same thing for additional body content)
+          to=["alice@example.com", "Bob <bob@example.com>"]
+      )
+      message.template_id = "5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f"  # SendGrid id
+      message.merge_data = {
+          'alice@example.com': {'name': "Alice", 'order_no': "12345"},
+          'bob@example.com': {'name': "Bob", 'order_no': "54321"},
+      }
+      message.merge_global_data = {
+          'ship_date': "May 15",
+      }
+      message.esp_extra = {
+          # Tell Anymail this SendGrid template uses "-field-" to refer to merge fields.
+          # (We could also just set SENDGRID_MERGE_FIELD_FORMAT in our ANYMAIL settings.)
+          'merge_field_format': "-{}-"
+      }
+
+SendGrid doesn't have a pre-defined merge field syntax, so you
+must tell Anymail how substitution fields are delimited in your templates.
+There are three ways you can do this:
+
+  * Set `'merge_field_format'` in the message's
+    :attr:`~anymail.message.AnymailMessage.esp_extra` to a python :meth:`str.format`
+    string, as shown in the example above. (This applies only to that
+    particular EmailMessage.)
+  * *Or* set :setting:`SENDGRID_MERGE_FIELD_FORMAT <ANYMAIL_SENDGRID_MERGE_FIELD_FORMAT>`
+    in your Anymail settings. This is usually the best approach, and will apply to all messages
+    sent through SendGrid. (You can still use esp_extra to override for individual messages.)
+  * *Or* include the field delimiters directly in *all* your
+    :attr:`~anymail.message.AnymailMessage.merge_data` and
+    :attr:`~anymail.message.AnymailMessage.merge_global_data` keys.
+    E.g.: ``{'-name-': "Alice", '-order_no-': "12345"}``.
+    (This can be error-prone, and difficult to move to other ESPs.)
+
+When you supply per-recipient :attr:`~anymail.message.AnymailMessage.merge_data`,
+Anymail automatically changes how it communicates the "to" list to SendGrid, so that
+so that each recipient sees only their own email address. (Anymail moves the recipients
+from top-level "to" and "toname" API parameters into the "x-smtpapi" section "to" list.)
+
+SendGrid templates allow you to mix your EmailMessage's `subject` and `body`
+with the template subject and body (by using `<%subject%>` and `<%body%>` in
+your SendGrid template definition where you want the message-specific versions
+to appear). If you don't want to supply any additional subject or body content
+from your Django app, set those EmailMessage attributes to empty strings.
+
+See the `SendGrid's template overview`_ and `transactional template docs`_
+for more information.
+
+.. _SendGrid's template overview:
+    https://sendgrid.com/docs/User_Guide/Transactional_Templates/index.html
+.. _transactional template docs:
+    https://sendgrid.com/docs/API_Reference/Web_API_v3/Transactional_Templates/smtpapi.html
 
 
 .. _sendgrid-webhooks:

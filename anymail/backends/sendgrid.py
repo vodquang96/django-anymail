@@ -1,7 +1,9 @@
+import warnings
+
 from django.core.mail import make_msgid
 from requests.structures import CaseInsensitiveDict
 
-from ..exceptions import AnymailConfigurationError, AnymailRequestsAPIError
+from ..exceptions import AnymailConfigurationError, AnymailRequestsAPIError, AnymailWarning
 from ..message import AnymailRecipientStatus
 from ..utils import get_anymail_setting, timestamp
 
@@ -31,6 +33,8 @@ class SendGridBackend(AnymailRequestsBackend):
 
         self.generate_message_id = get_anymail_setting('generate_message_id', esp_name=esp_name,
                                                        kwargs=kwargs, default=True)
+        self.merge_field_format = get_anymail_setting('merge_field_format', esp_name=esp_name,
+                                                      kwargs=kwargs, default=None)
 
         # This is SendGrid's Web API v2 (because the Web API v3 doesn't support sending)
         api_url = get_anymail_setting('api_url', esp_name=esp_name, kwargs=kwargs,
@@ -65,6 +69,10 @@ class SendGridPayload(RequestsPayload):
         self.generate_message_id = backend.generate_message_id
         self.message_id = None  # Message-ID -- assigned in serialize_data unless provided in headers
         self.smtpapi = {}  # SendGrid x-smtpapi field
+        self.to_list = []  # late-bound 'to' field
+        self.merge_field_format = backend.merge_field_format
+        self.merge_data = None  # late-bound per-recipient data
+        self.merge_global_data = None
 
         http_headers = kwargs.pop('headers', {})
         query_params = kwargs.pop('params', {})
@@ -85,6 +93,15 @@ class SendGridPayload(RequestsPayload):
 
         if self.generate_message_id:
             self.ensure_message_id()
+
+        self.build_merge_data()
+        if self.merge_data is None:
+            # Standard 'to' and 'toname' headers
+            self.set_recipients('to', self.to_list)
+        else:
+            # Merge-friendly smtpapi 'to' field
+            self.smtpapi['to'] = [email.address for email in self.to_list]
+            self.all_recipients += self.to_list
 
         # Serialize x-smtpapi to json:
         if len(self.smtpapi) > 0:
@@ -132,6 +149,41 @@ class SendGridPayload(RequestsPayload):
             domain = None
         return make_msgid(domain=domain)
 
+    def build_merge_data(self):
+        """Set smtpapi['sub'] and ['section']"""
+        if self.merge_data is not None:
+            # Convert from {to1: {a: A1, b: B1}, to2: {a: A2}}  (merge_data format)
+            # to {a: [A1, A2], b: [B1, ""]}  ({field: [data in to-list order], ...})
+            all_fields = set()
+            for recipient_data in self.merge_data.values():
+                all_fields = all_fields.union(recipient_data.keys())
+            recipients = [email.email for email in self.to_list]
+
+            if self.merge_field_format is None and all(field.isalnum() for field in all_fields):
+                warnings.warn(
+                    "Your SendGrid merge fields don't seem to have delimiters, "
+                    "which can cause unexpected results with Anymail's merge_data. "
+                    "Search SENDGRID_MERGE_FIELD_FORMAT in the Anymail docs for more info.",
+                    AnymailWarning)
+
+            sub_field_fmt = self.merge_field_format or '{}'
+            sub_fields = {field: sub_field_fmt.format(field) for field in all_fields}
+
+            self.smtpapi['sub'] = {
+                # If field data is missing for recipient, use (formatted) field as the substitution.
+                # (This allows default to resolve from global "section" substitutions.)
+                sub_fields[field]: [self.merge_data.get(recipient, {}).get(field, sub_fields[field])
+                                    for recipient in recipients]
+                for field in all_fields
+            }
+
+        if self.merge_global_data is not None:
+            section_field_fmt = self.merge_field_format or '{}'
+            self.smtpapi['section'] = {
+                section_field_fmt.format(field): data
+                for field, data in self.merge_global_data.items()
+            }
+
     #
     # Payload construction
     #
@@ -145,6 +197,11 @@ class SendGridPayload(RequestsPayload):
         self.data["from"] = email.email
         if email.name:
             self.data["fromname"] = email.name
+
+    def set_to(self, emails):
+        # late-bind in self.serialize_data, because whether it goes in smtpapi
+        # depends on whether there is merge_data
+        self.to_list = emails
 
     def set_recipients(self, recipient_type, emails):
         assert recipient_type in ["to", "cc", "bcc"]
@@ -229,5 +286,18 @@ class SendGridPayload(RequestsPayload):
         # (You could add it through esp_extra.)
         self.add_filter('opentrack', 'enable', int(track_opens))
 
+    def set_template_id(self, template_id):
+        self.add_filter('templates', 'enable', 1)
+        self.add_filter('templates', 'template_id', template_id)
+
+    def set_merge_data(self, merge_data):
+        # Becomes smtpapi['sub'] in build_merge_data, after we know recipients and merge_field_format.
+        self.merge_data = merge_data
+
+    def set_merge_global_data(self, merge_global_data):
+        # Becomes smtpapi['section'] in build_merge_data, after we know merge_field_format.
+        self.merge_global_data = merge_global_data
+
     def set_esp_extra(self, extra):
+        self.merge_field_format = extra.pop('merge_field_format', self.merge_field_format)
         self.data.update(extra)
