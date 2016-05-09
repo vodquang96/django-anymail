@@ -38,7 +38,7 @@ To use Anymail for sending email, edit your Django project's :file:`settings.py`
     .. code-block:: python
 
         ANYMAIL = {
-            "MAILGUN_API_KEY" = "<your Mailgun key>",
+            "MAILGUN_API_KEY": "<your Mailgun key>",
         }
 
    The exact settings vary by ESP.
