@@ -401,6 +401,69 @@ class MandrillBackendAnymailFeatureTests(MandrillBackendMockAPITestCase):
         data = self.get_api_call_json()
         self.assertNotIn('subject', data['message'])
 
+    def test_esp_extra(self):
+        self.message.esp_extra = {
+            'ip_pool': 'Bulk Pool',  # Mandrill send param that goes at top level of API payload
+            'message': {
+                'subaccount': 'Marketing Dept.'  # param that goes within message dict
+            }
+        }
+        self.message.tags = ['test-tag']  # make sure non-esp_extra params are merged
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertEqual(data['ip_pool'], 'Bulk Pool')
+        self.assertEqual(data['message']['subaccount'], 'Marketing Dept.')
+        self.assertEqual(data['message']['tags'], ['test-tag'])
+
+    def test_esp_extra_recipient_metadata(self):
+        """Anymail allows pythonic recipient_metadata dict"""
+        self.message.esp_extra = {'message': {'recipient_metadata': {
+            # Anymail expands simple python dicts into the more-verbose
+            # rcpt/values lists the Mandrill API uses
+            "customer@example.com": {'cust_id': "67890", 'order_id': "54321"},
+            "guest@example.com": {'cust_id': "94107", 'order_id': "43215"} ,
+        }}}
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertCountEqual(data['message']['recipient_metadata'], [
+            {'rcpt': "customer@example.com", 'values': {'cust_id': "67890", 'order_id': "54321"}},
+            {'rcpt': "guest@example.com", 'values': {'cust_id': "94107", 'order_id': "43215"}}])
+
+        # You can also just supply it in Mandrill's native form
+        self.message.esp_extra = {'message': {'recipient_metadata': [
+            {'rcpt': "customer@example.com", 'values': {'cust_id': "80806", 'order_id': "70701"}},
+            {'rcpt': "guest@example.com", 'values': {'cust_id': "21212", 'order_id': "10305"}}]}}
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertCountEqual(data['message']['recipient_metadata'], [
+            {'rcpt': "customer@example.com", 'values': {'cust_id': "80806", 'order_id': "70701"}},
+            {'rcpt': "guest@example.com", 'values': {'cust_id': "21212", 'order_id': "10305"}}])
+
+    def test_esp_extra_template_content(self):
+        """Anymail allows pythonic template_content dict"""
+        self.message.template_id = "welcome_template"  # forces send-template API and default template_content
+        self.message.esp_extra = {'template_content': {
+            # Anymail expands simple python dicts into the more-verbose name/content
+            # structures the Mandrill API uses
+            'HEADLINE': "<h1>Specials Just For *|FNAME|*</h1>",
+            'OFFER_BLOCK': "<p><em>Half off</em> all fruit</p>",
+        }}
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertCountEqual(data['template_content'], [
+            {'name': "HEADLINE", 'content': "<h1>Specials Just For *|FNAME|*</h1>"},
+            {'name': "OFFER_BLOCK", 'content': "<p><em>Half off</em> all fruit</p>"}])
+
+        # You can also just supply it in Mandrill's native form
+        self.message.esp_extra = {'template_content': [
+            {'name': "HEADLINE", 'content': "<h1>Exciting offers for *|FNAME|*</h1>"},
+            {'name': "OFFER_BLOCK", 'content': "<p><em>25% off</em> all fruit</p>"}]}
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertCountEqual(data['template_content'], [
+            {'name': "HEADLINE", 'content': "<h1>Exciting offers for *|FNAME|*</h1>"},
+            {'name': "OFFER_BLOCK", 'content': "<p><em>25% off</em> all fruit</p>"}])
+
     def test_default_omits_options(self):
         """Make sure by default we don't send any ESP-specific options.
 
@@ -411,11 +474,15 @@ class MandrillBackendAnymailFeatureTests(MandrillBackendMockAPITestCase):
         self.message.send()
         self.assert_esp_called("/messages/send.json")
         data = self.get_api_call_json()
+        self.assertNotIn('global_merge_vars', data['message'])
+        self.assertNotIn('merge_vars', data['message'])
         self.assertNotIn('metadata', data['message'])
         self.assertNotIn('send_at', data)
         self.assertNotIn('tags', data['message'])
-        self.assertNotIn('track_opens', data['message'])
+        self.assertNotIn('template_content', data['message'])
+        self.assertNotIn('template_name', data['message'])
         self.assertNotIn('track_clicks', data['message'])
+        self.assertNotIn('track_opens', data['message'])
 
     # noinspection PyUnresolvedReferences
     def test_send_attaches_anymail_status(self):

@@ -97,9 +97,38 @@ which is the secure, production version of Mandrill's 1.0 API.
 esp_extra support
 -----------------
 
-Anymail's Mandrill backend does not yet implement the
-:attr:`~anymail.message.AnymailMessage.esp_extra` feature.
+To use Mandrill features not directly supported by Anymail, you can
+set a message's :attr:`~anymail.message.AnymailMessage.esp_extra` to
+a `dict` of parameters to merge into Mandrill's `messages/send API`_ call.
+Note that a few parameters go at the top level, but Mandrill expects
+most options within a `'message'` sub-dict---be sure to check their
+API docs:
 
+  .. code-block:: python
+
+      message.esp_extra = {
+          # Mandrill expects 'ip_pool' at top level...
+          'ip_pool': 'Bulk Pool',
+          # ... but 'subaccount' must be within a 'message' dict:
+          'message': {
+              'subaccount': 'Marketing Dept.'
+          }
+      }
+
+Anymail has special handling that lets you specify Mandrill's
+`'recipient_metadata'` as a simple, pythonic `dict` (similar in form
+to Anymail's :attr:`~anymail.message.AnymailMessage.merge_data`),
+rather than Mandrill's more complex list of rcpt/values dicts.
+You can use whichever style you prefer (but either way,
+recipient_metadata must be in `esp_extra['message']`).
+
+Similary, Anymail allows Mandrill's `'template_content'` in esp_extra
+(top level) either as a pythonic `dict` (similar to Anymail's
+:attr:`~anymail.message.AnymailMessage.merge_global_data`) or
+as Mandrill's more complex list of name/content dicts.
+
+.. _messages/send API:
+    https://mandrillapp.com/api/docs/messages.JSON.html#method=send
 
 .. _mandrill-templates:
 
@@ -222,14 +251,19 @@ Changes to settings
   the values from :setting:`ANYMAIL_SEND_DEFAULTS`.
 
 ``MANDRILL_SUBACCOUNT``
-  Use :setting:`ANYMAIL_MANDRILL_SEND_DEFAULTS`:
+  Set :ref:`esp_extra <mandrill-esp-extra>`
+  globally in :setting:`ANYMAIL_SEND_DEFAULTS`:
 
     .. code-block:: python
 
         ANYMAIL = {
             ...
             "MANDRILL_SEND_DEFAULTS": {
-                "subaccount": "<your subaccount>"
+                "esp_extra": {
+                    "message": {
+                        "subaccount": "<your subaccount>"
+                    }
+                }
             }
         }
 
@@ -290,13 +324,30 @@ Changes to EmailMessage attributes
   to use the values from the stored template.
 
 **Other Mandrill-specific attributes**
-  Are currently still supported by Anymail's Mandrill backend,
-  but will be ignored by other Anymail backends.
+  Djrill allowed nearly all Mandrill API parameters to be set
+  as attributes directly on an EmailMessage. With Anymail, you
+  should instead set these in the message's
+  :ref:`esp_extra <mandrill-esp-extra>` dict as described above.
 
-  It's best to eliminate them if they're not essential
-  to your code. In the future, the Mandrill-only attributes
-  will be moved into the
-  :attr:`~anymail.message.AnymailMessage.esp_extra` dict.
+  Although the Djrill style attributes are still supported (for now),
+  Anymail will issue a :exc:`DeprecationWarning` if you try to use them.
+  These warnings are visible during tests (with Django's default test
+  runner), and will explain how to update your code.
+
+  You can also use the following git grep expression to find potential
+  problems:
+
+    .. code-block:: console
+
+        git grep -w \
+          -e 'async' -e 'auto_html' -e 'auto_text' -e 'from_name' -e 'global_merge_vars' \
+          -e 'google_analytics_campaign' -e 'google_analytics_domains' -e 'important' \
+          -e 'inline_css' -e 'ip_pool' -e 'merge_language' -e 'merge_vars' \
+          -e 'preserve_recipients' -e 'recipient_metadata' -e 'return_path_domain' \
+          -e 'signing_domain' -e 'subaccount' -e 'template_content' -e 'template_name' \
+          -e 'tracking_domain' -e 'url_strip_qs' -e 'use_template_from' -e 'use_template_subject' \
+          -e 'view_content_link'
+
 
 **Inline images**
   Djrill (incorrectly) used the presence of a :mailheader:`Content-ID`

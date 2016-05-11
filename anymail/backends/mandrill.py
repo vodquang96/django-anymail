@@ -1,6 +1,7 @@
+import warnings
 from datetime import datetime
 
-from ..exceptions import AnymailRequestsAPIError
+from ..exceptions import AnymailRequestsAPIError, AnymailWarning
 from ..message import AnymailRecipientStatus, ANYMAIL_STATUSES
 from ..utils import last, combine, get_anymail_setting
 
@@ -43,14 +44,8 @@ class MandrillBackend(AnymailRequestsBackend):
         return recipient_status
 
 
-def _expand_merge_vars(vardict):
-    """Convert a Python dict to an array of name-content used by Mandrill.
-
-    { name: value, ... } --> [ {'name': name, 'content': value }, ... ]
-    """
-    # For testing reproducibility, we sort the keys
-    return [{'name': name, 'content': vardict[name]}
-            for name in sorted(vardict.keys())]
+class DjrillDeprecationWarning(AnymailWarning, DeprecationWarning):
+    """Warning for features carried over from Djrill that will be removed soon"""
 
 
 def encode_date_for_mandrill(dt):
@@ -69,6 +64,10 @@ def encode_date_for_mandrill(dt):
 
 class MandrillPayload(RequestsPayload):
 
+    def __init__(self, *args, **kwargs):
+        self.esp_extra = {}  # late-bound in serialize_data
+        super(MandrillPayload, self).__init__(*args, **kwargs)
+
     def get_api_endpoint(self):
         if 'template_name' in self.data:
             return "messages/send-template.json"
@@ -76,6 +75,7 @@ class MandrillPayload(RequestsPayload):
             return "messages/send.json"
 
     def serialize_data(self):
+        self.process_esp_extra()
         return self.serialize_json(self.data)
 
     #
@@ -89,7 +89,9 @@ class MandrillPayload(RequestsPayload):
         }
 
     def set_from_email(self, email):
-        if not getattr(self.message, "use_template_from", False):  # Djrill compat!
+        if getattr(self.message, "use_template_from", False):
+            self.deprecation_warning('message.use_template_from', 'message.from_email = None')
+        else:
             self.data["message"]["from_email"] = email.email
             if email.name:
                 self.data["message"]["from_name"] = email.name
@@ -100,7 +102,9 @@ class MandrillPayload(RequestsPayload):
         to_list.append({"email": email.email, "name": email.name, "type": recipient_type})
 
     def set_subject(self, subject):
-        if not getattr(self.message, "use_template_subject", False):  # Djrill compat!
+        if getattr(self.message, "use_template_subject", False):
+            self.deprecation_warning('message.use_template_subject', 'message.subject = None')
+        else:
             self.data["message"]["subject"] = subject
 
     def set_reply_to(self, emails):
@@ -166,9 +170,59 @@ class MandrillPayload(RequestsPayload):
         ]
 
     def set_esp_extra(self, extra):
-        pass
+        # late bind in serialize_data, so that obsolete Djrill attrs can contribute
+        self.esp_extra = extra
 
-    # Djrill leftovers
+    def process_esp_extra(self):
+        if self.esp_extra is not None and len(self.esp_extra) > 0:
+            esp_extra = self.esp_extra
+            # Convert pythonic template_content dict to Mandrill name/content list
+            try:
+                template_content = esp_extra['template_content']
+            except KeyError:
+                pass
+            else:
+                if hasattr(template_content, 'items'):  # if it's dict-like
+                    if esp_extra is self.esp_extra:
+                        esp_extra = self.esp_extra.copy()  # don't modify caller's value
+                    esp_extra['template_content'] = [
+                        {'name': var, 'content': value}
+                        for var, value in template_content.items()]
+            # Convert pythonic recipient_metadata dict to Mandrill rcpt/values list
+            try:
+                recipient_metadata = esp_extra['message']['recipient_metadata']
+            except KeyError:
+                pass
+            else:
+                if hasattr(recipient_metadata, 'keys'):  # if it's dict-like
+                    if esp_extra['message'] is self.esp_extra['message']:
+                        esp_extra['message'] = self.esp_extra['message'].copy()  # don't modify caller's value
+                    # For testing reproducibility, we sort the recipients
+                    esp_extra['message']['recipient_metadata'] = [
+                        {'rcpt': rcpt, 'values': recipient_metadata[rcpt]}
+                        for rcpt in sorted(recipient_metadata.keys())]
+            # Merge esp_extra with payload data: shallow merge within ['message'] and top-level keys
+            self.data.update({k:v for k,v in esp_extra.items() if k != 'message'})
+            try:
+                self.data['message'].update(esp_extra['message'])
+            except KeyError:
+                pass
+
+    # Djrill deprecated message attrs
+
+    def deprecation_warning(self, feature, replacement=None):
+        msg = "Djrill's `%s` will be removed in an upcoming Anymail release." % feature
+        if replacement:
+            msg += " Use `%s` instead." % replacement
+        warnings.warn(msg, DjrillDeprecationWarning)
+
+    def deprecated_to_esp_extra(self, attr, in_message_dict=False):
+        feature = "message.%s" % attr
+        if in_message_dict:
+            replacement = "message.esp_extra = {'message': {'%s': <value>}}" % attr
+        else:
+            replacement = "message.esp_extra = {'%s': <value>}" % attr
+        self.deprecation_warning(feature, replacement)
 
     esp_message_attrs = (
         ('async', last, None),
@@ -188,25 +242,40 @@ class MandrillPayload(RequestsPayload):
         ('subaccount', last, None),
         ('google_analytics_domains', last, None),
         ('google_analytics_campaign', last, None),
+        ('global_merge_vars', combine, None),
+        ('merge_vars', combine, None),
         ('recipient_metadata', combine, None),
-        ('template_content', combine, _expand_merge_vars),
+        ('template_name', last, None),
+        ('template_content', combine, None),
     )
 
     def set_async(self, async):
-        self.data["async"] = async
+        self.deprecated_to_esp_extra('async')
+        self.esp_extra['async'] = async
 
     def set_ip_pool(self, ip_pool):
-        self.data["ip_pool"] = ip_pool
+        self.deprecated_to_esp_extra('ip_pool')
+        self.esp_extra['ip_pool'] = ip_pool
+
+    def set_global_merge_vars(self, global_merge_vars):
+        self.deprecation_warning('message.global_merge_vars', 'message.merge_global_data')
+        self.set_merge_global_data(global_merge_vars)
+
+    def set_merge_vars(self, merge_vars):
+        self.deprecation_warning('message.merge_vars', 'message.merge_data')
+        self.set_merge_data(merge_vars)
+
+    def set_template_name(self, template_name):
+        self.deprecation_warning('message.template_name', 'message.template_id')
+        self.set_template_id(template_name)
 
     def set_template_content(self, template_content):
-        self.data["template_content"] = template_content
+        self.deprecated_to_esp_extra('template_content')
+        self.esp_extra['template_content'] = template_content
 
     def set_recipient_metadata(self, recipient_metadata):
-        # For testing reproducibility, we sort the recipients
-        self.data['message']['recipient_metadata'] = [
-            {'rcpt': rcpt, 'values': recipient_metadata[rcpt]}
-            for rcpt in sorted(recipient_metadata.keys())
-        ]
+        self.deprecated_to_esp_extra('recipient_metadata', in_message_dict=True)
+        self.esp_extra.setdefault('message', {})['recipient_metadata'] = recipient_metadata
 
     # Set up simple set_<attr> functions for any missing esp_message_attrs attrs
     # (avoids dozens of simple `self.data["message"][<attr>] = value` functions)
@@ -225,7 +294,8 @@ class MandrillPayload(RequestsPayload):
     def make_setter(attr, setter_name):
         # sure wish we could use functools.partial to create instance methods (descriptors)
         def setter(self, value):
-            self.data["message"][attr] = value
+            self.deprecated_to_esp_extra(attr, in_message_dict=True)
+            self.esp_extra.setdefault('message', {})[attr] = value
         setter.__name__ = setter_name
         return setter
 
