@@ -68,7 +68,7 @@ without raising any other errors.
 
     Your pre_send receiver must be a function with this signature:
 
-    .. function:: def my_pre_send_handler(sender, message, **kwargs):
+    .. function:: def my_pre_send_handler(sender, message, esp_name, **kwargs):
 
        (You can name it anything you want.)
 
