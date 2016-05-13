@@ -3,11 +3,13 @@
 # python runtests.py [anymail.tests.test_x anymail.tests.test_y.SomeTestCase ...]
 
 import sys
+import warnings
 
 from django import setup
 from django.conf import settings
 from django.test.runner import DiscoverRunner as TestRunner
 
+warnings.simplefilter('default')  # show DeprecationWarning and other default-ignored warnings
 
 APP = 'anymail'
 

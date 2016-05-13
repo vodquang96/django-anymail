@@ -66,17 +66,18 @@ To run the tests, either:
 
     .. code-block:: console
 
-        $ python -Wall setup.py test
+        $ python setup.py test
 
 or:
 
     .. code-block:: console
 
-        $ python -Wall runtests.py
+        $ python runtests.py
 
 Anymail also includes some integration tests, which do call the live ESP APIs.
 These integration tests require API keys (and sometimes other settings) they
-get from from environment variables. Look in the ``*_integration_tests.py``
+get from from environment variables. They're skipped if these keys aren't present.
+If you want to run them, look in the ``*_integration_tests.py``
 files in the `tests source`_ for specific requirements.
 
 .. _.travis.yml: https://github.com/anymail/django-anymail/blob/master/.travis.yml

@@ -35,4 +35,4 @@ install:
   - pip install $DJANGO
   - pip install .
   - pip list
-script: python -Wall setup.py test
+script: python setup.py test
