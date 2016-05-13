@@ -592,62 +592,6 @@ class MandrillBackendSessionSharingTestCase(SessionSharingTestCasesMixin, Mandri
     pass  # tests are defined in the mixin
 
 
-@override_settings(ANYMAIL_SEND_DEFAULTS={
-    'metadata': {'global': 'globalvalue', 'other': 'othervalue'},
-    'tags': ['globaltag'],
-    'track_clicks': True,
-    'track_opens': True,
-    # 'esp_extra': {'globaloption': 'globalsetting'},  # Mandrill doesn't support esp_extra yet
-})
-class MandrillBackendSendDefaultsTests(MandrillBackendMockAPITestCase):
-    """Tests backend support for global SEND_DEFAULTS"""
-
-    def test_send_defaults(self):
-        """Test that global send defaults are applied"""
-        self.message.send()
-        data = self.get_api_call_json()
-        # All these values came from ANYMAIL_SEND_DEFAULTS:
-        self.assertEqual(data['message']['metadata'], {'global': 'globalvalue', 'other': 'othervalue'})
-        self.assertEqual(data['message']['tags'], ['globaltag'])
-        self.assertEqual(data['message']['track_clicks'], True)
-        self.assertEqual(data['message']['track_opens'], True)
-        # self.assertEqual(data['globaloption'], 'globalsetting')
-
-    def test_merge_message_with_send_defaults(self):
-        """Test that individual message settings are *merged into* the global send defaults"""
-        self.message.metadata = {'message': 'messagevalue', 'other': 'override'}
-        self.message.tags = ['messagetag']
-        self.message.track_clicks = False
-        # self.message.esp_extra = {'messageoption': 'messagesetting'}
-
-        self.message.send()
-        data = self.get_api_call_json()
-        # All these values came from ANYMAIL_SEND_DEFAULTS + message.*:
-        self.assertEqual(data['message']['metadata'],
-                         {'global': 'globalvalue', 'message': 'messagevalue', 'other': 'override'})  # merged
-        self.assertEqual(data['message']['tags'], ['globaltag', 'messagetag'])  # tags concatenated
-        self.assertEqual(data['message']['track_clicks'], False)  # message overrides
-        self.assertEqual(data['message']['track_opens'], True)
-        # self.assertEqual(data['globaloption'], 'globalsetting')
-        # self.assertEqual(data['messageoption'], 'messagesetting')  # additional esp_extra
-
-    @override_settings(ANYMAIL_MANDRILL_SEND_DEFAULTS={
-        'tags': ['esptag'],
-        'metadata': {'esp': 'espvalue'},
-        'track_opens': False,
-    })
-    def test_esp_send_defaults(self):
-        """Test that ESP-specific send defaults override individual global defaults"""
-        self.message.send()
-        data = self.get_api_call_json()
-        # All these values came from ANYMAIL_SEND_DEFAULTS plus ANYMAIL_MAILGUN_SEND_DEFAULTS:
-        self.assertEqual(data['message']['metadata'], {'esp': 'espvalue'})  # entire metadata overridden
-        self.assertEqual(data['message']['tags'], ['esptag'])  # entire tags overridden
-        self.assertEqual(data['message']['track_clicks'], True)  # we didn't override the global track_clicks
-        self.assertEqual(data['message']['track_opens'], False)
-        # self.assertEqual(data['globaloption'], 'globalsetting')  # we didn't override the global esp_extra
-
-
 @override_settings(EMAIL_BACKEND="anymail.backends.mandrill.MandrillBackend")
 class MandrillBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin):
     """Test backend without required settings"""

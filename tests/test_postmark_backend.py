@@ -546,51 +546,6 @@ class PostmarkBackendSessionSharingTestCase(SessionSharingTestCasesMixin, Postma
     pass  # tests are defined in the mixin
 
 
-@override_settings(ANYMAIL_SEND_DEFAULTS={
-    'tags': ['globaltag'],
-    'track_opens': True,
-    'esp_extra': {'globaloption': 'globalsetting'},
-})
-class PostmarkBackendSendDefaultsTests(PostmarkBackendMockAPITestCase):
-    """Tests backend support for global SEND_DEFAULTS"""
-
-    def test_send_defaults(self):
-        """Test that global send defaults are applied"""
-        self.message.send()
-        data = self.get_api_call_json()
-        # All these values came from ANYMAIL_SEND_DEFAULTS:
-        self.assertEqual(data['Tag'], 'globaltag')
-        self.assertEqual(data['TrackOpens'], True)
-        self.assertEqual(data['globaloption'], 'globalsetting')
-
-    def test_merge_message_with_send_defaults(self):
-        """Test that individual message settings are *merged into* the global send defaults"""
-        self.message.tags = None  # can't really append (since only one tag), but can suppress it
-        self.message.track_opens = False
-        self.message.esp_extra = {'messageoption': 'messagesetting'}
-
-        self.message.send()
-        data = self.get_api_call_json()
-        # All these values came from ANYMAIL_SEND_DEFAULTS + message.*:
-        self.assertNotIn('Tag', data)
-        self.assertEqual(data['TrackOpens'], False)
-        self.assertEqual(data['globaloption'], 'globalsetting')
-        self.assertEqual(data['messageoption'], 'messagesetting')  # additional esp_extra
-
-    @override_settings(ANYMAIL_POSTMARK_SEND_DEFAULTS={
-        'tags': ['esptag'],
-        'track_opens': False,
-    })
-    def test_esp_send_defaults(self):
-        """Test that ESP-specific send defaults override individual global defaults"""
-        self.message.send()
-        data = self.get_api_call_json()
-        # All these values came from ANYMAIL_SEND_DEFAULTS plus ANYMAIL_SENDGRID_SEND_DEFAULTS:
-        self.assertEqual(data['Tag'], 'esptag')  # entire tags overridden
-        self.assertEqual(data['TrackOpens'], False)  # esp override
-        self.assertEqual(data['globaloption'], 'globalsetting')  # we didn't override the global esp_extra
-
-
 @override_settings(EMAIL_BACKEND="anymail.backends.postmark.PostmarkBackend")
 class PostmarkBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin):
     """Test ESP backend without required settings in place"""

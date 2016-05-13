@@ -468,65 +468,6 @@ class MailgunBackendSessionSharingTestCase(SessionSharingTestCasesMixin, Mailgun
     pass  # tests are defined in the mixin
 
 
-@override_settings(ANYMAIL_SEND_DEFAULTS={
-    'metadata': {'global': 'globalvalue', 'other': 'othervalue'},
-    'tags': ['globaltag'],
-    'track_clicks': True,
-    'track_opens': True,
-    'esp_extra': {'o:globaloption': 'globalsetting'},
-})
-class MailgunBackendSendDefaultsTests(MailgunBackendMockAPITestCase):
-    """Tests backend support for global SEND_DEFAULTS"""
-
-    def test_send_defaults(self):
-        """Test that global send defaults are applied"""
-        self.message.send()
-        data = self.get_api_call_data()
-        # All these values came from ANYMAIL_SEND_DEFAULTS:
-        self.assertEqual(data['v:global'], 'globalvalue')
-        self.assertEqual(data['v:other'], 'othervalue')
-        self.assertEqual(data['o:tag'], ['globaltag'])
-        self.assertEqual(data['o:tracking-clicks'], 'yes')
-        self.assertEqual(data['o:tracking-opens'], 'yes')
-        self.assertEqual(data['o:globaloption'], 'globalsetting')
-
-    def test_merge_message_with_send_defaults(self):
-        """Test that individual message settings are *merged into* the global send defaults"""
-        self.message.metadata = {'message': 'messagevalue', 'other': 'override'}
-        self.message.tags = ['messagetag']
-        self.message.track_clicks = False
-        self.message.esp_extra = {'o:messageoption': 'messagesetting'}
-
-        self.message.send()
-        data = self.get_api_call_data()
-        # All these values came from ANYMAIL_SEND_DEFAULTS + message.*:
-        self.assertEqual(data['v:global'], 'globalvalue')
-        self.assertEqual(data['v:message'], 'messagevalue')  # additional metadata
-        self.assertEqual(data['v:other'], 'override')  # override global value
-        self.assertEqual(data['o:tag'], ['globaltag', 'messagetag'])  # tags concatenated
-        self.assertEqual(data['o:tracking-clicks'], 'no')  # message overrides
-        self.assertEqual(data['o:tracking-opens'], 'yes')
-        self.assertEqual(data['o:globaloption'], 'globalsetting')
-        self.assertEqual(data['o:messageoption'], 'messagesetting')  # additional esp_extra
-
-    @override_settings(ANYMAIL_MAILGUN_SEND_DEFAULTS={
-        'tags': ['esptag'],
-        'metadata': {'esp': 'espvalue'},
-        'track_opens': False,
-    })
-    def test_esp_send_defaults(self):
-        """Test that ESP-specific send defaults override individual global defaults"""
-        self.message.send()
-        data = self.get_api_call_data()
-        # All these values came from ANYMAIL_SEND_DEFAULTS plus ANYMAIL_MAILGUN_SEND_DEFAULTS:
-        self.assertNotIn('v:global', data)  # entire metadata overridden
-        self.assertEqual(data['v:esp'], 'espvalue')
-        self.assertEqual(data['o:tag'], ['esptag'])  # entire tags overridden
-        self.assertEqual(data['o:tracking-clicks'], 'yes')  # we didn't override the global track_clicks
-        self.assertEqual(data['o:tracking-opens'], 'no')
-        self.assertEqual(data['o:globaloption'], 'globalsetting')  # we didn't override the global esp_extra
-
-
 @override_settings(EMAIL_BACKEND="anymail.backends.mailgun.MailgunBackend")
 class MailgunBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin):
     """Test ESP backend without required settings in place"""
