@@ -28,7 +28,13 @@ class TestBackendTestCase(SimpleTestCase, AnymailTestMixin):
         self.message = AnymailMessage('Subject', 'Text Body', 'from@example.com', ['to@example.com'])
 
     @staticmethod
+    def get_send_count():
+        """Returns number of times "send api" has been called this test"""
+        return len(recorded_send_params)
+
+    @staticmethod
     def get_send_params():
+        """Returns the params for the most recent "send api" call"""
         return recorded_send_params[-1]
 
 

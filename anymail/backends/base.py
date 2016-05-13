@@ -4,8 +4,9 @@ from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
 from django.utils.timezone import is_naive, get_current_timezone, make_aware, utc
 
-from ..exceptions import AnymailError, AnymailUnsupportedFeature, AnymailRecipientsRefused
+from ..exceptions import AnymailCancelSend, AnymailError, AnymailUnsupportedFeature, AnymailRecipientsRefused
 from ..message import AnymailStatus
+from ..signals import pre_send, post_send
 from ..utils import Attachment, ParsedEmail, UNSET, combine, last, get_anymail_setting
 
 
@@ -105,21 +106,39 @@ class AnymailBaseBackend(BaseEmailBackend):
         anticipated failures that should be suppressed in fail_silently mode.
         """
         message.anymail_status = AnymailStatus()
+        if not self.run_pre_send(message):  # (might modify message)
+            return False  # cancel send without error
+
         if not message.recipients():
             return False
 
         payload = self.build_message_payload(message, self.send_defaults)
-        # FUTURE: if pre-send-signal OK...
         response = self.post_to_esp(payload, message)
         message.anymail_status.esp_response = response
 
         recipient_status = self.parse_recipient_status(response, payload, message)
         message.anymail_status.set_recipient_status(recipient_status)
 
+        self.run_post_send(message)  # send signal before raising status errors
         self.raise_for_recipient_status(message.anymail_status, response, payload, message)
-        # FUTURE: post-send signal
 
         return True
+
+    def run_pre_send(self, message):
+        """Send pre_send signal, and return True if message should still be sent"""
+        try:
+            pre_send.send(self.__class__, message=message, esp_name=self.esp_name)
+            return True
+        except AnymailCancelSend:
+            return False  # abort without causing error
+
+    def run_post_send(self, message):
+        """Send post_send signal to all receivers"""
+        results = post_send.send_robust(
+            self.__class__, message=message, status=message.anymail_status, esp_name=self.esp_name)
+        for (receiver, response) in results:
+            if isinstance(response, Exception):
+                raise response
 
     def build_message_payload(self, message, defaults):
         """Returns a payload that will allow message to be sent via the ESP.

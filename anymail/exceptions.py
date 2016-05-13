@@ -125,6 +125,10 @@ class AnymailSerializationError(AnymailError, TypeError):
         super(AnymailSerializationError, self).__init__(message, *args, **kwargs)
 
 
+class AnymailCancelSend(AnymailError):
+    """Pre-send signal receiver can raise to prevent message send"""
+
+
 class AnymailWebhookValidationFailure(AnymailError, SuspiciousOperation):
     """Exception when a webhook cannot be validated.
 

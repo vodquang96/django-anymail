@@ -1,6 +1,12 @@
 from django.dispatch import Signal
 
 
+# Outbound message, before sending
+pre_send = Signal(providing_args=['message', 'esp_name'])
+
+# Outbound message, after sending
+post_send = Signal(providing_args=['message', 'status', 'esp_name'])
+
 # Delivery and tracking events for sent messages
 tracking = Signal(providing_args=['event', 'esp_name'])
 

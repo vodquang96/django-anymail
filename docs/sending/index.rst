@@ -10,4 +10,5 @@ Sending email
    anymail_additions
    templates
    tracking
+   signals
    exceptions
