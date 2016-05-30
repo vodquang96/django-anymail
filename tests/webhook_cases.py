@@ -82,7 +82,7 @@ class WebhookBasicAuthTestsMixin(object):
             with self.assertWarns(AnymailInsecureWebhookWarning):
                 response = self.call_webhook()
         else:
-            with self.assertDoesNotWarn():
+            with self.assertDoesNotWarn(AnymailInsecureWebhookWarning):
                 response = self.call_webhook()
         self.assertEqual(response.status_code, 200)
 

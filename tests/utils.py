@@ -51,9 +51,15 @@ class AnymailTestMixin:
             return _AssertWarnsContext(expected_warning, self, expected_regex=expected_regex, msg=msg)
 
     @contextmanager
-    def assertDoesNotWarn(self):
+    def assertDoesNotWarn(self, disallowed_warning=Warning):
+        """Makes test error (rather than fail) if disallowed_warning occurs.
+
+        Note: you probably want to be more specific than the default
+        disallowed_warning=Warning, which errors for any warning
+        (including DeprecationWarnings).
+        """
         try:
-            warnings.simplefilter("error")
+            warnings.simplefilter("error", disallowed_warning)
             yield
         finally:
             warnings.resetwarnings()
