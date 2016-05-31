@@ -13,9 +13,11 @@ from django.conf import settings
 from django.test.utils import get_runner
 
 
-def runtests(test_labels=None):
+def setup_and_run_tests(test_labels=None):
     """Discover and run project tests. Returns number of failures."""
     test_labels = test_labels or ['tests']
+
+    warnings.simplefilter('default')  # show DeprecationWarning and other default-ignored warnings
 
     # noinspection PyStringFormat
     os.environ['DJANGO_SETTINGS_MODULE'] = \
@@ -27,7 +29,12 @@ def runtests(test_labels=None):
     return test_runner.run_tests(test_labels)
 
 
-if __name__ == '__main__':
-    warnings.simplefilter('default')  # show DeprecationWarning and other default-ignored warnings
-    failures = runtests(test_labels=sys.argv[1:])
+def runtests(test_labels=None):
+    """Run project tests and exit"""
+    # Used as setup test_suite: must either exit or return a TestSuite
+    failures = setup_and_run_tests(test_labels)
     sys.exit(bool(failures))
+
+
+if __name__ == '__main__':
+    runtests(test_labels=sys.argv[1:])
