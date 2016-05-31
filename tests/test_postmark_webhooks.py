@@ -1,7 +1,6 @@
 import json
 from datetime import datetime
 
-from django.core.urlresolvers import reverse
 from django.utils.timezone import get_fixed_timezone
 from mock import ANY
 
@@ -12,8 +11,8 @@ from .webhook_cases import WebhookBasicAuthTestsMixin, WebhookTestCase
 
 class PostmarkWebhookSecurityTestCase(WebhookTestCase, WebhookBasicAuthTestsMixin):
     def call_webhook(self):
-        webhook = reverse('postmark_tracking_webhook')
-        return self.client.post(webhook, content_type='application/json', data=json.dumps({}))
+        return self.client.post('/anymail/postmark/tracking/',
+                                content_type='application/json', data=json.dumps({}))
 
     # Actual tests are in WebhookBasicAuthTestsMixin
 
@@ -36,8 +35,8 @@ class PostmarkDeliveryTestCase(WebhookTestCase):
             "Subject": "Postmark event test",
             "Content": "..."
         }
-        webhook = reverse('postmark_tracking_webhook')
-        response = self.client.post(webhook, content_type='application/json', data=json.dumps(raw_event))
+        response = self.client.post('/anymail/postmark/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_event))
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=PostmarkTrackingWebhookView,
                                                       event=ANY, esp_name='Postmark')
@@ -69,8 +68,8 @@ class PostmarkDeliveryTestCase(WebhookTestCase):
             "ReceivedAt": "2016-04-27T16:21:41.2493688-04:00",
             "Recipient": "recipient@example.com"
         }
-        webhook = reverse('postmark_tracking_webhook')
-        response = self.client.post(webhook, content_type='application/json', data=json.dumps(raw_event))
+        response = self.client.post('/anymail/postmark/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_event))
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=PostmarkTrackingWebhookView,
                                                       event=ANY, esp_name='Postmark')

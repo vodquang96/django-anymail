@@ -4,7 +4,6 @@ from datetime import datetime
 import hashlib
 import hmac
 from django.core.exceptions import ImproperlyConfigured
-from django.core.urlresolvers import reverse
 from django.test import override_settings
 from django.utils.timezone import utc
 from mock import ANY
@@ -42,9 +41,9 @@ def querydict_to_postdict(qd):
 
 class MailgunWebhookSettingsTestCase(WebhookTestCase):
     def test_requires_api_key(self):
-        webhook = reverse('mailgun_tracking_webhook')
         with self.assertRaises(ImproperlyConfigured):
-            self.client.post(webhook, data=mailgun_sign({'event': 'delivered'}))
+            self.client.post('/anymail/mailgun/tracking/',
+                             data=mailgun_sign({'event': 'delivered'}))
 
 
 @override_settings(ANYMAIL_MAILGUN_API_KEY=TEST_API_KEY)
@@ -52,25 +51,24 @@ class MailgunWebhookSecurityTestCase(WebhookTestCase, WebhookBasicAuthTestsMixin
     should_warn_if_no_auth = False  # because we check webhook signature
 
     def call_webhook(self):
-        webhook = reverse('mailgun_tracking_webhook')
-        return self.client.post(webhook, data=mailgun_sign({'event': 'delivered'}))
+        return self.client.post('/anymail/mailgun/tracking/',
+                                data=mailgun_sign({'event': 'delivered'}))
 
     # Additional tests are in WebhookBasicAuthTestsMixin
 
     def test_verifies_correct_signature(self):
-        webhook = reverse('mailgun_tracking_webhook')
-        response = self.client.post(webhook, data=mailgun_sign({'event': 'delivered'}))
+        response = self.client.post('/anymail/mailgun/tracking/',
+                                    data=mailgun_sign({'event': 'delivered'}))
         self.assertEqual(response.status_code, 200)
 
     def test_verifies_missing_signature(self):
-        webhook = reverse('mailgun_tracking_webhook')
-        response = self.client.post(webhook, data={'event': 'delivered'})
+        response = self.client.post('/anymail/mailgun/tracking/',
+                                    data={'event': 'delivered'})
         self.assertEqual(response.status_code, 400)
 
     def test_verifies_bad_signature(self):
-        webhook = reverse('mailgun_tracking_webhook')
         data = mailgun_sign({'event': 'delivered'}, api_key="wrong API key")
-        response = self.client.post(webhook, data=data)
+        response = self.client.post('/anymail/mailgun/tracking/', data=data)
         self.assertEqual(response.status_code, 400)
 
 
@@ -99,8 +97,7 @@ class MailgunDeliveryTestCase(WebhookTestCase):
             'recipient': 'recipient@example.com',
             'event': 'delivered',
         })
-        webhook = reverse('mailgun_tracking_webhook')
-        response = self.client.post(webhook, data=raw_event)
+        response = self.client.post('/anymail/mailgun/tracking/', data=raw_event)
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MailgunTrackingWebhookView,
                                                       event=ANY, esp_name='Mailgun')
@@ -137,8 +134,7 @@ class MailgunDeliveryTestCase(WebhookTestCase):
             'X-Mailgun-Sid': 'WyI3Y2VjMyIsICJib3VuY2VAZXhhbXBsZS5jb20iLCAiZjFjNzgyIl0=',
             'token': 'a3fe1fa1640349ac552b84ddde373014b4c41645830c8dd3fc',
         })
-        webhook = reverse('mailgun_tracking_webhook')
-        response = self.client.post(webhook, data=raw_event)
+        response = self.client.post('/anymail/mailgun/tracking/', data=raw_event)
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MailgunTrackingWebhookView,
                                                       event=ANY, esp_name='Mailgun')
@@ -162,8 +158,7 @@ class MailgunDeliveryTestCase(WebhookTestCase):
             'recipient': 'complaint@example.com',
             # (omitting some fields that aren't relevant to the test)
         })
-        webhook = reverse('mailgun_tracking_webhook')
-        response = self.client.post(webhook, data=raw_event)
+        response = self.client.post('/anymail/mailgun/tracking/', data=raw_event)
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MailgunTrackingWebhookView,
                                                       event=ANY, esp_name='Mailgun')
@@ -181,8 +176,7 @@ class MailgunDeliveryTestCase(WebhookTestCase):
             'recipient': 'complaint@example.com',
             # (omitting some fields that aren't relevant to the test)
         })
-        webhook = reverse('mailgun_tracking_webhook')
-        response = self.client.post(webhook, data=raw_event)
+        response = self.client.post('/anymail/mailgun/tracking/', data=raw_event)
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MailgunTrackingWebhookView,
                                                       event=ANY, esp_name='Mailgun')
@@ -201,8 +195,7 @@ class MailgunDeliveryTestCase(WebhookTestCase):
             'recipient': 'noreply@example.com',
             # (omitting some fields that aren't relevant to the test)
         })
-        webhook = reverse('mailgun_tracking_webhook')
-        response = self.client.post(webhook, data=raw_event)
+        response = self.client.post('/anymail/mailgun/tracking/', data=raw_event)
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MailgunTrackingWebhookView,
                                                       event=ANY, esp_name='Mailgun')
@@ -221,7 +214,7 @@ class MailgunDeliveryTestCase(WebhookTestCase):
             'custom1': 'value',
             'custom2': '{"key":"value"}',  # you can store JSON, but you'll need to unpack it yourself
         })
-        self.client.post(reverse('mailgun_tracking_webhook'), data=raw_event)
+        self.client.post('/anymail/mailgun/tracking/', data=raw_event)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler)
         event = kwargs['event']
         self.assertEqual(event.metadata, {"custom1": "value1", "custom2": '{"key":"value"}'})
@@ -232,7 +225,7 @@ class MailgunDeliveryTestCase(WebhookTestCase):
             'tag': ['tag1', 'tag2'],  # Django TestClient encodes list as multiple field values
             'event': 'opened',
         })
-        self.client.post(reverse('mailgun_tracking_webhook'), data=raw_event)
+        self.client.post('/anymail/mailgun/tracking/', data=raw_event)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler)
         event = kwargs['event']
         self.assertEqual(event.tags, ["tag1", "tag2"])
@@ -243,8 +236,7 @@ class MailgunDeliveryTestCase(WebhookTestCase):
             'X-Mailgun-Tag': ['tag1', 'tag2'],
             'event': 'delivered',
         })
-        self.client.post(reverse('mailgun_tracking_webhook'), data=raw_event)
-        kwargs = self.assert_handler_called_once_with(self.tracking_handler)
+        self.client.post('/anymail/mailgun/tracking/', data=raw_event)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler)
         event = kwargs['event']
         self.assertEqual(event.tags, ["tag1", "tag2"])

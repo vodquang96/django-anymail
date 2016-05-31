@@ -7,7 +7,6 @@ import hashlib
 import hmac
 from base64 import b64encode
 from django.core.exceptions import ImproperlyConfigured
-from django.core.urlresolvers import reverse
 from django.test import override_settings
 from django.utils.timezone import utc
 from mock import ANY
@@ -20,14 +19,14 @@ from .webhook_cases import WebhookTestCase, WebhookBasicAuthTestsMixin
 TEST_WEBHOOK_KEY = 'TEST_WEBHOOK_KEY'
 
 
-def mandrill_args(events=None, urlname='mandrill_tracking_webhook', key=TEST_WEBHOOK_KEY):
+def mandrill_args(events=None, url='/anymail/mandrill/tracking/', key=TEST_WEBHOOK_KEY):
     """Returns TestClient.post kwargs for Mandrill webhook call with events
 
     Computes correct signature.
     """
     if events is None:
         events = []
-    url = urljoin('http://testserver/', reverse(urlname))
+    url = urljoin('http://testserver/', url)
     mandrill_events = json.dumps(events)
     signed_data = url + 'mandrill_events' + mandrill_events
     signature = b64encode(hmac.new(key=key.encode('ascii'),
@@ -42,9 +41,9 @@ def mandrill_args(events=None, urlname='mandrill_tracking_webhook', key=TEST_WEB
 
 class MandrillWebhookSettingsTestCase(WebhookTestCase):
     def test_requires_webhook_key(self):
-        webhook = reverse('mandrill_tracking_webhook')
         with self.assertRaises(ImproperlyConfigured):
-            self.client.post(webhook, data={'mandrill_events': '[]'})
+            self.client.post('/anymail/mandrill/tracking/',
+                             data={'mandrill_events': '[]'})
 
 
 @override_settings(ANYMAIL_MANDRILL_WEBHOOK_KEY=TEST_WEBHOOK_KEY)
@@ -63,8 +62,8 @@ class MandrillWebhookSecurityTestCase(WebhookTestCase, WebhookBasicAuthTestsMixi
         self.assertEqual(response.status_code, 200)
 
     def test_verifies_missing_signature(self):
-        webhook = reverse('mandrill_tracking_webhook')
-        response = self.client.post(webhook, data={'mandrill_events': '[{"event":"send"}]'})
+        response = self.client.post('/anymail/mandrill/tracking/',
+                                    data={'mandrill_events': '[{"event":"send"}]'})
         self.assertEqual(response.status_code, 400)
 
     def test_verifies_bad_signature(self):
@@ -78,8 +77,7 @@ class MandrillTrackingTestCase(WebhookTestCase):
 
     def test_head_request(self):
         # Mandrill verifies webhooks at config time with a HEAD request
-        webhook = reverse('mandrill_tracking_webhook')
-        response = self.client.head(webhook)
+        response = self.client.head('/anymail/mandrill/tracking/')
         self.assertEqual(response.status_code, 200)
 
     def test_post_request_invalid_json(self):

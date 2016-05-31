@@ -1,7 +1,6 @@
 import json
 from datetime import datetime
 
-from django.core.urlresolvers import reverse
 from django.utils.timezone import utc
 from mock import ANY
 
@@ -12,8 +11,8 @@ from .webhook_cases import WebhookBasicAuthTestsMixin, WebhookTestCase
 
 class SendGridWebhookSecurityTestCase(WebhookTestCase, WebhookBasicAuthTestsMixin):
     def call_webhook(self):
-        webhook = reverse('sendgrid_tracking_webhook')
-        return self.client.post(webhook, content_type='application/json', data=json.dumps([]))
+        return self.client.post('/anymail/sendgrid/tracking/',
+                                content_type='application/json', data=json.dumps([]))
 
     # Actual tests are in WebhookBasicAuthTestsMixin
 
@@ -32,8 +31,8 @@ class SendGridDeliveryTestCase(WebhookTestCase):
             "custom1": "value1",
             "custom2": "value2",
         }]
-        webhook = reverse('sendgrid_tracking_webhook')
-        response = self.client.post(webhook, content_type='application/json', data=json.dumps(raw_events))
+        response = self.client.post('/anymail/sendgrid/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_events))
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=SendGridTrackingWebhookView,
                                                       event=ANY, esp_name='SendGrid')
@@ -60,8 +59,8 @@ class SendGridDeliveryTestCase(WebhookTestCase):
             "timestamp": 1461095250,
             "smtp-id": "<wrfRRvF7Q0GgwUo2CvDmEA@example.com>"
         }]
-        webhook = reverse('sendgrid_tracking_webhook')
-        response = self.client.post(webhook, content_type='application/json', data=json.dumps(raw_events))
+        response = self.client.post('/anymail/sendgrid/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_events))
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=SendGridTrackingWebhookView,
                                                       event=ANY, esp_name='SendGrid')
@@ -87,8 +86,8 @@ class SendGridDeliveryTestCase(WebhookTestCase):
             "reason": "Invalid",
             "event": "dropped"
         }]
-        webhook = reverse('sendgrid_tracking_webhook')
-        response = self.client.post(webhook, content_type='application/json', data=json.dumps(raw_events))
+        response = self.client.post('/anymail/sendgrid/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_events))
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=SendGridTrackingWebhookView,
                                                       event=ANY, esp_name='SendGrid')
@@ -112,8 +111,8 @@ class SendGridDeliveryTestCase(WebhookTestCase):
             "reason": "Unsubscribed Address",
             "event": "dropped"
         }]
-        webhook = reverse('sendgrid_tracking_webhook')
-        response = self.client.post(webhook, content_type='application/json', data=json.dumps(raw_events))
+        response = self.client.post('/anymail/sendgrid/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_events))
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=SendGridTrackingWebhookView,
                                                       event=ANY, esp_name='SendGrid')
@@ -141,8 +140,8 @@ class SendGridDeliveryTestCase(WebhookTestCase):
             "smtp-id": "<Lli-03HcQ5-JLybO9fXsJg@example.com>",
             "type": "bounce"
         }]
-        webhook = reverse('sendgrid_tracking_webhook')
-        response = self.client.post(webhook, content_type='application/json', data=json.dumps(raw_events))
+        response = self.client.post('/anymail/sendgrid/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_events))
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=SendGridTrackingWebhookView,
                                                       event=ANY, esp_name='SendGrid')
@@ -166,8 +165,8 @@ class SendGridDeliveryTestCase(WebhookTestCase):
             "timestamp": 1461200990,
             "smtp-id": "<20160421010427.2847.6797@example.com>",
         }]
-        webhook = reverse('sendgrid_tracking_webhook')
-        response = self.client.post(webhook, content_type='application/json', data=json.dumps(raw_events))
+        response = self.client.post('/anymail/sendgrid/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_events))
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=SendGridTrackingWebhookView,
                                                       event=ANY, esp_name='SendGrid')
@@ -192,8 +191,8 @@ class SendGridDeliveryTestCase(WebhookTestCase):
             "useragent": "Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0",
             "event": "open"
         }]
-        webhook = reverse('sendgrid_tracking_webhook')
-        response = self.client.post(webhook, content_type='application/json', data=json.dumps(raw_events))
+        response = self.client.post('/anymail/sendgrid/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_events))
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=SendGridTrackingWebhookView,
                                                       event=ANY, esp_name='SendGrid')
@@ -219,8 +218,8 @@ class SendGridDeliveryTestCase(WebhookTestCase):
             "timestamp": 1461095250,
             "url": "http://www.example.com"
         }]
-        webhook = reverse('sendgrid_tracking_webhook')
-        response = self.client.post(webhook, content_type='application/json', data=json.dumps(raw_events))
+        response = self.client.post('/anymail/sendgrid/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_events))
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=SendGridTrackingWebhookView,
                                                       event=ANY, esp_name='SendGrid')
