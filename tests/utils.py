@@ -7,6 +7,8 @@ import warnings
 from base64 import b64decode
 from contextlib import contextmanager
 
+from django.test import Client
+
 
 def decode_att(att):
     """Returns the original data from base64-encoded attachment content"""
@@ -142,3 +144,13 @@ class _AssertWarnsContext(object):
                      self.expected_regex.pattern, str(first_matching)))
         self._raiseFailure("{} not triggered".format(exc_name))
 
+
+class ClientWithCsrfChecks(Client):
+    """Django test Client that enforces CSRF checks
+
+    https://docs.djangoproject.com/en/1.9/ref/csrf/#testing
+    """
+
+    def __init__(self, **defaults):
+        super(ClientWithCsrfChecks, self).__init__(
+            enforce_csrf_checks=True, **defaults)

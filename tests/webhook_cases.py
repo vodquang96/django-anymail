@@ -6,7 +6,7 @@ from mock import create_autospec, ANY
 from anymail.exceptions import AnymailInsecureWebhookWarning
 from anymail.signals import tracking, inbound
 
-from .utils import AnymailTestMixin
+from .utils import AnymailTestMixin, ClientWithCsrfChecks
 
 
 def event_handler(sender, event, esp_name, **kwargs):
@@ -21,6 +21,8 @@ class WebhookTestCase(AnymailTestMixin, SimpleTestCase):
     - connects webhook signal handlers
     - sets up basic auth by default (since most ESP webhooks warn if it's not enabled)
     """
+
+    client_class = ClientWithCsrfChecks
 
     def setUp(self):
         super(WebhookTestCase, self).setUp()

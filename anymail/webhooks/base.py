@@ -104,11 +104,14 @@ class AnymailBaseWebhookView(AnymailBasicAuthMixin, View):
 
     http_method_names = ["post", "head", "options"]
 
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super(AnymailBaseWebhookView, self).dispatch(request, *args, **kwargs)
+
     def head(self, request, *args, **kwargs):
         # Some ESPs verify the webhook with a HEAD request at configuration time
         return HttpResponse()
 
-    @method_decorator(csrf_exempt)
     def post(self, request, *args, **kwargs):
         # Normal Django exception handling will do the right thing:
         # - AnymailWebhookValidationFailure will turn into an HTTP 400 response
