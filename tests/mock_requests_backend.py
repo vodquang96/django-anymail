@@ -14,7 +14,7 @@ UNSET = object()
 
 
 class RequestsBackendMockAPITestCase(SimpleTestCase, AnymailTestMixin):
-    """TestCase that uses Djrill EmailBackend with a mocked Mandrill API"""
+    """TestCase that mocks API calls through requests"""
 
     DEFAULT_RAW_RESPONSE = b"""{"subclass": "should override"}"""
 

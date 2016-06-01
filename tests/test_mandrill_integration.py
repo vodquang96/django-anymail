@@ -106,7 +106,7 @@ class MandrillBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
             if self.message.anymail_status.status == {'queued'}:
                 self.skipTest("Mandrill queued the send -- can't complete this test")
             else:
-                self.fail("Djrill did not raise AnymailRecipientsRefused for invalid recipient")
+                self.fail("Anymail did not raise AnymailRecipientsRefused for invalid recipient")
 
     def test_rejected_to(self):
         # Example of detecting when a recipient is on Mandrill's rejection blacklist
@@ -125,7 +125,7 @@ class MandrillBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
             if self.message.anymail_status.status == {'queued'}:
                 self.skipTest("Mandrill queued the send -- can't complete this test")
             else:
-                self.fail("Djrill did not raise AnymailRecipientsRefused for blacklist recipient")
+                self.fail("Anymail did not raise AnymailRecipientsRefused for blacklist recipient")
 
     @override_settings(MANDRILL_API_KEY="Hey, that's not an API key!")
     def test_invalid_api_key(self):
