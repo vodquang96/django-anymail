@@ -65,7 +65,15 @@ class AnymailRequestsBackend(AnymailBaseBackend):
         Can raise AnymailRequestsAPIError for HTTP errors in the post
         """
         params = payload.get_request_params(self.api_url)
-        response = self.session.request(**params)
+        try:
+            response = self.session.request(**params)
+        except requests.RequestException as err:
+            # raise an exception that is both AnymailRequestsAPIError
+            # and the original requests exception type
+            exc_class = type('AnymailRequestsAPIError', (AnymailRequestsAPIError, type(err)), {})
+            raise exc_class(
+                "Error posting to %s:" % params.get('url', '<missing url>'),
+                raised_from=err, email_message=message, payload=payload)
         self.raise_for_status(response, payload, message)
         return response
 

@@ -1,4 +1,5 @@
 import json
+from traceback import format_exception_only
 
 from django.core.exceptions import ImproperlyConfigured, SuspiciousOperation
 from requests import HTTPError
@@ -18,11 +19,13 @@ class AnymailError(Exception):
           status_code: HTTP status code of response to ESP send call
           payload: data arg (*not* json-stringified) for the ESP send call
           response: requests.Response from the send call
+          raised_from: original/wrapped Exception
         """
         self.backend = kwargs.pop('backend', None)
         self.email_message = kwargs.pop('email_message', None)
         self.payload = kwargs.pop('payload', None)
         self.status_code = kwargs.pop('status_code', None)
+        self.raised_from = kwargs.pop('raised_from', None)
         if isinstance(self, HTTPError):
             # must leave response in kwargs for HTTPError
             self.response = kwargs.get('response', None)
@@ -33,6 +36,7 @@ class AnymailError(Exception):
     def __str__(self):
         parts = [
             " ".join([str(arg) for arg in self.args]),
+            self.describe_raised_from(),
             self.describe_send(),
             self.describe_response(),
         ]
@@ -67,6 +71,12 @@ class AnymailError(Exception):
             except AttributeError:
                 pass
         return description
+
+    def describe_raised_from(self):
+        """Return the original exception"""
+        if self.raised_from is None:
+            return None
+        return ''.join(format_exception_only(type(self.raised_from), self.raised_from)).strip()
 
 
 class AnymailAPIError(AnymailError):

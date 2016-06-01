@@ -12,7 +12,7 @@ from django.test import SimpleTestCase
 from django.test.utils import override_settings
 from django.utils.timezone import get_fixed_timezone, override as override_current_timezone
 
-from anymail.exceptions import AnymailAPIError, AnymailUnsupportedFeature
+from anymail.exceptions import AnymailAPIError, AnymailRequestsAPIError, AnymailUnsupportedFeature
 from anymail.message import attach_inline_image_file
 
 from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
@@ -257,6 +257,20 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         self.set_mock_response(status_code=502, raw=None)
         with self.assertRaises(AnymailAPIError):
             self.message.send()
+
+    def test_requests_exception(self):
+        """Exception during API call should be AnymailAPIError"""
+        # (The post itself raises an error -- different from returning a failure response)
+        from requests.exceptions import SSLError  # a low-level requests exception
+        self.mock_request.side_effect = SSLError("Something bad")
+        with self.assertRaisesMessage(AnymailRequestsAPIError, "Something bad") as cm:
+            self.message.send()
+        self.assertIsInstance(cm.exception, SSLError)  # also retains specific requests exception class
+
+        # Make sure fail_silently is respected
+        self.mock_request.side_effect = SSLError("Something bad")
+        sent = mail.send_mail('Subject', 'Body', 'from@example.com', ['to@example.com'], fail_silently=True)
+        self.assertEqual(sent, 0)
 
 
 class MailgunBackendAnymailFeatureTests(MailgunBackendMockAPITestCase):
