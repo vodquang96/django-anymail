@@ -413,6 +413,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         })
 
     def test_merge_data(self):
+        self.message.from_email = 'from@example.com'
         self.message.to = ['alice@example.com', 'Bob <bob@example.com>']
         # SendGrid template_id is not required to use merge.
         # You can just supply template content as the message (e.g.):
@@ -431,10 +432,12 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
 
         data = self.get_api_call_data()
         smtpapi = self.get_smtpapi()
-        # For batch send, must set both to+toname *and* smtpapi['to']:
-        self.assertEqual(data['toname'], [' ', 'Bob'])
-        self.assertEqual(data['to'], ['alice@example.com', 'bob@example.com'])
+        # For batch send, smtpapi['to'] gets real recipient list;
+        # normal 'to' is not used (but must be valid, so we substitute the from_email):
+        self.assertEqual(data['to'], ['from@example.com'])
+        self.assertEqual(data['toname'], [' '])  # empty string if no name in from_email
         self.assertEqual(smtpapi['to'], ['alice@example.com', 'Bob <bob@example.com>'])
+        # smtpapi['sub'] values should be in to-list order:
         self.assertEqual(smtpapi['sub'], {
             ':name': ["Alice", "Bob"],
             ':group': ["Developers", ":group"],  # missing value gets replaced with var name...

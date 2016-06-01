@@ -96,9 +96,14 @@ class SendGridPayload(RequestsPayload):
 
         self.build_merge_data()
         if self.merge_data is not None:
-            # Must *also* set smtpapi 'to' field so SG does batch send
-            # (else all recipients would see each other's emails)
+            # Move the 'to' recipients to smtpapi, so SG does batch send
+            # (else all recipients would see each other's emails).
+            # Regular 'to' must still be a valid email (even though "ignored")...
+            # we use the from_email as recommended by SG support
+            # (See https://github.com/anymail/django-anymail/pull/14#issuecomment-220231250)
             self.smtpapi['to'] = [email.address for email in self.to_list]
+            self.data['to'] = [self.data['from']]
+            self.data['toname'] = [self.data.get('fromname', " ")]
 
         # Serialize x-smtpapi to json:
         if len(self.smtpapi) > 0:
