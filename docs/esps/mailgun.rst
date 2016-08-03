@@ -41,6 +41,20 @@ root of the settings file if neither ``ANYMAIL["MAILGUN_API_KEY"]``
 nor ``ANYMAIL_MAILGUN_API_KEY`` is set.
 
 
+.. setting:: ANYMAIL_MAILGUN_SENDER_DOMAIN
+
+.. rubric:: MAILGUN_SENDER_DOMAIN
+
+If you are using a specific `Mailgun sender domain`_
+that is *different* from your messages' `from_email` domains,
+set this to the domain you've configured in your Mailgun account.
+
+If your messages' `from_email` domains always match a configured
+Mailgun sender domain, this setting is not needed.
+
+See :ref:`mailgun-sender-domain` below for examples.
+
+
 .. setting:: ANYMAIL_MAILGUN_API_URL
 
 .. rubric:: MAILGUN_API_URL
@@ -58,32 +72,40 @@ The default is ``MAILGUN_API_URL = "https://api.mailgun.net/v3"``
 Email sender domain
 -------------------
 
-Mailgun's API requires a sender domain `in the API url <base-url>`_.
-By default, Anymail will use the domain of each email's from address
-as the domain for the Mailgun API.
+Mailgun's API requires identifying the sender domain.
+By default, Anymail uses the domain of each messages's `from_email`
+(e.g., "example.com" for "from\@example.com").
 
-If you need to override this default, you can use Anymail's
-:attr:`esp_extra` dict, either on an individual message:
+You will need to override this default if you are using
+a dedicated `Mailgun sender domain`_ that is different from
+a message's `from_email` domain.
 
-    .. code-block:: python
-
-        message = EmailMessage(from_email="sales@europe.example.com", ...)
-        message.esp_extra = {"sender_domain": "example.com"}
-
-
-... or as a global :ref:`send default <send-defaults>` setting that applies
-to all messages:
+For example, if you are sending from "orders\@example.com", but your
+Mailgun account is configured for "*mail1*.example.com", you should provide
+:setting:`MAILGUN_SENDER_DOMAIN <ANYMAIL_MAILGUN_SENDER_DOMAIN>` in your settings.py:
 
     .. code-block:: python
+        :emphasize-lines: 4
 
         ANYMAIL = {
             ...
-            "MAILGUN_SEND_DEFAULTS": {
-                "esp_extra": {"sender_domain": "example.com"}
-            }
+            "MAILGUN_API_KEY": "<your API key>",
+            "MAILGUN_SENDER_DOMAIN": "mail1.example.com"
         }
 
-.. _base-url: https://documentation.mailgun.com/api-intro.html#base-url
+
+If you need to override the sender domain for an individual message,
+include `sender_domain` in Anymail's :attr:`~anymail.message.AnymailMessage.esp_extra`
+for that message:
+
+    .. code-block:: python
+
+        message = EmailMessage(from_email="marketing@example.com", ...)
+        message.esp_extra = {"sender_domain": "mail2.example.com"}
+
+
+.. _Mailgun sender domain:
+    https://help.mailgun.com/hc/en-us/articles/202256730-How-do-I-pick-a-domain-name-for-my-Mailgun-account-
 
 
 .. _mailgun-esp-extra:

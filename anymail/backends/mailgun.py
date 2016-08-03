@@ -16,6 +16,8 @@ class MailgunBackend(AnymailRequestsBackend):
         """Init options from Django settings"""
         esp_name = self.esp_name
         self.api_key = get_anymail_setting('api_key', esp_name=esp_name, kwargs=kwargs, allow_bare=True)
+        self.sender_domain = get_anymail_setting('sender_domain', esp_name=esp_name, kwargs=kwargs,
+                                                 allow_bare=True, default=None)
         api_url = get_anymail_setting('api_url', esp_name=esp_name, kwargs=kwargs,
                                       default="https://api.mailgun.net/v3")
         if not api_url.endswith("/"):
@@ -54,7 +56,7 @@ class MailgunPayload(RequestsPayload):
 
     def __init__(self, message, defaults, backend, *args, **kwargs):
         auth = ("api", backend.api_key)
-        self.sender_domain = None
+        self.sender_domain = backend.sender_domain
         self.all_recipients = []  # used for backend.parse_recipient_status
 
         # late-binding of recipient-variables:

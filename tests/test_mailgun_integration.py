@@ -23,10 +23,9 @@ MAILGUN_TEST_DOMAIN = os.getenv('MAILGUN_TEST_DOMAIN')
 @unittest.skipUnless(MAILGUN_TEST_API_KEY and MAILGUN_TEST_DOMAIN,
                      "Set MAILGUN_TEST_API_KEY and MAILGUN_TEST_DOMAIN environment variables "
                      "to run Mailgun integration tests")
-@override_settings(ANYMAIL_MAILGUN_API_KEY=MAILGUN_TEST_API_KEY,
-                   ANYMAIL_MAILGUN_SEND_DEFAULTS={
-                       'esp_extra': {'o:testmode': 'yes',
-                                     'sender_domain': MAILGUN_TEST_DOMAIN}},
+@override_settings(ANYMAIL={'MAILGUN_API_KEY': MAILGUN_TEST_API_KEY,
+                            'MAILGUN_SENDER_DOMAIN': MAILGUN_TEST_DOMAIN,
+                            'MAILGUN_SEND_DEFAULTS': {'esp_extra': {'o:testmode': 'yes'}}},
                    EMAIL_BACKEND="anymail.backends.mailgun.MailgunBackend")
 class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     """Mailgun API integration tests
@@ -168,7 +167,9 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         self.assertEqual(err.status_code, 400)
         self.assertIn("'from' parameter is not a valid address", str(err))
 
-    @override_settings(ANYMAIL_MAILGUN_API_KEY="Hey, that's not an API key!")
+    @override_settings(ANYMAIL={'MAILGUN_API_KEY': "Hey, that's not an API key",
+                                'MAILGUN_SENDER_DOMAIN': MAILGUN_TEST_DOMAIN,
+                                'MAILGUN_SEND_DEFAULTS': {'esp_extra': {'o:testmode': 'yes'}}})
     def test_invalid_api_key(self):
         with self.assertRaises(AnymailAPIError) as cm:
             self.message.send()

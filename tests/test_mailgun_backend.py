@@ -383,8 +383,8 @@ class MailgunBackendAnymailFeatureTests(MailgunBackendMockAPITestCase):
 
     def test_sender_domain(self):
         """Mailgun send domain can come from from_email or esp_extra"""
-        # You could also use ANYMAIL_SEND_DEFAULTS={'esp_extra': {'sender_domain': 'your-domain.com'}}
-        # (The mailgun_integration_tests do that.)
+        # You could also use MAILGUN_SENDER_DOMAIN in your ANYMAIL settings, as in the next test.
+        # (The mailgun_integration_tests also do that.)
         self.message.from_email = "Test From <from@from-email.example.com>"
         self.message.send()
         self.assert_esp_called('/from-email.example.com/messages')  # API url includes the sender-domain
@@ -392,6 +392,11 @@ class MailgunBackendAnymailFeatureTests(MailgunBackendMockAPITestCase):
         self.message.esp_extra = {'sender_domain': 'esp-extra.example.com'}
         self.message.send()
         self.assert_esp_called('/esp-extra.example.com/messages')  # overrides from_email
+
+    @override_settings(ANYMAIL_MAILGUN_SENDER_DOMAIN='mg.example.com')
+    def test_sender_domain_setting(self):
+        self.message.send()
+        self.assert_esp_called('/mg.example.com/messages')  # setting overrides from_email
 
     def test_default_omits_options(self):
         """Make sure by default we don't send any ESP-specific options.
