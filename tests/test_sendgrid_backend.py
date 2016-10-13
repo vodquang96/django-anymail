@@ -400,6 +400,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         self.assertEqual(smtpapi['filters']['opentrack'], {'settings': {'enable': 0}})
 
     def test_template_id(self):
+        self.message.attach_alternative("HTML Body", "text/html")
         self.message.template_id = "5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f"
         self.message.send()
         smtpapi = self.get_smtpapi()
@@ -407,6 +408,19 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
             'settings': {'enable': 1,
                          'template_id': "5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f"}
         })
+        data = self.get_api_call_data()
+        self.assertEqual(data['text'], "Text Body")
+        self.assertEqual(data['html'], "HTML Body")
+
+    def test_template_id_with_empty_body(self):
+        # Text and html must be present (and non-empty-string), or the corresponding
+        # part will not render from the template. Make sure we fill in strings:
+        message = mail.EmailMessage(from_email='from@example.com', to=['to@example.com'])
+        message.template_id = "5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f"
+        message.send()
+        data = self.get_api_call_data()
+        self.assertEqual(data['text'], " ")  # single space is sufficient
+        self.assertEqual(data['html'], " ")
 
     def test_merge_data(self):
         self.message.from_email = 'from@example.com'

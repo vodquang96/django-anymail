@@ -290,6 +290,12 @@ class SendGridPayload(RequestsPayload):
     def set_template_id(self, template_id):
         self.add_filter('templates', 'enable', 1)
         self.add_filter('templates', 'template_id', template_id)
+        # Must ensure text and html are non-empty, or template parts won't render.
+        # https://sendgrid.com/docs/API_Reference/Web_API_v3/Transactional_Templates/smtpapi.html#-Text-or-HTML-Templates
+        if not self.data.get("text", ""):
+            self.data["text"] = " "
+        if not self.data.get("html", ""):
+            self.data["html"] = " "
 
     def set_merge_data(self, merge_data):
         # Becomes smtpapi['sub'] in build_merge_data, after we know recipients and merge_field_format.

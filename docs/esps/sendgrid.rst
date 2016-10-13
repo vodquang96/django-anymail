@@ -282,6 +282,11 @@ your SendGrid template definition where you want the message-specific versions
 to appear). If you don't want to supply any additional subject or body content
 from your Django app, set those EmailMessage attributes to empty strings.
 
+(Anymail will convert empty text and HTML bodies to single spaces whenever
+:attr:`~anymail.message.AnymailMessage.template_id` is set, to ensure the
+plaintext and HTML from your template are present in your outgoing email.
+This works around a `limitation in SendGrid's template rendering`_.)
+
 See the `SendGrid's template overview`_ and `transactional template docs`_
 for more information.
 
@@ -289,6 +294,8 @@ for more information.
     https://sendgrid.com/docs/User_Guide/Transactional_Templates/index.html
 .. _transactional template docs:
     https://sendgrid.com/docs/API_Reference/Web_API_v3/Transactional_Templates/smtpapi.html
+.. _limitation in SendGrid's template rendering:
+    https://sendgrid.com/docs/API_Reference/Web_API_v3/Transactional_Templates/smtpapi.html#-Text-or-HTML-Templates
 
 
 .. _sendgrid-webhooks:
