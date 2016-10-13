@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import unicode_literals
-
 from datetime import date, datetime
 from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
@@ -145,9 +143,7 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         self.assertEqual(len(inlines), 0)
 
     def test_unicode_attachment_correctly_decoded(self):
-        # Slight modification from the Django unicode docs:
-        # https://django.readthedocs.io/en/latest/ref/unicode.html#email
-        self.message.attach("Une pièce jointe.html", '<p>\u2019</p>', mimetype='text/html')
+        self.message.attach(u"Une pièce jointe.html", u'<p>\u2019</p>', mimetype='text/html')
         self.message.send()
         files = self.get_api_call_files()
         attachments = [value for (field, value) in files if field == 'attachment']
