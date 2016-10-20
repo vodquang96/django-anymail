@@ -212,6 +212,19 @@ ESP send status
     :class:`~django.core.mail.EmailMessage`, with a normalized version
     of the ESP's response.
 
+    Anymail backends create this attribute *as they process each message.*
+    Before that, anymail_status won't be present on an ordinary Django
+    EmailMessage or EmailMultiAlternatives---you'll get an :exc:`AttributeError`
+    if you try to access it.
+
+    This might cause problems in your test cases, because Django
+    `substitutes its own locmem email backend`_ during testing (so anymail_status
+    won't be set even after sending). Your code should either guard against
+    a missing anymail_status attribute, or use :class:`AnymailMessage`
+    (or the :class:`AnymailMessageMixin`) which initializes its anymail_status
+    attribute to a default AnymailStatus object.
+
+    After sending through an Anymail backend,
     :attr:`~AnymailMessage.anymail_status` will be an object with these attributes:
 
     .. attribute:: message_id
@@ -306,6 +319,10 @@ ESP send status
 
             # This will work with a requests-based backend:
             message.anymail_status.esp_response.json()
+
+
+.. _substitutes its own locmem email backend:
+   https://docs.djangoproject.com/en/stable/topics/testing/tools/#email-services
 
 
 .. _inline-images:

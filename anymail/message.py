@@ -28,7 +28,7 @@ class AnymailMessageMixin(object):
         self.template_id = kwargs.pop('template_id', UNSET)
         self.merge_data = kwargs.pop('merge_data', UNSET)
         self.merge_global_data = kwargs.pop('merge_global_data', UNSET)
-        self.anymail_status = None
+        self.anymail_status = AnymailStatus()
 
         # noinspection PyArgumentList
         super(AnymailMessageMixin, self).__init__(*args, **kwargs)
