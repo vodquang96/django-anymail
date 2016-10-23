@@ -183,8 +183,8 @@ class PostmarkPayload(RequestsPayload):
             if len(tags) > 1:
                 self.unsupported_feature('multiple tags (%r)' % tags)
 
-    # Postmark doesn't support click-tracking
-    # def set_track_clicks(self, track_clicks):
+    def set_track_clicks(self, track_clicks):
+        self.data["TrackLinks"] = 'HtmlAndText' if track_clicks else 'None'
 
     def set_track_opens(self, track_opens):
         self.data["TrackOpens"] = track_opens

@@ -325,8 +325,15 @@ class PostmarkBackendAnymailFeatureTests(PostmarkBackendMockAPITestCase):
 
     def test_track_clicks(self):
         self.message.track_clicks = True
-        with self.assertRaisesMessage(AnymailUnsupportedFeature, 'track_clicks'):
-            self.message.send()
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertEqual(data['TrackLinks'], 'HtmlAndText')
+
+        # Also explicit "None" for False (to override server default)
+        self.message.track_clicks = False
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertEqual(data['TrackLinks'], 'None')
 
     def test_template(self):
         self.message.template_id = 1234567
@@ -369,6 +376,7 @@ class PostmarkBackendAnymailFeatureTests(PostmarkBackendMockAPITestCase):
         self.assertNotIn('TemplateId', data)
         self.assertNotIn('TemplateModel', data)
         self.assertNotIn('TrackOpens', data)
+        self.assertNotIn('TrackLinks', data)
 
     def test_esp_extra(self):
         self.message.esp_extra = {

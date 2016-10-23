@@ -34,7 +34,7 @@ Email Service Provider                        |Mailgun|   |Mandrill|  |Postmark|
 :attr:`~AnymailMessage.metadata`              Yes         Yes         No          Yes         Yes
 :attr:`~AnymailMessage.send_at`               Yes         Yes         No          Yes         Yes
 :attr:`~AnymailMessage.tags`                  Yes         Yes         Max 1 tag   Yes         Max 1 tag
-:attr:`~AnymailMessage.track_clicks`          Yes         Yes         No          Yes         Yes
+:attr:`~AnymailMessage.track_clicks`          Yes         Yes         Yes         Yes         Yes
 :attr:`~AnymailMessage.track_opens`           Yes         Yes         Yes         Yes         Yes
 
 .. rubric:: :ref:`templates-and-merge`

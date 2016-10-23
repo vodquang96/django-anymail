@@ -87,9 +87,7 @@ messages.)
 Limitations and quirks
 ----------------------
 
-Postmark has excellent support for standard email functionality, but does
-not support all the tracking and reporting additions offered by some other
-ESPs.
+Postmark does not support a few tracking and reporting additions offered by other ESPs.
 
 Anymail normally raises an :exc:`~anymail.exceptions.AnymailUnsupportedFeature`
 error when you try to send a message using features that Postmark doesn't support
@@ -107,12 +105,21 @@ see :ref:`unsupported-features`.
   Postmark does not support attaching :attr:`~anymail.message.AnymailMessage.metadata`
   to messages.
 
-**No click-tracking**
-  Postmark supports :attr:`~anymail.message.AnymailMessage.track_open`,
-  but not :attr:`~anymail.message.AnymailMessage.track_clicks`.
-
 **No delayed sending**
   Postmark does not support :attr:`~anymail.message.AnymailMessage.send_at`.
+
+**Click-tracking**
+  Postmark supports `several link-tracking options`_. Anymail treats
+  :attr:`~anymail.message.AnymailMessage.track_clicks` as Postmark's
+  "HtmlAndText" option when True.
+
+  If you would prefer Postmark's "HtmlOnly" or "TextOnly" link-tracking, you could
+  either set that as a Postmark server-level default (and use `message.track_clicks = False`
+  to disable tracking for specific messages), or use something like
+  `message.esp_extra = {'TrackLinks': "HtmlOnly"}` to specify a particular option.
+
+.. _several link-tracking options:
+   http://developer.postmarkapp.com/developer-link-tracking.html
 
 
 .. _postmark-templates:

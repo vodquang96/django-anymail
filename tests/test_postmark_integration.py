@@ -53,6 +53,7 @@ class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
             # no metadata, send_at, track_clicks support
             tags=["tag 1"],  # max one tag
             track_opens=True,
+            track_clicks=True,
         )
         message.attach("attachment1.txt", "Here is some\ntext for you", "text/plain")
         message.attach("attachment2.csv", "ID,Name\n1,Amy Lina", "text/csv")
