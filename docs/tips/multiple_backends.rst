@@ -47,3 +47,13 @@ and in the constructor for an
 
 (See the :class:`django.utils.log.AdminEmailHandler` docs for more information
 on Django's admin error logging.)
+
+
+You could expand on this concept and create your own EmailBackend that
+dynamically switches between other Anymail backends---based on properties of the
+message, or other criteria you set. For example, `this gist`_ shows an EmailBackend
+that checks ESPs' status-page APIs, and automatically falls back to a different ESP
+when the first one isn't working.
+
+.. _this gist:
+    https://gist.github.com/tgehrs/58ae571b6db64225c317bf83c06ec312
