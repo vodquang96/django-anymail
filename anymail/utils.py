@@ -2,15 +2,16 @@ import mimetypes
 from base64 import b64encode
 from datetime import datetime
 from email.mime.base import MIMEBase
-from email.utils import formatdate, parseaddr, unquote
+from email.utils import formatdate, getaddresses, unquote
 from time import mktime
 
 import six
 from django.conf import settings
 from django.core.mail.message import sanitize_address, DEFAULT_ATTACHMENT_MIME_TYPE
+from django.utils.encoding import force_text
 from django.utils.timezone import utc
 
-from .exceptions import AnymailConfigurationError
+from .exceptions import AnymailConfigurationError, AnymailInvalidAddress
 
 UNSET = object()  # Used as non-None default value
 
@@ -93,30 +94,38 @@ def getfirst(dct, keys, default=UNSET):
         return default
 
 
+def parse_one_addr(address):
+    # This is email.utils.parseaddr, but without silently returning
+    # partial content if there are commas or parens in the string:
+    addresses = getaddresses([address])
+    if len(addresses) > 1:
+        raise ValueError("Multiple email addresses (parses as %r)" % addresses)
+    elif len(addresses) == 0:
+        return ('', '')
+    return addresses[0]
+
+
 class ParsedEmail(object):
-    """A sanitized, full email address with separate name and email properties"""
+    """A sanitized, full email address with separate name and email properties."""
 
     def __init__(self, address, encoding):
-        self.address = sanitize_address(address, encoding)
-        self._name = None
-        self._email = None
-
-    def _parse(self):
-        if self._email is None:
-            self._name, self._email = parseaddr(self.address)
+        if address is None:
+            self.name = self.email = self.address = None
+            return
+        try:
+            self.name, self.email = parse_one_addr(force_text(address))
+            if self.email == '':
+                # normalize sanitize_address py2/3 behavior:
+                raise ValueError('No email found')
+            # Django's sanitize_address is like email.utils.formataddr, but also
+            # escapes as needed for use in email message headers:
+            self.address = sanitize_address((self.name, self.email), encoding)
+        except (IndexError, TypeError, ValueError) as err:
+            raise AnymailInvalidAddress("Invalid email address format %r: %s"
+                                        % (address, str(err)))
 
     def __str__(self):
         return self.address
-
-    @property
-    def name(self):
-        self._parse()
-        return self._name
-
-    @property
-    def email(self):
-        self._parse()
-        return self._email
 
 
 class Attachment(object):

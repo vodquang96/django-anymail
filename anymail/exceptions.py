@@ -101,6 +101,10 @@ class AnymailRecipientsRefused(AnymailError):
         super(AnymailRecipientsRefused, self).__init__(message, *args, **kwargs)
 
 
+class AnymailInvalidAddress(AnymailError, ValueError):
+    """Exception when using an invalidly-formatted email address"""
+
+
 class AnymailUnsupportedFeature(AnymailError, ValueError):
     """Exception for Anymail features that the ESP doesn't support.
 

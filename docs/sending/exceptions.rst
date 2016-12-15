@@ -36,6 +36,26 @@ Exceptions
     your ESP's dashboard. See :ref:`troubleshooting`.)
 
 
+.. exception:: AnymailInvalidAddress
+
+    .. versionadded:: 0.7
+
+    The send call will raise a :exc:`!AnymailInvalidAddress` error if you
+    attempt to send a message with invalidly-formatted email addresses in
+    the :attr:`from_email` or recipient lists.
+
+    One source of this error can be using a display-name ("real name") containing
+    commas or parentheses. Per :rfc:`5322`, you should use double quotes around
+    the display-name portion of an email address:
+
+    .. code-block:: python
+
+        # won't work:
+        send_mail(from_email='Widgets, Inc. <widgets@example.com>', ...)
+        # must use double quotes around display-name containing comma:
+        send_mail(from_email='"Widgets, Inc." <widgets@example.com>', ...)
+
+
 .. exception:: AnymailSerializationError
 
     The send call will raise a :exc:`!AnymailSerializationError`
