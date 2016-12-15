@@ -62,6 +62,8 @@ class PostmarkTrackingWebhookView(PostmarkBaseWebhookView):
         except KeyError:
             if 'FirstOpen' in esp_event:
                 event_type = EventType.OPENED
+            elif 'DeliveredAt' in esp_event:
+                event_type = EventType.DELIVERED
             elif 'From' in esp_event:
                 # This is an inbound event
                 raise AnymailConfigurationError(
@@ -73,7 +75,7 @@ class PostmarkTrackingWebhookView(PostmarkBaseWebhookView):
         recipient = getfirst(esp_event, ['Email', 'Recipient'], None)  # Email for bounce; Recipient for open
 
         try:
-            timestr = getfirst(esp_event, ['BouncedAt', 'ReceivedAt'])
+            timestr = getfirst(esp_event, ['DeliveredAt', 'BouncedAt', 'ReceivedAt'])
         except KeyError:
             timestamp = None
         else:

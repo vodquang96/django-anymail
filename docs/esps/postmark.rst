@@ -177,8 +177,8 @@ Status tracking webhooks
 If you are using Anymail's normalized :ref:`status tracking <event-tracking>`, enter
 the url in your `Postmark account settings`_, under Servers > *your server name* >
 Settings > Outbound > Webhooks. You should enter this same Anymail tracking URL
-for both the "Bounce webhook" and "Opens webhook" (if you want to receive both
-types of events):
+for all of the "Delivery webhook," "Bounce webhook," and "Opens webhook" (if you
+want to receive all these types of events):
 
    :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/postmark/tracking/`
 
@@ -192,11 +192,12 @@ If you use multiple Postmark servers, you'll need to repeat entering the webhook
 settings for each of them.
 
 Postmark will report these Anymail :attr:`~anymail.signals.AnymailTrackingEvent.event_type`\s:
-rejected, failed, bounced, deferred, autoresponded, opened, complained, unsubscribed, subscribed.
-(Postmark does not support sent, delivered, or clicked events.)
+rejected, failed, bounced, deferred, delivered, autoresponded, opened, complained,
+unsubscribed, subscribed. (Postmark does not support sent or clicked events.)
 
 The event's :attr:`~anymail.signals.AnymailTrackingEvent.esp_event` field will be
-a `dict` of Postmark `bounce <http://developer.postmarkapp.com/developer-bounce-webhook.html>`_
+a `dict` of Postmark `delivery <http://developer.postmarkapp.com/developer-delivery-webhook.html>`_,
+`bounce <http://developer.postmarkapp.com/developer-bounce-webhook.html>`_,
 or `open <http://developer.postmarkapp.com/developer-open-webhook.html>`_ webhook data.
 
 .. _Postmark account settings: https://account.postmarkapp.com/servers
