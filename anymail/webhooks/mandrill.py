@@ -23,15 +23,23 @@ class MandrillSignatureMixin(object):
     def __init__(self, **kwargs):
         # noinspection PyUnresolvedReferences
         esp_name = self.esp_name
-        webhook_key = get_anymail_setting('webhook_key', esp_name=esp_name,
+        # webhook_key is required for POST, but not for HEAD when Mandrill validates webhook url.
+        # Defer "missing setting" error until we actually try to use it in the POST...
+        webhook_key = get_anymail_setting('webhook_key', esp_name=esp_name, default=None,
                                           kwargs=kwargs, allow_bare=True)
-        self.webhook_key = webhook_key.encode('ascii')  # hmac.new requires bytes key in python 3
+        if webhook_key is not None:
+            self.webhook_key = webhook_key.encode('ascii')  # hmac.new requires bytes key in python 3
         self.webhook_url = get_anymail_setting('webhook_url', esp_name=esp_name, default=None,
                                                kwargs=kwargs, allow_bare=True)
         # noinspection PyArgumentList
         super(MandrillSignatureMixin, self).__init__(**kwargs)
 
     def validate_request(self, request):
+        if self.webhook_key is None:
+            # issue deferred "missing setting" error (re-call get-setting without a default)
+            # noinspection PyUnresolvedReferences
+            get_anymail_setting('webhook_key', esp_name=self.esp_name, allow_bare=True)
+
         try:
             signature = request.META["HTTP_X_MANDRILL_SIGNATURE"]
         except KeyError:

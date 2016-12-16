@@ -191,20 +191,32 @@ Status tracking webhooks
 ------------------------
 
 If you are using Anymail's normalized :ref:`status tracking <event-tracking>`,
-follow `Mandrill's instructions`_ to add Anymail's webhook URL:
+setting up Anymail's webhook URL requires deploying your Django project twice:
 
-   :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/mandrill/tracking/`
+1. First, follow the instructions to
+   :ref:`configure Anymail's webhooks <webhooks-configuration>`. You *must*
+   deploy before adding the webhook URL to Mandrill, because it will attempt
+   to verify the URL against your production server.
 
-     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
-     * *yoursite.example.com* is your Django site
+   Follow `Mandrill's instructions`_ to add Anymail's webhook URL in their settings:
 
-Be sure to check the boxes in the Mandrill settings for the event types you want to receive.
-The same Anymail tracking URL can handle all Mandrill "message" and "sync" events.
+      :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/mandrill/tracking/`
+
+        * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
+        * *yoursite.example.com* is your Django site
+
+   Be sure to check the boxes in the Mandrill settings for the event types you want to receive.
+   The same Anymail tracking URL can handle all Mandrill "message" and "sync" events.
+
+2. Mandrill will provide you a "webhook authentication key" once it verifies the URL
+   is working. Add this to your Django project's Anymail settings under
+   :setting:`MANDRILL_WEBHOOK_KEY <ANYMAIL_MANDRILL_WEBHOOK_KEY>`.
+   (You may also need to set :setting:`MANDRILL_WEBHOOK_URL <ANYMAIL_MANDRILL_WEBHOOK_URL>`
+   depending on your server config.) Then deploy your project again.
 
 Mandrill implements webhook signing on the entire event payload, and Anymail will
-verify the signature. You must set :setting:`ANYMAIL_MANDRILL_WEBHOOK_KEY` to the
-webhook key authentication key issued by Mandrill. You may also need to set
-:setting:`ANYMAIL_MANDRILL_WEBHOOK_URL` depending on your server config.
+verify the signature. Until the correct webhook key is set, Anymail will raise
+an exception for any webhook calls from Mandrill (other than the initial validation request).
 
 Mandrill will report these Anymail :attr:`~anymail.signals.AnymailTrackingEvent.event_type`\s:
 sent, rejected, deferred, bounced, opened, clicked, complained, unsubscribed. Mandrill does

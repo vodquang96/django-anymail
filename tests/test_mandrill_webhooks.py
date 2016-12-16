@@ -41,9 +41,16 @@ def mandrill_args(events=None, url='/anymail/mandrill/tracking/', key=TEST_WEBHO
 
 class MandrillWebhookSettingsTestCase(WebhookTestCase):
     def test_requires_webhook_key(self):
-        with self.assertRaises(ImproperlyConfigured):
+        with self.assertRaisesRegex(ImproperlyConfigured, r'MANDRILL_WEBHOOK_KEY'):
             self.client.post('/anymail/mandrill/tracking/',
                              data={'mandrill_events': '[]'})
+
+    def test_head_does_not_require_webhook_key(self):
+        # Mandrill issues an unsigned HEAD request to verify the wehbook url.
+        # Only *after* that succeeds will Mandrill will tell you the webhook key.
+        # So make sure that HEAD request will go through without any key set:
+        response = self.client.head('/anymail/mandrill/tracking/')
+        self.assertEqual(response.status_code, 200)
 
 
 @override_settings(ANYMAIL_MANDRILL_WEBHOOK_KEY=TEST_WEBHOOK_KEY)
