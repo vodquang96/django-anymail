@@ -24,8 +24,15 @@ matrix:
     - { env: DJANGO=django==1.10, python: 3.4 }
     - { env: DJANGO=django==1.10 RUN_LIVE_TESTS=true, python: 3.5 }
     - { env: DJANGO=django==1.10, python: pypy }
-    # Django 1.11 (prerelease): Python ???
-    #- { env: DJANGO="--pre django", python: ??? }
+
+  allow_failures:
+    # Django 1.11 (prerelease): Python 2.7, 3.4, 3.5, or 3.6
+    - { env: DJANGO="--pre django", python: 2.7 }
+    - { env: DJANGO="--pre django", python: 3.4 }
+    - { env: DJANGO="--pre django", python: 3.5 }
+    - { env: DJANGO="--pre django", python: 3.6 }
+    - { env: DJANGO="--pre django", python: pypy }
+
 cache:
   directories:
     - $HOME/.cache/pip
