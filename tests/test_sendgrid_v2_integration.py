@@ -2,6 +2,7 @@ import os
 import unittest
 from datetime import datetime, timedelta
 
+from django.core.mail import send_mail
 from django.test import SimpleTestCase
 from django.test.utils import override_settings
 
@@ -10,8 +11,12 @@ from anymail.message import AnymailMessage
 
 from .utils import AnymailTestMixin, sample_image_path, RUN_LIVE_TESTS
 
+# For API_KEY auth tests:
 SENDGRID_TEST_API_KEY = os.getenv('SENDGRID_TEST_API_KEY')
-SENDGRID_TEST_TEMPLATE_ID = os.getenv('SENDGRID_TEST_TEMPLATE_ID')
+
+# For USERNAME/PASSWORD auth tests:
+SENDGRID_TEST_USERNAME = os.getenv('SENDGRID_TEST_USERNAME')
+SENDGRID_TEST_PASSWORD = os.getenv('SENDGRID_TEST_PASSWORD')
 
 
 @unittest.skipUnless(RUN_LIVE_TESTS, "RUN_LIVE_TESTS disabled in this environment")
@@ -19,21 +24,17 @@ SENDGRID_TEST_TEMPLATE_ID = os.getenv('SENDGRID_TEST_TEMPLATE_ID')
                      "Set SENDGRID_TEST_API_KEY environment variable "
                      "to run SendGrid integration tests")
 @override_settings(ANYMAIL_SENDGRID_API_KEY=SENDGRID_TEST_API_KEY,
-                   ANYMAIL_SENDGRID_SEND_DEFAULTS={"esp_extra": {
-                       "mail_settings": {"sandbox_mode": {"enable": True}},
-                   }},
-                   EMAIL_BACKEND="anymail.backends.sendgrid.SendGridBackend")
+                   EMAIL_BACKEND="anymail.backends.sendgrid_v2.EmailBackend")
 class SendGridBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
-    """SendGrid v3 API integration tests
+    """SendGrid v2 API integration tests
 
     These tests run against the **live** SendGrid API, using the
     environment variable `SENDGRID_TEST_API_KEY` as the API key
     If those variables are not set, these tests won't run.
 
-    The SEND_DEFAULTS above force SendGrid's v3 sandbox mode, which avoids sending mail.
-    (Sandbox sends also don't show in the activity feed, so disable that for live debugging.)
-
-    The tests also use SendGrid's "sink domain" @sink.sendgrid.net for recipient addresses.
+    SendGrid v2 doesn't offer a test mode -- it tries to send everything
+    you ask. To avoid stacking up a pile of undeliverable @example.com
+    emails, the tests use SendGrid's "sink domain" @sink.sendgrid.net.
     https://support.sendgrid.com/hc/en-us/articles/201995663-Safely-Test-Your-Sending-Speed
 
     """
@@ -61,21 +62,20 @@ class SendGridBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     def test_all_options(self):
         send_at = datetime.now().replace(microsecond=0) + timedelta(minutes=2)
         message = AnymailMessage(
-            subject="Anymail all-options integration test",
+            subject="Anymail all-options integration test FILES",
             body="This is the text body",
-            from_email='"Test From, with comma" <from@example.com>',
-            to=["to1@sink.sendgrid.net", '"Recipient 2, OK?" <to2@sink.sendgrid.net>'],
+            from_email="Test From <from@example.com>",
+            to=["to1@sink.sendgrid.net", "Recipient 2 <to2@sink.sendgrid.net>"],
             cc=["cc1@sink.sendgrid.net", "Copy 2 <cc2@sink.sendgrid.net>"],
             bcc=["bcc1@sink.sendgrid.net", "Blind Copy 2 <bcc2@sink.sendgrid.net>"],
-            reply_to=['"Reply, with comma" <reply@example.com>'],  # v3 only supports single reply-to
-            headers={"X-Anymail-Test": "value", "X-Anymail-Count": 3},
+            reply_to=["reply1@example.com", "Reply 2 <reply2@example.com>"],
+            headers={"X-Anymail-Test": "value"},
 
             metadata={"meta1": "simple string", "meta2": 2},
             send_at=send_at,
             tags=["tag 1", "tag 2"],
             track_clicks=True,
             track_opens=True,
-            # esp_extra={'asm': {'group_id': 1}},  # this breaks activity feed if you don't have an asm group
         )
         message.attach("attachment1.txt", "Here is some\ntext for you", "text/plain")
         message.attach("attachment2.csv", "ID,Name\n1,Amy Lina", "text/csv")
@@ -90,14 +90,13 @@ class SendGridBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
 
     def test_merge_data(self):
         message = AnymailMessage(
-            subject="Anymail merge_data test: %field%",
-            body="This body includes merge data: %field%",
+            subject="Anymail merge_data test: %value%",
+            body="This body includes merge data: %value%",
             from_email="Test From <from@example.com>",
             to=["to1@sink.sendgrid.net", "Recipient 2 <to2@sink.sendgrid.net>"],
-            reply_to=['"Merge data in reply name: %field%" <reply@example.com>'],
             merge_data={
-                'to1@sink.sendgrid.net': {'field': 'one'},
-                'to2@sink.sendgrid.net': {'field': 'two'},
+                'to1@sink.sendgrid.net': {'value': 'one'},
+                'to2@sink.sendgrid.net': {'value': 'two'},
             },
             esp_extra={
                 'merge_field_format': '%{}%',
@@ -108,30 +107,40 @@ class SendGridBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         self.assertEqual(recipient_status['to1@sink.sendgrid.net'].status, 'queued')
         self.assertEqual(recipient_status['to2@sink.sendgrid.net'].status, 'queued')
 
-    @unittest.skipUnless(SENDGRID_TEST_TEMPLATE_ID,
-                         "Set the SENDGRID_TEST_TEMPLATE_ID environment variable "
-                         "to a template in your SendGrid account to test stored templates")
-    def test_stored_template(self):
-        message = AnymailMessage(
-            from_email="Test From <from@example.com>",
-            to=["to@sink.sendgrid.net"],
-            template_id=SENDGRID_TEST_TEMPLATE_ID,
-            # The test template in the Anymail Test account has a substitution "-field-":
-            merge_global_data={
-                'field': 'value from merge_global_data',
-            },
-            esp_extra={
-                'merge_field_format': '-{}-',
-            },
-        )
-        message.send()
-        self.assertEqual(message.anymail_status.status, {'queued'})
-
     @override_settings(ANYMAIL_SENDGRID_API_KEY="Hey, that's not an API key!")
     def test_invalid_api_key(self):
         with self.assertRaises(AnymailAPIError) as cm:
             self.message.send()
         err = cm.exception
-        self.assertEqual(err.status_code, 401)
+        self.assertEqual(err.status_code, 400)
         # Make sure the exception message includes SendGrid's response:
         self.assertIn("authorization grant is invalid", str(err))
+
+
+@unittest.skipUnless(RUN_LIVE_TESTS, "RUN_LIVE_TESTS disabled in this environment")
+@unittest.skipUnless(SENDGRID_TEST_USERNAME and SENDGRID_TEST_PASSWORD,
+                     "Set SENDGRID_TEST_USERNAME and SENDGRID_TEST_PASSWORD"
+                     "environment variables to run SendGrid integration tests")
+@override_settings(ANYMAIL_SENDGRID_USERNAME=SENDGRID_TEST_USERNAME,
+                   ANYMAIL_SENDGRID_PASSWORD=SENDGRID_TEST_PASSWORD,
+                   EMAIL_BACKEND="anymail.backends.sendgrid_v2.EmailBackend")
+class SendGridBackendUserPassIntegrationTests(SimpleTestCase, AnymailTestMixin):
+    """SendGrid username/password API integration tests
+
+    (See notes above for the API-key tests)
+    """
+
+    def test_valid_auth(self):
+        sent_count = send_mail('Anymail SendGrid username/password integration test',
+                               'Text content', 'from@example.com', ['to@sink.sendgrid.net'])
+        self.assertEqual(sent_count, 1)
+
+    @override_settings(ANYMAIL_SENDGRID_PASSWORD="Hey, this isn't the password!")
+    def test_invalid_auth(self):
+        with self.assertRaises(AnymailAPIError) as cm:
+            send_mail('Anymail SendGrid username/password integration test',
+                      'Text content', 'from@example.com', ['to@sink.sendgrid.net'])
+        err = cm.exception
+        self.assertEqual(err.status_code, 400)
+        # Make sure the exception message includes SendGrid's response:
+        self.assertIn("Bad username / password", str(err))

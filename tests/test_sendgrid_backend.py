@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import json
+from base64 import b64encode, b64decode
 from calendar import timegm
 from datetime import date, datetime
 from decimal import Decimal
@@ -8,12 +8,12 @@ from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
 
 from django.core import mail
-from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 from django.test.utils import override_settings
 from django.utils.timezone import get_fixed_timezone, override as override_current_timezone
 
-from anymail.exceptions import AnymailAPIError, AnymailSerializationError, AnymailUnsupportedFeature, AnymailWarning
+from anymail.exceptions import (AnymailAPIError, AnymailConfigurationError, AnymailSerializationError,
+                                AnymailUnsupportedFeature, AnymailWarning)
 from anymail.message import attach_inline_image_file
 
 from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
@@ -23,19 +23,13 @@ from .utils import sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAM
 @override_settings(EMAIL_BACKEND='anymail.backends.sendgrid.SendGridBackend',
                    ANYMAIL={'SENDGRID_API_KEY': 'test_api_key'})
 class SendGridBackendMockAPITestCase(RequestsBackendMockAPITestCase):
-    DEFAULT_RAW_RESPONSE = b"""{
-        "message": "success"
-    }"""
+    DEFAULT_RAW_RESPONSE = b""  # SendGrid v3 success responses are empty
+    DEFAULT_STATUS_CODE = 202  # SendGrid v3 uses '202 Accepted' for success (in most cases)
 
     def setUp(self):
         super(SendGridBackendMockAPITestCase, self).setUp()
         # Simple message useful for many tests
         self.message = mail.EmailMultiAlternatives('Subject', 'Text Body', 'from@example.com', ['to@example.com'])
-
-    def get_smtpapi(self):
-        """Returns the x-smtpapi data passed to the mock requests call"""
-        data = self.get_api_call_data()
-        return json.loads(data["x-smtpapi"])
 
 
 class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
@@ -45,39 +39,22 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
         """Test basic API for simple send"""
         mail.send_mail('Subject here', 'Here is the message.',
                        'from@sender.example.com', ['to@example.com'], fail_silently=False)
-        self.assert_esp_called('/api/mail.send.json')
+        self.assert_esp_called('https://api.sendgrid.com/v3/mail/send')
         http_headers = self.get_api_call_headers()
         self.assertEqual(http_headers["Authorization"], "Bearer test_api_key")
+        self.assertEqual(http_headers["Content-Type"], "application/json")
 
-        query = self.get_api_call_params(required=False)
-        if query:
-            self.assertNotIn('api_user', query)
-            self.assertNotIn('api_key', query)
-
-        data = self.get_api_call_data()
+        data = self.get_api_call_json()
         self.assertEqual(data['subject'], "Subject here")
-        self.assertEqual(data['text'], "Here is the message.")
-        self.assertEqual(data['from'], "from@sender.example.com")
-        self.assertEqual(data['to'], ["to@example.com"])
+        self.assertEqual(data['content'], [{'type': "text/plain", 'value': "Here is the message."}])
+        self.assertEqual(data['from'], {'email': "from@sender.example.com"})
+        self.assertEqual(data['personalizations'], [{
+            'to': [{'email': "to@example.com"}],
+        }])
         # make sure backend assigned a Message-ID for event tracking
-        email_headers = json.loads(data['headers'])
-        self.assertRegex(email_headers['Message-ID'], r'\<.+@sender\.example\.com\>')  # id uses from_email's domain
-        # make sure we added the Message-ID to unique_args for event notification
-        smtpapi = self.get_smtpapi()
-        self.assertEqual(email_headers['Message-ID'], smtpapi['unique_args']['smtp-id'])
-
-    @override_settings(ANYMAIL={'SENDGRID_USERNAME': 'sg_username', 'SENDGRID_PASSWORD': 'sg_password'})
-    def test_user_pass_auth(self):
-        """Make sure alternative USERNAME/PASSWORD auth works"""
-        mail.send_mail('Subject here', 'Here is the message.',
-                       'from@sender.example.com', ['to@example.com'], fail_silently=False)
-        self.assert_esp_called('/api/mail.send.json')
-        query = self.get_api_call_params()
-        self.assertEqual(query['api_user'], 'sg_username')
-        self.assertEqual(query['api_key'], 'sg_password')
-        http_headers = self.get_api_call_headers(required=False)
-        if http_headers:
-            self.assertNotIn('Authorization', http_headers)
+        self.assertRegex(data['headers']['Message-ID'], r'\<.+@sender\.example\.com\>')  # id uses from_email's domain
+        # make sure we added the Message-ID to custom_args for event notification
+        self.assertEqual(data['headers']['Message-ID'], data['custom_args']['smtp-id'])
 
     def test_name_addr(self):
         """Make sure RFC2822 name-addr format (with display-name) is allowed
@@ -90,15 +67,24 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
             cc=['Carbon Copy <cc1@example.com>', 'cc2@example.com'],
             bcc=['Blind Copy <bcc1@example.com>', 'bcc2@example.com'])
         msg.send()
-        data = self.get_api_call_data()
-        self.assertEqual(data['from'], "from@example.com")
-        self.assertEqual(data['fromname'], "From Name")
-        self.assertEqual(data['to'], ['to1@example.com', 'to2@example.com'])
-        self.assertEqual(data['toname'], ['Recipient #1', ' '])  # note space -- SendGrid balks on ''
-        self.assertEqual(data['cc'], ['cc1@example.com', 'cc2@example.com'])
-        self.assertEqual(data['ccname'], ['Carbon Copy', ' '])
-        self.assertEqual(data['bcc'], ['bcc1@example.com', 'bcc2@example.com'])
-        self.assertEqual(data['bccname'], ['Blind Copy', ' '])
+        data = self.get_api_call_json()
+        self.assertEqual(data['from'], {'email': "from@example.com", 'name': "From Name"})
+
+        # single message (single "personalization") sent to all those recipients
+        # (note workaround for SendGrid v3 API bug quoting display-name in personalizations)
+        self.assertEqual(len(data['personalizations']), 1)
+        self.assertEqual(data['personalizations'][0]['to'], [
+            {'name': '"Recipient #1"', 'email': 'to1@example.com'},
+            {'email': 'to2@example.com'}
+        ])
+        self.assertEqual(data['personalizations'][0]['cc'], [
+            {'name': '"Carbon Copy"', 'email': 'cc1@example.com'},
+            {'email': 'cc2@example.com'}
+        ])
+        self.assertEqual(data['personalizations'][0]['bcc'], [
+            {'name': '"Blind Copy"', 'email': 'bcc1@example.com'},
+            {'email': 'bcc2@example.com'}
+        ])
 
     def test_email_message(self):
         email = mail.EmailMessage(
@@ -110,24 +96,27 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
                      'X-MyHeader': 'my value',
                      'Message-ID': '<mycustommsgid@sales.example.com>'})  # should override backend msgid
         email.send()
-        data = self.get_api_call_data()
+        data = self.get_api_call_json()
+        self.assertEqual(data['personalizations'], [{
+                'to': [{'email': "to1@example.com"},
+                       {'email': "to2@example.com", 'name': '"Also To"'}],
+                'cc': [{'email': "cc1@example.com"},
+                       {'email': "cc2@example.com", 'name': '"Also CC"'}],
+                'bcc': [{'email': "bcc1@example.com"},
+                        {'email': "bcc2@example.com", 'name': '"Also BCC"'}],
+            }])
+
+        self.assertEqual(data['from'], {'email': "from@example.com"})
         self.assertEqual(data['subject'], "Subject")
-        self.assertEqual(data['text'], "Body goes here")
-        self.assertEqual(data['from'], "from@example.com")
-        self.assertEqual(data['to'], ['to1@example.com', 'to2@example.com'])
-        self.assertEqual(data['toname'], [' ', 'Also To'])
-        self.assertEqual(data['bcc'], ['bcc1@example.com', 'bcc2@example.com'])
-        self.assertEqual(data['bccname'], [' ', 'Also BCC'])
-        self.assertEqual(data['cc'], ['cc1@example.com', 'cc2@example.com'])
-        self.assertEqual(data['ccname'], [' ', 'Also CC'])
-        self.assertJSONEqual(data['headers'], {
-            'Message-ID': '<mycustommsgid@sales.example.com>',
-            'Reply-To': 'another@example.com',
-            'X-MyHeader': 'my value',
+        self.assertEqual(data['content'], [{'type': "text/plain", 'value': "Body goes here"}])
+        self.assertEqual(data['reply_to'], {'email': "another@example.com"})
+        self.assertEqual(data['headers'], {
+            'X-MyHeader': "my value",
+            'Message-ID': "<mycustommsgid@sales.example.com>",
         })
-        # make sure custom Message-ID also added to unique_args
-        self.assertJSONEqual(data['x-smtpapi'], {
-            'unique_args': {'smtp-id': '<mycustommsgid@sales.example.com>'}
+        # make sure custom Message-ID also added to custom_args
+        self.assertEqual(data['custom_args'], {
+            'smtp-id': "<mycustommsgid@sales.example.com>",
         })
 
     def test_html_message(self):
@@ -137,29 +126,33 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
                                             'from@example.com', ['to@example.com'])
         email.attach_alternative(html_content, "text/html")
         email.send()
-        data = self.get_api_call_data()
-        self.assertEqual(data['text'], text_content)
-        self.assertEqual(data['html'], html_content)
+        data = self.get_api_call_json()
+        # SendGrid requires content in text, html order:
+        self.assertEqual(len(data['content']), 2)
+        self.assertEqual(data['content'][0], {'type': "text/plain", 'value': text_content})
+        self.assertEqual(data['content'][1], {'type': "text/html", 'value': html_content})
         # Don't accidentally send the html part as an attachment:
-        files = self.get_api_call_files(required=False)
-        self.assertIsNone(files)
+        self.assertNotIn('attachments', data)
 
     def test_html_only_message(self):
         html_content = '<p>This is an <strong>important</strong> message.</p>'
         email = mail.EmailMessage('Subject', html_content, 'from@example.com', ['to@example.com'])
         email.content_subtype = "html"  # Main content is now text/html
         email.send()
-        data = self.get_api_call_data()
-        self.assertNotIn('text', data)
-        self.assertEqual(data['html'], html_content)
+        data = self.get_api_call_json()
+        self.assertEqual(len(data['content']), 1)
+        self.assertEqual(data['content'][0], {'type': "text/html", 'value': html_content})
 
     def test_extra_headers(self):
-        self.message.extra_headers = {'X-Custom': 'string', 'X-Num': 123}
+        self.message.extra_headers = {'X-Custom': 'string', 'X-Num': 123,
+                                      'Reply-To': '"Do Not Reply" <noreply@example.com>'}
         self.message.send()
-        data = self.get_api_call_data()
-        headers = json.loads(data['headers'])
-        self.assertEqual(headers['X-Custom'], 'string')
-        self.assertEqual(headers['X-Num'], '123')  # number converted to string (per SendGrid requirement)
+        data = self.get_api_call_json()
+        self.assertEqual(data['headers']['X-Custom'], 'string')
+        self.assertEqual(data['headers']['X-Num'], '123')  # converted to string (undoc'd SendGrid requirement)
+        # Reply-To must be moved to separate param
+        self.assertNotIn('Reply-To', data['headers'])
+        self.assertEqual(data['reply_to'], {'name': "Do Not Reply", 'email': "noreply@example.com"})
 
     def test_extra_headers_serialization_error(self):
         self.message.extra_headers = {'X-Custom': Decimal(12.5)}
@@ -167,15 +160,24 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
             self.message.send()
 
     def test_reply_to(self):
-        email = mail.EmailMessage('Subject', 'Body goes here', 'from@example.com', ['to1@example.com'],
-                                  reply_to=['reply@example.com', 'Other <reply2@example.com>'],
-                                  headers={'X-Other': 'Keep'})
-        email.send()
-        data = self.get_api_call_data()
-        self.assertNotIn('replyto', data)  # don't use SendGrid's replyto (it's broken); just use headers
-        headers = json.loads(data['headers'])
-        self.assertEqual(headers['Reply-To'], 'reply@example.com, Other <reply2@example.com>')
-        self.assertEqual(headers['X-Other'], 'Keep')  # don't lose other headers
+        self.message.reply_to = ['"Reply recipient" <reply@example.com']
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertEqual(data['reply_to'], {'name': "Reply recipient", 'email': "reply@example.com"})
+
+    def test_multiple_reply_to(self):
+        # SendGrid v3 prohibits Reply-To in custom headers, and only allows a single reply address
+        self.message.reply_to = ['"Reply recipient" <reply@example.com', 'reply2@example.com']
+        with self.assertRaises(AnymailUnsupportedFeature):
+            self.message.send()
+
+    @override_settings(ANYMAIL_IGNORE_UNSUPPORTED_FEATURES=True)
+    def test_multiple_reply_to_ignore_unsupported(self):
+        # Should use first Reply-To if ignoring unsupported features
+        self.message.reply_to = ['"Reply recipient" <reply@example.com', 'reply2@example.com']
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertEqual(data['reply_to'], {'name': "Reply recipient", 'email': "reply@example.com"})
 
     def test_attachments(self):
         text_content = "* Item one\n* Item two\n* Item three"
@@ -192,37 +194,29 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
         self.message.attach(mimeattachment)
 
         self.message.send()
-        files = self.get_api_call_files()
-        self.assertEqual(files, {
-            'files[test.txt]': ('test.txt', text_content, 'text/plain'),
-            'files[test.png]': ('test.png', png_content, 'image/png'),  # type inferred from filename
-            'files[]': ('', pdf_content, 'application/pdf'),  # no filename
-        })
+        data = self.get_api_call_json()
+        self.assertEqual(len(data['attachments']), 3)
 
-    def test_attachment_name_conflicts(self):
-        # It's not clear how to (or whether) supply multiple attachments with
-        # the same name to SendGrid's API. Anymail treats this case as unsupported.
-        self.message.attach('foo.txt', 'content', 'text/plain')
-        self.message.attach('bar.txt', 'content', 'text/plain')
-        self.message.attach('foo.txt', 'different content', 'text/plain')
-        with self.assertRaisesMessage(AnymailUnsupportedFeature,
-                                      "multiple attachments with the same filename") as cm:
-            self.message.send()
-        self.assertIn('foo.txt', str(cm.exception))  # say which filename
-
-    def test_unnamed_attachment_conflicts(self):
-        # Same as previous test, but with None/empty filenames
-        self.message.attach(None, 'content', 'text/plain')
-        self.message.attach('', 'different content', 'text/plain')
-        with self.assertRaisesMessage(AnymailUnsupportedFeature, "multiple unnamed attachments"):
-            self.message.send()
+        attachments = data['attachments']
+        self.assertEqual(attachments[0], {
+            'filename': "test.txt",
+            'content': b64encode(text_content.encode('utf-8')).decode('ascii'),
+            'type': "text/plain"})
+        self.assertEqual(attachments[1], {
+            'filename': "test.png",
+            'content': b64encode(png_content).decode('ascii'),
+            'type': "image/png"})  # type inferred from filename
+        self.assertEqual(attachments[2], {
+            'filename': "",  # no filename -- but param is required
+            'content': b64encode(pdf_content).decode('ascii'),
+            'type': "application/pdf"})
 
     def test_unicode_attachment_correctly_decoded(self):
         self.message.attach(u"Une pièce jointe.html", u'<p>\u2019</p>', mimetype='text/html')
         self.message.send()
-        files = self.get_api_call_files()
-        self.assertEqual(files[u'files[Une pièce jointe.html]'],
-                         (u'Une pièce jointe.html', u'<p>\u2019</p>', 'text/html'))
+        attachment = self.get_api_call_json()['attachments'][0]
+        self.assertEqual(attachment['filename'], u'Une pièce jointe.html')
+        self.assertEqual(b64decode(attachment['content']).decode('utf-8'), u'<p>\u2019</p>')
 
     def test_embedded_images(self):
         image_filename = SAMPLE_IMAGE_FILENAME
@@ -234,14 +228,15 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
         self.message.attach_alternative(html_content, "text/html")
 
         self.message.send()
-        data = self.get_api_call_data()
-        self.assertEqual(data['html'], html_content)
+        data = self.get_api_call_json()
 
-        files = self.get_api_call_files()
-        self.assertEqual(files, {
-            'files[%s]' % image_filename: (image_filename, image_data, "image/png"),
+        self.assertEqual(data['attachments'][0], {
+            'filename': image_filename,
+            'content': b64encode(image_data).decode('ascii'),
+            'type': "image/png",  # type inferred from filename
+            'disposition': "inline",
+            'content_id': cid,
         })
-        self.assertEqual(data['content[%s]' % image_filename], cid)
 
     def test_attached_images(self):
         image_filename = SAMPLE_IMAGE_FILENAME
@@ -254,50 +249,48 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
         self.message.attach(image)
 
         self.message.send()
-        files = self.get_api_call_files()
-        self.assertEqual(files, {
-            'files[%s]' % image_filename: (image_filename, image_data, "image/png"),  # the named one
-            'files[]': ('', image_data, "image/png"),  # the unnamed one
+
+        image_data_b64 = b64encode(image_data).decode('ascii')
+        data = self.get_api_call_json()
+        self.assertEqual(data['attachments'][0], {
+            'filename': image_filename,  # the named one
+            'content': image_data_b64,
+            'type': "image/png",
+        })
+        self.assertEqual(data['attachments'][1], {
+            'filename': '',  # the unnamed one
+            'content': image_data_b64,
+            'type': "image/png",
         })
 
     def test_multiple_html_alternatives(self):
-        # Multiple alternatives not allowed
+        # SendGrid's v3 API allows all kinds of content alternatives.
+        # It's unclear whether this would permit multiple text/html parts
+        # (the API docs warn that "If included, text/plain and text/html must be
+        # the first indices of the [content] array in this order"), but Anymail
+        # generally passes whatever the API structure supports -- deferring any
+        # limitations to the ESP.
+        self.message.body = "Text body"
         self.message.attach_alternative("<p>First html is OK</p>", "text/html")
-        self.message.attach_alternative("<p>But not second html</p>", "text/html")
-        with self.assertRaises(AnymailUnsupportedFeature):
-            self.message.send()
+        self.message.attach_alternative("<p>And maybe second html, too</p>", "text/html")
 
-    def test_html_alternative(self):
-        # Only html alternatives allowed
-        self.message.attach_alternative("{'not': 'allowed'}", "application/json")
-        with self.assertRaises(AnymailUnsupportedFeature):
-            self.message.send()
-
-    def test_alternatives_fail_silently(self):
-        # Make sure fail_silently is respected
-        self.message.attach_alternative("{'not': 'allowed'}", "application/json")
-        sent = self.message.send(fail_silently=True)
-        self.assert_esp_not_called("API should not be called when send fails silently")
-        self.assertEqual(sent, 0)
-
-    def test_suppress_empty_address_lists(self):
-        """Empty to, cc, bcc, and reply_to shouldn't generate empty headers"""
         self.message.send()
-        data = self.get_api_call_data()
-        self.assertNotIn('cc', data)
-        self.assertNotIn('ccname', data)
-        self.assertNotIn('bcc', data)
-        self.assertNotIn('bccname', data)
-        headers = json.loads(data['headers'])
-        self.assertNotIn('Reply-To', headers)
+        data = self.get_api_call_json()
+        self.assertEqual(data['content'], [
+            {'type': "text/plain", 'value': "Text body"},
+            {'type': "text/html", 'value': "<p>First html is OK</p>"},
+            {'type': "text/html", 'value': "<p>And maybe second html, too</p>"},
+        ])
 
-        # Test empty `to` -- but send requires at least one recipient somewhere (like cc)
-        self.message.to = []
-        self.message.cc = ['cc@example.com']
+    def test_non_html_alternative(self):
+        self.message.body = "Text body"
+        self.message.attach_alternative("{'maybe': 'allowed'}", "application/json")
         self.message.send()
-        data = self.get_api_call_data()
-        self.assertNotIn('to', data)
-        self.assertNotIn('toname', data)
+        data = self.get_api_call_json()
+        self.assertEqual(data['content'], [
+            {'type': "text/plain", 'value': "Text body"},
+            {'type': "application/json", 'value': "{'maybe': 'allowed'}"},
+        ])
 
     def test_api_failure(self):
         self.set_mock_response(status_code=400)
@@ -313,17 +306,16 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
     def test_api_error_includes_details(self):
         """AnymailAPIError should include ESP's error message"""
         # JSON error response:
-        error_response = b"""{
-          "message": "error",
-          "errors": [
-            "Helpful explanation from SendGrid",
-            "and more"
-          ]
-        }"""
-        self.set_mock_response(status_code=200, raw=error_response)
-        with self.assertRaisesRegex(AnymailAPIError,
-                                    r"\bHelpful explanation from SendGrid\b.*and more\b"):
+        error_response = b"""{"errors":[
+            {"message":"Helpful explanation from SendGrid","field":"subject","help":null},
+            {"message":"Another error","field":null,"help":null}
+        ]}"""
+        self.set_mock_response(status_code=400, raw=error_response)
+        with self.assertRaises(AnymailAPIError) as cm:
             self.message.send()
+        err = cm.exception
+        self.assertIn("Helpful explanation from SendGrid", str(err))
+        self.assertIn("Another error", str(err))
 
         # Non-JSON error response:
         self.set_mock_response(status_code=500, raw=b"Ack! Bad proxy!")
@@ -340,12 +332,12 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
     """Test backend support for Anymail added features"""
 
     def test_metadata(self):
-        # Note: SendGrid doesn't handle complex types in metadata
         self.message.metadata = {'user_id': "12345", 'items': 6}
         self.message.send()
-        smtpapi = self.get_smtpapi()
-        smtpapi['unique_args'].pop('smtp-id', None)  # remove Message-ID we added as tracking workaround
-        self.assertEqual(smtpapi['unique_args'], {'user_id': "12345", 'items': 6})
+        data = self.get_api_call_json()
+        data['custom_args'].pop('smtp-id', None)  # remove Message-ID we added as tracking workaround
+        self.assertEqual(data['custom_args'], {'user_id': "12345",
+                                               'items': "6"})  # number converted to string
 
     def test_send_at(self):
         utc_plus_6 = get_fixed_timezone(6 * 60)
@@ -355,76 +347,75 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
             # Timezone-aware datetime converted to UTC:
             self.message.send_at = datetime(2016, 3, 4, 5, 6, 7, tzinfo=utc_minus_8)
             self.message.send()
-            smtpapi = self.get_smtpapi()
-            self.assertEqual(smtpapi['send_at'], timegm((2016, 3, 4, 13, 6, 7)))  # 05:06 UTC-8 == 13:06 UTC
+            data = self.get_api_call_json()
+            self.assertEqual(data['send_at'], timegm((2016, 3, 4, 13, 6, 7)))  # 05:06 UTC-8 == 13:06 UTC
 
             # Timezone-naive datetime assumed to be Django current_timezone
             self.message.send_at = datetime(2022, 10, 11, 12, 13, 14, 567)  # microseconds should get stripped
             self.message.send()
-            smtpapi = self.get_smtpapi()
-            self.assertEqual(smtpapi['send_at'], timegm((2022, 10, 11, 6, 13, 14)))  # 12:13 UTC+6 == 06:13 UTC
+            data = self.get_api_call_json()
+            self.assertEqual(data['send_at'], timegm((2022, 10, 11, 6, 13, 14)))  # 12:13 UTC+6 == 06:13 UTC
 
             # Date-only treated as midnight in current timezone
             self.message.send_at = date(2022, 10, 22)
             self.message.send()
-            smtpapi = self.get_smtpapi()
-            self.assertEqual(smtpapi['send_at'], timegm((2022, 10, 21, 18, 0, 0)))  # 00:00 UTC+6 == 18:00-1d UTC
+            data = self.get_api_call_json()
+            self.assertEqual(data['send_at'], timegm((2022, 10, 21, 18, 0, 0)))  # 00:00 UTC+6 == 18:00-1d UTC
 
             # POSIX timestamp
             self.message.send_at = 1651820889  # 2022-05-06 07:08:09 UTC
             self.message.send()
-            smtpapi = self.get_smtpapi()
-            self.assertEqual(smtpapi['send_at'], 1651820889)
+            data = self.get_api_call_json()
+            self.assertEqual(data['send_at'], 1651820889)
 
     def test_tags(self):
         self.message.tags = ["receipt", "repeat-user"]
         self.message.send()
-        smtpapi = self.get_smtpapi()
-        self.assertCountEqual(smtpapi['category'], ["receipt", "repeat-user"])
+        data = self.get_api_call_json()
+        self.assertCountEqual(data['categories'], ["receipt", "repeat-user"])
 
     def test_tracking(self):
         # Test one way...
         self.message.track_clicks = False
         self.message.track_opens = True
         self.message.send()
-        smtpapi = self.get_smtpapi()
-        self.assertEqual(smtpapi['filters']['clicktrack'], {'settings': {'enable': 0}})
-        self.assertEqual(smtpapi['filters']['opentrack'], {'settings': {'enable': 1}})
+        data = self.get_api_call_json()
+        self.assertEqual(data['tracking_settings']['click_tracking'], {'enable': False})
+        self.assertEqual(data['tracking_settings']['open_tracking'], {'enable': True})
 
         # ...and the opposite way
         self.message.track_clicks = True
         self.message.track_opens = False
         self.message.send()
-        smtpapi = self.get_smtpapi()
-        self.assertEqual(smtpapi['filters']['clicktrack'], {'settings': {'enable': 1}})
-        self.assertEqual(smtpapi['filters']['opentrack'], {'settings': {'enable': 0}})
+        data = self.get_api_call_json()
+        self.assertEqual(data['tracking_settings']['click_tracking'], {'enable': True})
+        self.assertEqual(data['tracking_settings']['open_tracking'], {'enable': False})
 
     def test_template_id(self):
-        self.message.attach_alternative("HTML Body", "text/html")
         self.message.template_id = "5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f"
         self.message.send()
-        smtpapi = self.get_smtpapi()
-        self.assertEqual(smtpapi['filters']['templates'], {
-            'settings': {'enable': 1,
-                         'template_id': "5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f"}
-        })
-        data = self.get_api_call_data()
-        self.assertEqual(data['text'], "Text Body")
-        self.assertEqual(data['html'], "HTML Body")
+        data = self.get_api_call_json()
+        self.assertEqual(data['template_id'], "5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f")
 
     def test_template_id_with_empty_body(self):
-        # Text and html must be present (and non-empty-string), or the corresponding
-        # part will not render from the template. Make sure we fill in strings:
+        # v2 API required *some* text and html in message to render those template bodies,
+        # so the v2 backend set those to " " when necessary.
+        # But per v3 docs:
+        #   "If you use a template that contains content and a subject (either text or html),
+        #   you do not need to specify those in the respective personalizations or message
+        #   level parameters."
+        # So make sure we aren't adding body content where not needed:
         message = mail.EmailMessage(from_email='from@example.com', to=['to@example.com'])
         message.template_id = "5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f"
         message.send()
-        data = self.get_api_call_data()
-        self.assertEqual(data['text'], " ")  # single space is sufficient
-        self.assertEqual(data['html'], " ")
+        data = self.get_api_call_json()
+        self.assertNotIn('content', data)  # neither text nor html body
+        self.assertNotIn('subject', data)
 
     def test_merge_data(self):
         self.message.from_email = 'from@example.com'
-        self.message.to = ['alice@example.com', 'Bob <bob@example.com>']
+        self.message.to = ['alice@example.com', 'Bob <bob@example.com>', 'celia@example.com']
+        self.message.cc = ['cc@example.com']  # gets applied to *each* recipient in a merge
         # SendGrid template_id is not required to use merge.
         # You can just supply template content as the message (e.g.):
         self.message.body = "Hi :name. Welcome to :group at :site."
@@ -433,6 +424,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
             # as shown here, or use one of the merge_field_format options shown in the test cases below
             'alice@example.com': {':name': "Alice", ':group': "Developers"},
             'bob@example.com': {':name': "Bob"},  # and leave :group undefined
+            # and no data for celia@example.com
         }
         self.message.merge_global_data = {
             ':group': "Users",
@@ -440,20 +432,21 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         }
         self.message.send()
 
-        data = self.get_api_call_data()
-        smtpapi = self.get_smtpapi()
-        # For batch send, smtpapi['to'] gets real recipient list;
-        # normal 'to' is not used (but must be valid, so we substitute the from_email):
-        self.assertEqual(data['to'], ['from@example.com'])
-        self.assertEqual(data['toname'], [' '])  # empty string if no name in from_email
-        self.assertEqual(smtpapi['to'], ['alice@example.com', 'Bob <bob@example.com>'])
-        # smtpapi['sub'] values should be in to-list order:
-        self.assertEqual(smtpapi['sub'], {
-            ':name': ["Alice", "Bob"],
-            ':group': ["Developers", ":group"],  # missing value gets replaced with var name...
-        })
-        self.assertEqual(smtpapi['section'], {
-            ':group': "Users",  # ... which SG should then try to resolve from here
+        data = self.get_api_call_json()
+        self.assertEqual(data['personalizations'], [
+            {'to': [{'email': 'alice@example.com'}],
+             'cc': [{'email': 'cc@example.com'}],  # all recipients get the cc
+             'substitutions': {':name': "Alice", ':group': "Developers",
+                               ':site': ":site"}},  # tell SG to look for global field in 'sections'
+            {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
+             'cc': [{'email': 'cc@example.com'}],
+             'substitutions': {':name': "Bob", ':group': ":group", ':site': ":site"}},
+            {'to': [{'email': 'celia@example.com'}],
+             'cc': [{'email': 'cc@example.com'}],
+             'substitutions': {':group': ":group", ':site': ":site"}},  # look for global fields in 'sections'
+        ])
+        self.assertEqual(data['sections'], {
+            ':group': "Users",
             ':site': "ExampleCo",
         })
 
@@ -467,12 +460,14 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         }
         self.message.merge_global_data = {'site': "ExampleCo"}
         self.message.send()
-        smtpapi = self.get_smtpapi()
-        self.assertEqual(smtpapi['sub'], {
-            ':name': ["Alice", "Bob"],
-            ':group': ["Developers", ":group"]  # substitutes formatted field name if missing for recipient
-        })
-        self.assertEqual(smtpapi['section'], {':site': "ExampleCo"})
+        data = self.get_api_call_json()
+        self.assertEqual(data['personalizations'], [
+            {'to': [{'email': 'alice@example.com'}],
+             'substitutions': {':name': "Alice", ':group': "Developers", ':site': ":site"}},  # keys changed to :field
+            {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
+             'substitutions': {':name': "Bob", ':site': ":site"}}
+        ])
+        self.assertEqual(data['sections'], {':site': "ExampleCo"})
 
     def test_merge_field_format_esp_extra(self):
         # Provide merge field delimiters for an individual message
@@ -484,14 +479,15 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         self.message.merge_global_data = {'site': "ExampleCo"}
         self.message.esp_extra = {'merge_field_format': '*|{}|*'}  # match Mandrill/MailChimp delimiters
         self.message.send()
-        smtpapi = self.get_smtpapi()
-        self.assertEqual(smtpapi['sub'], {
-            '*|name|*': ["Alice", "Bob"],
-            '*|group|*': ["Developers", '*|group|*']  # substitutes formatted field name if missing for recipient
-        })
-        self.assertEqual(smtpapi['section'], {'*|site|*': "ExampleCo"})
+        data = self.get_api_call_json()
+        self.assertEqual(data['personalizations'], [
+            {'to': [{'email': 'alice@example.com'}],
+             'substitutions': {'*|name|*': "Alice", '*|group|*': "Developers", '*|site|*': "*|site|*"}},
+            {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
+             'substitutions': {'*|name|*': "Bob", '*|site|*': "*|site|*"}}
+        ])
+        self.assertEqual(data['sections'], {'*|site|*': "ExampleCo"})
         # Make sure our esp_extra merge_field_format doesn't get sent to SendGrid API:
-        data = self.get_api_call_data()
         self.assertNotIn('merge_field_format', data)
 
     def test_warn_if_no_merge_field_delimiters(self):
@@ -502,7 +498,12 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         with self.assertWarnsRegex(AnymailWarning, r'SENDGRID_MERGE_FIELD_FORMAT'):
             self.message.send()
 
-    @override_settings(ANYMAIL_SENDGRID_GENERATE_MESSAGE_ID=False)  # else we force unique_args
+    def test_warn_if_no_global_merge_field_delimiters(self):
+        self.message.merge_global_data = {'site': "ExampleCo"}
+        with self.assertWarnsRegex(AnymailWarning, r'SENDGRID_MERGE_FIELD_FORMAT'):
+            self.message.send()
+
+    @override_settings(ANYMAIL_SENDGRID_GENERATE_MESSAGE_ID=False)  # else we force custom_args
     def test_default_omits_options(self):
         """Make sure by default we don't send any ESP-specific options.
 
@@ -511,40 +512,51 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         that your ESP account settings apply by default.
         """
         self.message.send()
-        data = self.get_api_call_data()
-        self.assertNotIn('x-smtpapi', data)
+        data = self.get_api_call_json()
+        self.assertNotIn('asm', data)
+        self.assertNotIn('attachments', data)
+        self.assertNotIn('batch_id', data)
+        self.assertNotIn('categories', data)
+        self.assertNotIn('custom_args', data)
+        self.assertNotIn('headers', data)
+        self.assertNotIn('ip_pool_name', data)
+        self.assertNotIn('mail_settings', data)
+        self.assertNotIn('sections', data)
+        self.assertNotIn('send_at', data)
+        self.assertNotIn('template_id', data)
+        self.assertNotIn('tracking_settings', data)
+
+        for personalization in data['personalizations']:
+            self.assertNotIn('custom_args', personalization)
+            self.assertNotIn('headers', personalization)
+            self.assertNotIn('send_at', personalization)
+            self.assertNotIn('substitutions', personalization)
 
     def test_esp_extra(self):
         self.message.tags = ["tag"]
         self.message.track_clicks = True
         self.message.esp_extra = {
-            'x-smtpapi': {
-                # Most SendMail options go in the 'x-smtpapi' block...
-                'asm_group_id': 1,
-                'filters': {
-                    # If you add a filter, you must supply all required settings for it.
-                    'subscriptiontrack': {
-                        'settings': {
-                            'enable': 1,
-                            'replace': '[unsubscribe_url]',
-                        },
-                    },
+            'ip_pool_name': "transactional",
+            'asm': {  # subscription management
+                'group_id': 1,
+            },
+            'tracking_settings': {
+                'subscription_tracking': {
+                        'enable': True,
+                        'substitution_tag': '[unsubscribe_url]',
                 },
             },
-            'newthing': "some param not supported by Anymail",
         }
         self.message.send()
-        # Additional send params:
-        data = self.get_api_call_data()
-        self.assertEqual(data['newthing'], "some param not supported by Anymail")
-        # Should merge x-smtpapi, and merge filters within x-smtpapi
-        smtpapi = self.get_smtpapi()
-        self.assertEqual(smtpapi['category'], ["tag"])
-        self.assertEqual(smtpapi['asm_group_id'], 1)
-        self.assertEqual(smtpapi['filters']['subscriptiontrack'],
-                         {'settings': {'enable': 1, 'replace': '[unsubscribe_url]'}})  # esp_extra merged
-        self.assertEqual(smtpapi['filters']['clicktrack'],
-                         {'settings': {'enable': 1}})  # Anymail message option preserved
+        data = self.get_api_call_json()
+        # merged from esp_extra:
+        self.assertEqual(data['ip_pool_name'], "transactional")
+        self.assertEqual(data['asm'], {'group_id': 1})
+        self.assertEqual(data['tracking_settings']['subscription_tracking'],
+                         {'enable': True, 'substitution_tag': "[unsubscribe_url]"})
+        # make sure we didn't overwrite Anymail message options:
+        self.assertEqual(data['categories'], ["tag"])
+        self.assertEqual(data['tracking_settings']['click_tracking'], {'enable': True})
 
     # noinspection PyUnresolvedReferences
     def test_send_attaches_anymail_status(self):
@@ -572,28 +584,25 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         self.assertEqual(self.message.anymail_status.recipients, {})
         self.assertIsNone(self.message.anymail_status.esp_response)
 
-    # noinspection PyUnresolvedReferences
-    def test_send_unparsable_response(self):
-        """If the send succeeds, but a non-JSON API response, should raise an API exception"""
-        mock_response = self.set_mock_response(status_code=200,
-                                               raw=b"yikes, this isn't a real response")
-        with self.assertRaises(AnymailAPIError):
-            self.message.send()
-        self.assertIsNone(self.message.anymail_status.status)
-        self.assertIsNone(self.message.anymail_status.message_id)
-        self.assertEqual(self.message.anymail_status.recipients, {})
-        self.assertEqual(self.message.anymail_status.esp_response, mock_response)
-
     def test_json_serialization_errors(self):
         """Try to provide more information about non-json-serializable data"""
         self.message.metadata = {'total': Decimal('19.99')}
         with self.assertRaises(AnymailSerializationError) as cm:
             self.message.send()
-            print(self.get_api_call_data())
         err = cm.exception
         self.assertIsInstance(err, TypeError)  # compatibility with json.dumps
         self.assertIn("Don't know how to send this data to SendGrid", str(err))  # our added context
         self.assertIn("Decimal('19.99') is not JSON serializable", str(err))  # original message
+
+    @override_settings(ANYMAIL_SENDGRID_WORKAROUND_NAME_QUOTE_BUG=False)
+    def test_undocumented_workaround_name_quote_bug_setting(self):
+        mail.send_mail("Subject", "Body", '"Sender, Inc." <from@example.com',
+                       ['"Recipient, Ltd." <to@example.com>'])
+        data = self.get_api_call_json()
+        self.assertEqual(data["personalizations"][0]["to"][0],
+            {"email": "to@example.com", "name": "Recipient, Ltd."})  # no extra quotes on name
+        self.assertEqual(data["from"],
+            {"email": "from@example.com", "name": "Sender, Inc."})
 
 
 class SendGridBackendRecipientsRefusedTests(SendGridBackendMockAPITestCase):
@@ -602,8 +611,7 @@ class SendGridBackendRecipientsRefusedTests(SendGridBackendMockAPITestCase):
     # SendGrid doesn't check email bounce or complaint lists at time of send --
     # it always just queues the message. You'll need to listen for the "rejected"
     # and "failed" events to detect refused recipients.
-
-    pass
+    pass  # not applicable to this backend
 
 
 class SendGridBackendSessionSharingTestCase(SessionSharingTestCasesMixin, SendGridBackendMockAPITestCase):
@@ -616,10 +624,24 @@ class SendGridBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin)
     """Test ESP backend without required settings in place"""
 
     def test_missing_auth(self):
-        with self.assertRaises(ImproperlyConfigured) as cm:
+        with self.assertRaisesRegex(AnymailConfigurationError, r'\bSENDGRID_API_KEY\b'):
             mail.send_mail('Subject', 'Message', 'from@example.com', ['to@example.com'])
-        errmsg = str(cm.exception)
-        # Make sure the exception mentions all the auth keys:
-        self.assertRegex(errmsg, r'\bSENDGRID_API_KEY\b')
-        self.assertRegex(errmsg, r'\bSENDGRID_USERNAME\b')
-        self.assertRegex(errmsg, r'\bSENDGRID_PASSWORD\b')
+
+
+@override_settings(EMAIL_BACKEND="anymail.backends.sendgrid.SendGridBackend")
+class SendGridBackendDisallowsV2Tests(SimpleTestCase, AnymailTestMixin):
+    """Using v2-API-only features should cause errors with v3 backend"""
+
+    @override_settings(ANYMAIL={'SENDGRID_USERNAME': 'sg_username', 'SENDGRID_PASSWORD': 'sg_password'})
+    def test_user_pass_auth(self):
+        """Make sure v2-only USERNAME/PASSWORD auth raises error"""
+        with self.assertRaisesRegex(AnymailConfigurationError, r'\bsendgrid_v2\.EmailBackend\b'):
+            mail.send_mail('Subject', 'Message', 'from@example.com', ['to@example.com'])
+
+    @override_settings(ANYMAIL={'SENDGRID_API_KEY': 'test_api_key'})
+    def test_esp_extra_smtpapi(self):
+        """x-smtpapi in the esp_extra indicates a desire to use the v2 api"""
+        message = mail.EmailMessage('Subject', 'Body', 'from@example.com', ['to@example.com'])
+        message.esp_extra = {'x-smtpapi': {'asm_group_id': 1}}
+        with self.assertRaisesRegex(AnymailConfigurationError, r'\bsendgrid_v2\.EmailBackend\b'):
+            message.send()
