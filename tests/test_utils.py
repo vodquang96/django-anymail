@@ -149,6 +149,7 @@ class UpdateDeepTests(SimpleTestCase):
         self.assertEqual(first, {'a': {'a1': 1, 'a2': 2}, 'c': {'c1': 1}})
 
 
+@override_settings(ALLOWED_HOSTS=[".example.com"])
 class RequestUtilsTests(SimpleTestCase):
     """Test utils.get_request_* helpers"""
 

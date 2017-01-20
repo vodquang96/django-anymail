@@ -96,10 +96,12 @@ class MandrillWebhookSecurityTestCase(WebhookTestCase, WebhookBasicAuthTestsMixi
         response = self.client.post(**kwargs)
         self.assertEqual(response.status_code, 200)
 
-    @override_settings(ANYMAIL={
-        "MANDRILL_WEBHOOK_URL": "https://abcde:12345@example.com/anymail/mandrill/tracking/",
-        "WEBHOOK_AUTHORIZATION": "abcde:12345",
-    })
+    @override_settings(
+        ALLOWED_HOSTS=['127.0.0.1', '.example.com'],
+        ANYMAIL={
+            "MANDRILL_WEBHOOK_URL": "https://abcde:12345@example.com/anymail/mandrill/tracking/",
+            "WEBHOOK_AUTHORIZATION": "abcde:12345",
+        })
     def test_webhook_url_setting(self):
         # If Django can't build_absolute_uri correctly (e.g., because your proxy
         # frontend isn't setting the proxy headers correctly), you must set
