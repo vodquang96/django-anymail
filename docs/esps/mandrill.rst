@@ -33,7 +33,7 @@ To use Anymail's Mandrill backend, set:
 
   .. code-block:: python
 
-      EMAIL_BACKEND = "anymail.backends.mandrill.MandrillBackend"
+      EMAIL_BACKEND = "anymail.backends.mandrill.EmailBackend"
 
 in your settings.py.
 

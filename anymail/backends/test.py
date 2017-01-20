@@ -5,12 +5,14 @@ from .base import AnymailBaseBackend, BasePayload
 from ..utils import get_anymail_setting
 
 
-class TestBackend(AnymailBaseBackend):
+class EmailBackend(AnymailBaseBackend):
     """
     Anymail backend that doesn't do anything.
 
     Used for testing Anymail common backend functionality.
     """
+
+    esp_name = "Test"
 
     def __init__(self, *args, **kwargs):
         # Init options from Django settings
@@ -19,7 +21,7 @@ class TestBackend(AnymailBaseBackend):
                                                   kwargs=kwargs, allow_bare=True)
         self.recorded_send_params = get_anymail_setting('recorded_send_params', default=[],
                                                         esp_name=esp_name, kwargs=kwargs)
-        super(TestBackend, self).__init__(*args, **kwargs)
+        super(EmailBackend, self).__init__(*args, **kwargs)
 
     def build_message_payload(self, message, defaults):
         return TestPayload(backend=self, message=message, defaults=defaults)
@@ -45,6 +47,14 @@ class TestBackend(AnymailBaseBackend):
             return response['recipient_status']
         except KeyError:
             raise AnymailAPIError('Unparsable test response')
+
+
+# Pre-v0.8 naming (immediately deprecated for this undocumented test feature)
+class TestBackend(object):
+    def __init__(self, **kwargs):
+        raise NotImplementedError(
+            "Anymail's (undocumented) TestBackend has been renamed to "
+            "'anymail.backends.test.EmailBackend'")
 
 
 class TestPayload(BasePayload):

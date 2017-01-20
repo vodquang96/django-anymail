@@ -17,7 +17,7 @@ from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharin
 from .utils import sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME, AnymailTestMixin
 
 
-@override_settings(EMAIL_BACKEND='anymail.backends.mailgun.MailgunBackend',
+@override_settings(EMAIL_BACKEND='anymail.backends.mailgun.EmailBackend',
                    ANYMAIL={'MAILGUN_API_KEY': 'test_api_key'})
 class MailgunBackendMockAPITestCase(RequestsBackendMockAPITestCase):
     DEFAULT_RAW_RESPONSE = b"""{
@@ -483,7 +483,7 @@ class MailgunBackendSessionSharingTestCase(SessionSharingTestCasesMixin, Mailgun
     pass  # tests are defined in the mixin
 
 
-@override_settings(EMAIL_BACKEND="anymail.backends.mailgun.MailgunBackend")
+@override_settings(EMAIL_BACKEND="anymail.backends.mailgun.EmailBackend")
 class MailgunBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin):
     """Test ESP backend without required settings in place"""
 
@@ -494,3 +494,13 @@ class MailgunBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin):
         # Make sure the error mentions MAILGUN_API_KEY and ANYMAIL_MAILGUN_API_KEY
         self.assertRegex(errmsg, r'\bMAILGUN_API_KEY\b')
         self.assertRegex(errmsg, r'\bANYMAIL_MAILGUN_API_KEY\b')
+
+
+class MailgunBackendDeprecationTests(MailgunBackendMockAPITestCase):
+    @override_settings(EMAIL_BACKEND='anymail.backends.mailgun.MailgunBackend')
+    def test_renamed_backend_warning(self):
+        # ...mailgun.MailgunBackend --> ...mailgun.EmailBackend
+        with self.assertWarnsRegex(DeprecationWarning,
+                                   r'anymail\.backends\.mailgun\.EmailBackend'):
+            self.message.send()
+

@@ -17,10 +17,9 @@ To use Anymail's Mailgun backend, set:
 
   .. code-block:: python
 
-      EMAIL_BACKEND = "anymail.backends.mailgun.MailgunBackend"
+      EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
 
-in your settings.py. (Watch your capitalization: Mailgun spells their name with a
-lowercase "g", so Anymail does too.)
+in your settings.py.
 
 
 .. setting:: ANYMAIL_MAILGUN_API_KEY

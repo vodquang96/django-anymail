@@ -1,17 +1,19 @@
 import warnings
 from datetime import datetime
 
-from ..exceptions import AnymailRequestsAPIError, AnymailWarning
+from ..exceptions import AnymailRequestsAPIError, AnymailWarning, AnymailDeprecationWarning
 from ..message import AnymailRecipientStatus, ANYMAIL_STATUSES
 from ..utils import last, combine, get_anymail_setting
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload
 
 
-class MandrillBackend(AnymailRequestsBackend):
+class EmailBackend(AnymailRequestsBackend):
     """
     Mandrill API Email Backend
     """
+
+    esp_name = "Mandrill"
 
     def __init__(self, **kwargs):
         """Init options from Django settings"""
@@ -21,7 +23,7 @@ class MandrillBackend(AnymailRequestsBackend):
                                       default="https://mandrillapp.com/api/1.0")
         if not api_url.endswith("/"):
             api_url += "/"
-        super(MandrillBackend, self).__init__(api_url, **kwargs)
+        super(EmailBackend, self).__init__(api_url, **kwargs)
 
     def build_message_payload(self, message, defaults):
         return MandrillPayload(message, defaults, self)
@@ -42,6 +44,15 @@ class MandrillBackend(AnymailRequestsBackend):
             raise AnymailRequestsAPIError("Invalid Mandrill API response format",
                                           email_message=message, payload=payload, response=response)
         return recipient_status
+
+
+# Pre-v0.8 naming (deprecated)
+class MandrillBackend(EmailBackend):
+    def __init__(self, **kwargs):
+        warnings.warn(AnymailDeprecationWarning(
+            "Please update your EMAIL_BACKEND setting to "
+            "'anymail.backends.mandrill.EmailBackend'"))
+        super(MandrillBackend, self).__init__(**kwargs)
 
 
 class DjrillDeprecationWarning(AnymailWarning, DeprecationWarning):

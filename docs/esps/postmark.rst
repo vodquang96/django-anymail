@@ -19,10 +19,9 @@ To use Anymail's Postmark backend, set:
 
   .. code-block:: python
 
-      EMAIL_BACKEND = "anymail.backends.postmark.PostmarkBackend"
+      EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
 
-in your settings.py. (Watch your capitalization: Postmark spells their name with a
-lowercase "m", so Anymail does too.)
+in your settings.py.
 
 
 .. setting:: ANYMAIL_POSTMARK_SERVER_TOKEN

@@ -1,18 +1,21 @@
 import re
+import warnings
 
 from requests.structures import CaseInsensitiveDict
 
-from ..exceptions import AnymailRequestsAPIError
+from ..exceptions import AnymailRequestsAPIError, AnymailDeprecationWarning
 from ..message import AnymailRecipientStatus
 from ..utils import get_anymail_setting
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload
 
 
-class PostmarkBackend(AnymailRequestsBackend):
+class EmailBackend(AnymailRequestsBackend):
     """
     Postmark API Email Backend
     """
+
+    esp_name = "Postmark"
 
     def __init__(self, **kwargs):
         """Init options from Django settings"""
@@ -22,7 +25,7 @@ class PostmarkBackend(AnymailRequestsBackend):
                                       default="https://api.postmarkapp.com/")
         if not api_url.endswith("/"):
             api_url += "/"
-        super(PostmarkBackend, self).__init__(api_url, **kwargs)
+        super(EmailBackend, self).__init__(api_url, **kwargs)
 
     def build_message_payload(self, message, defaults):
         return PostmarkPayload(message, defaults, self)
@@ -30,7 +33,7 @@ class PostmarkBackend(AnymailRequestsBackend):
     def raise_for_status(self, response, payload, message):
         # We need to handle 422 responses in parse_recipient_status
         if response.status_code != 422:
-            super(PostmarkBackend, self).raise_for_status(response, payload, message)
+            super(EmailBackend, self).raise_for_status(response, payload, message)
 
     def parse_recipient_status(self, response, payload, message):
         parsed_response = self.deserialize_json_response(response, payload, message)
@@ -87,6 +90,15 @@ class PostmarkBackend(AnymailRequestsBackend):
             return [email.strip().lower() for email in emails.split(',')]
         else:
             return []
+
+
+# Pre-v0.8 naming (deprecated)
+class PostmarkBackend(EmailBackend):
+    def __init__(self, **kwargs):
+        warnings.warn(AnymailDeprecationWarning(
+            "Please update your EMAIL_BACKEND setting to "
+            "'anymail.backends.postmark.EmailBackend'"))
+        super(PostmarkBackend, self).__init__(**kwargs)
 
 
 class PostmarkPayload(RequestsPayload):

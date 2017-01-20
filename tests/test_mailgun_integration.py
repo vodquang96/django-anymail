@@ -24,7 +24,7 @@ MAILGUN_TEST_DOMAIN = os.getenv('MAILGUN_TEST_DOMAIN')
 @override_settings(ANYMAIL={'MAILGUN_API_KEY': MAILGUN_TEST_API_KEY,
                             'MAILGUN_SENDER_DOMAIN': MAILGUN_TEST_DOMAIN,
                             'MAILGUN_SEND_DEFAULTS': {'esp_extra': {'o:testmode': 'yes'}}},
-                   EMAIL_BACKEND="anymail.backends.mailgun.MailgunBackend")
+                   EMAIL_BACKEND="anymail.backends.mailgun.EmailBackend")
 class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     """Mailgun API integration tests
 

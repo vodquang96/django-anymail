@@ -260,7 +260,7 @@ class SendGridPayload(RequestsPayload):
         if files_field in self.files:
             # It's possible SendGrid could actually handle this case (needs testing),
             # but requests doesn't seem to accept a list of tuples for a files field.
-            # (See the MailgunBackend version for a different approach that might work.)
+            # (See the Mailgun EmailBackend version for a different approach that might work.)
             self.unsupported_feature(
                 "multiple attachments with the same filename ('%s')" % filename if filename
                 else "multiple unnamed attachments")

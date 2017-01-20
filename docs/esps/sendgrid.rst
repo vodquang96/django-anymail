@@ -34,10 +34,9 @@ To use Anymail's SendGrid backend, set:
 
   .. code-block:: python
 
-      EMAIL_BACKEND = "anymail.backends.sendgrid.SendGridBackend"
+      EMAIL_BACKEND = "anymail.backends.sendgrid.EmailBackend"
 
-in your settings.py. (Watch your capitalization: SendGrid spells
-their name with an uppercase "G", so Anymail does too.)
+in your settings.py.
 
 
 .. setting:: ANYMAIL_SENDGRID_API_KEY

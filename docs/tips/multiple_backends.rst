@@ -18,7 +18,7 @@ but send admin emails directly through an SMTP server:
     from django.core.mail import send_mail, get_connection
 
     # send_mail connection defaults to the settings EMAIL_BACKEND, which
-    # we've set to Anymail's MailgunBackend. This will be sent using Mailgun:
+    # we've set to Anymail's Mailgun EmailBackend. This will be sent using Mailgun:
     send_mail("Thanks", "We sent your order", "sales@example.com", ["customer@example.com"])
 
     # Get a connection to an SMTP backend, and send using that instead:
@@ -27,13 +27,13 @@ but send admin emails directly through an SMTP server:
               connection=smtp_backend)
 
     # You can even use multiple Anymail backends in the same app:
-    sendgrid_backend = get_connection('anymail.backends.sendgrid.SendGridBackend')
+    sendgrid_backend = get_connection('anymail.backends.sendgrid.EmailBackend')
     send_mail("Password reset", "Here you go", "noreply@example.com", ["user@example.com"],
               connection=sendgrid_backend)
 
     # You can override settings.py settings with kwargs to get_connection.
     # This example supplies credentials to use a SendGrid subuser acccount:
-    alt_sendgrid_backend = get_connection('anymail.backends.sendgrid.SendGridBackend',
+    alt_sendgrid_backend = get_connection('anymail.backends.sendgrid.EmailBackend',
                                           username='marketing_subuser', password='abc123')
     send_mail("Here's that info", "you wanted", "marketing@example.com", ["prospect@example.com"],
               connection=alt_sendgrid_backend)

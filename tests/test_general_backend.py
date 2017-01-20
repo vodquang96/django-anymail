@@ -19,11 +19,11 @@ from .utils import AnymailTestMixin
 recorded_send_params = []
 
 
-@override_settings(EMAIL_BACKEND='anymail.backends.test.TestBackend',
-                   ANYMAIL_TEST_SAMPLE_SETTING='sample',  # required TestBackend setting
+@override_settings(EMAIL_BACKEND='anymail.backends.test.EmailBackend',
+                   ANYMAIL_TEST_SAMPLE_SETTING='sample',  # required test EmailBackend setting
                    ANYMAIL_TEST_RECORDED_SEND_PARAMS=recorded_send_params)
 class TestBackendTestCase(SimpleTestCase, AnymailTestMixin):
-    """Base TestCase using Anymail's TestBackend"""
+    """Base TestCase using Anymail's Test EmailBackend"""
 
     def setUp(self):
         super(TestBackendTestCase, self).setUp()
@@ -42,8 +42,8 @@ class TestBackendTestCase(SimpleTestCase, AnymailTestMixin):
         return recorded_send_params[-1]
 
 
-@override_settings(EMAIL_BACKEND='anymail.backends.test.TestBackend')  # but no ANYMAIL settings overrides
-class BackendSettingsTests(SimpleTestCase, AnymailTestMixin):          # (so not TestBackendTestCase)
+@override_settings(EMAIL_BACKEND='anymail.backends.test.EmailBackend')  # but no ANYMAIL settings overrides
+class BackendSettingsTests(SimpleTestCase, AnymailTestMixin):           # (so not TestBackendTestCase)
     """Test settings initializations for Anymail EmailBackends"""
 
     @override_settings(ANYMAIL={'TEST_SAMPLE_SETTING': 'setting_from_anymail_settings'})
@@ -97,7 +97,7 @@ class UnsupportedFeatureTests(TestBackendTestCase):
 
     def test_unsupported_feature(self):
         """Unsupported features raise AnymailUnsupportedFeature"""
-        # TestBackend doesn't support non-HTML alternative parts
+        # Test EmailBackend doesn't support non-HTML alternative parts
         self.message.attach_alternative(b'FAKE_MP3_DATA', 'audio/mpeg')
         with self.assertRaises(AnymailUnsupportedFeature):
             self.message.send()
@@ -135,10 +135,10 @@ class SendDefaultsTests(TestBackendTestCase):
         self.assertEqual(params['tags'], ['globaltag'])
         self.assertEqual(params['template_id'], 'my-template')
         self.assertEqual(params['track_clicks'], True)
-        self.assertEqual(params['globalextra'], 'globalsetting')  # TestBackend merges esp_extra into params
+        self.assertEqual(params['globalextra'], 'globalsetting')  # Test EmailBackend merges esp_extra into params
 
     @override_settings(ANYMAIL={
-        'TEST_SEND_DEFAULTS': {  # "TEST" is the name of the TestBackend's ESP
+        'TEST_SEND_DEFAULTS': {  # "TEST" is the name of the Test EmailBackend's ESP
             'metadata': {'global': 'espvalue'},
             'tags': ['esptag'],
             'track_opens': False,
@@ -152,7 +152,7 @@ class SendDefaultsTests(TestBackendTestCase):
         self.assertEqual(params['metadata'], {'global': 'espvalue'})
         self.assertEqual(params['tags'], ['esptag'])
         self.assertEqual(params['track_opens'], False)
-        self.assertEqual(params['globalextra'], 'espsetting')  # TestBackend merges esp_extra into params
+        self.assertEqual(params['globalextra'], 'espsetting')  # Test EmailBackend merges esp_extra into params
 
     @override_settings(ANYMAIL={
         'SEND_DEFAULTS': {
@@ -199,7 +199,7 @@ class SendDefaultsTests(TestBackendTestCase):
             'template_id': 'global-template',
             'esp_extra': {'globalextra': 'globalsetting'},
         },
-        'TEST_SEND_DEFAULTS': {  # "TEST" is the name of the TestBackend's ESP
+        'TEST_SEND_DEFAULTS': {  # "TEST" is the name of the Test EmailBackend's ESP
             'merge_global_data': {'esp': 'espmerge'},
             'metadata': {'esp': 'espvalue'},
             'tags': ['esptag'],

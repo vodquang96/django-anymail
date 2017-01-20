@@ -18,7 +18,7 @@ SPARKPOST_TEST_API_KEY = os.getenv('SPARKPOST_TEST_API_KEY')
                      "Set SPARKPOST_TEST_API_KEY environment variable "
                      "to run SparkPost integration tests")
 @override_settings(ANYMAIL_SPARKPOST_API_KEY=SPARKPOST_TEST_API_KEY,
-                   EMAIL_BACKEND="anymail.backends.sparkpost.SparkPostBackend")
+                   EMAIL_BACKEND="anymail.backends.sparkpost.EmailBackend")
 class SparkPostBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     """SparkPost API integration tests
 

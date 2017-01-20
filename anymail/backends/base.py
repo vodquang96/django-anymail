@@ -190,9 +190,12 @@ class AnymailBaseBackend(BaseEmailBackend):
         """
         Read-only name of the ESP for this backend.
 
-        (E.g., MailgunBackend will return "Mailgun")
+        Concrete backends must override with class attr. E.g.:
+            esp_name = "Postmark"
+            esp_name = "SendGrid"  # (use ESP's preferred capitalization)
         """
-        return self.__class__.__name__.replace("Backend", "")
+        raise NotImplementedError("%s.%s must declare esp_name class attr" %
+                                  (self.__class__.__module__, self.__class__.__name__))
 
 
 class BasePayload(object):

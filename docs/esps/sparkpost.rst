@@ -33,10 +33,9 @@ To use Anymail's SparkPost backend, set:
 
   .. code-block:: python
 
-      EMAIL_BACKEND = "anymail.backends.sparkpost.SparkPostBackend"
+      EMAIL_BACKEND = "anymail.backends.sparkpost.EmailBackend"
 
-in your settings.py. (Watch your capitalization: SparkPost spells
-their name with an inner capital "P", so Anymail does too.)
+in your settings.py.
 
 
 .. setting:: ANYMAIL_SPARKPOST_API_KEY

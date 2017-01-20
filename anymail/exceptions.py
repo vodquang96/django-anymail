@@ -175,3 +175,7 @@ class AnymailWarning(Warning):
 
 class AnymailInsecureWebhookWarning(AnymailWarning):
     """Warns when webhook configured without any validation"""
+
+
+class AnymailDeprecationWarning(AnymailWarning, DeprecationWarning):
+    """Warning for deprecated Anymail features"""

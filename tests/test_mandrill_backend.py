@@ -19,7 +19,7 @@ from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharin
 from .utils import sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME, AnymailTestMixin, decode_att
 
 
-@override_settings(EMAIL_BACKEND='anymail.backends.mandrill.MandrillBackend',
+@override_settings(EMAIL_BACKEND='anymail.backends.mandrill.EmailBackend',
                    ANYMAIL={'MANDRILL_API_KEY': 'test_api_key'})
 class MandrillBackendMockAPITestCase(RequestsBackendMockAPITestCase):
     DEFAULT_RAW_RESPONSE = b"""[{
@@ -588,7 +588,7 @@ class MandrillBackendSessionSharingTestCase(SessionSharingTestCasesMixin, Mandri
     pass  # tests are defined in the mixin
 
 
-@override_settings(EMAIL_BACKEND="anymail.backends.mandrill.MandrillBackend")
+@override_settings(EMAIL_BACKEND="anymail.backends.mandrill.EmailBackend")
 class MandrillBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin):
     """Test backend without required settings"""
 
@@ -598,3 +598,12 @@ class MandrillBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin)
         errmsg = str(cm.exception)
         self.assertRegex(errmsg, r'\bMANDRILL_API_KEY\b')
         self.assertRegex(errmsg, r'\bANYMAIL_MANDRILL_API_KEY\b')
+
+
+class MandrillBackendDeprecationTests(MandrillBackendMockAPITestCase):
+    @override_settings(EMAIL_BACKEND='anymail.backends.mandrill.MandrillBackend')
+    def test_renamed_backend_warning(self):
+        # ...mandrill.MandrillBackend --> ...mandrill.EmailBackend
+        with self.assertWarnsRegex(DeprecationWarning,
+                                   r'anymail\.backends\.mandrill\.EmailBackend'):
+            self.message.send()

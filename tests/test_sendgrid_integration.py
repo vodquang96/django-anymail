@@ -22,7 +22,7 @@ SENDGRID_TEST_TEMPLATE_ID = os.getenv('SENDGRID_TEST_TEMPLATE_ID')
                    ANYMAIL_SENDGRID_SEND_DEFAULTS={"esp_extra": {
                        "mail_settings": {"sandbox_mode": {"enable": True}},
                    }},
-                   EMAIL_BACKEND="anymail.backends.sendgrid.SendGridBackend")
+                   EMAIL_BACKEND="anymail.backends.sendgrid.EmailBackend")
 class SendGridBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     """SendGrid v3 API integration tests
 

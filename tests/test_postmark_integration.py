@@ -11,7 +11,7 @@ from .utils import AnymailTestMixin, sample_image_path, RUN_LIVE_TESTS
 
 @unittest.skipUnless(RUN_LIVE_TESTS, "RUN_LIVE_TESTS disabled in this environment")
 @override_settings(ANYMAIL_POSTMARK_SERVER_TOKEN="POSTMARK_API_TEST",
-                   EMAIL_BACKEND="anymail.backends.postmark.PostmarkBackend")
+                   EMAIL_BACKEND="anymail.backends.postmark.EmailBackend")
 class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     """Postmark API integration tests
 

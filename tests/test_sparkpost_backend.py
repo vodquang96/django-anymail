@@ -21,7 +21,7 @@ from anymail.message import attach_inline_image_file
 from .utils import AnymailTestMixin, decode_att, SAMPLE_IMAGE_FILENAME, sample_image_path, sample_image_content
 
 
-@override_settings(EMAIL_BACKEND='anymail.backends.sparkpost.SparkPostBackend',
+@override_settings(EMAIL_BACKEND='anymail.backends.sparkpost.EmailBackend',
                    ANYMAIL={'SPARKPOST_API_KEY': 'test_api_key'})
 class SparkPostBackendMockAPITestCase(SimpleTestCase, AnymailTestMixin):
     """TestCase that uses SparkPostEmailBackend with a mocked transmissions.send API"""
@@ -559,7 +559,7 @@ class SparkPostBackendRecipientsRefusedTests(SparkPostBackendMockAPITestCase):
         self.assertEqual(sent, 1)  # refused message is included in sent count
 
 
-@override_settings(EMAIL_BACKEND="anymail.backends.sparkpost.SparkPostBackend")
+@override_settings(EMAIL_BACKEND="anymail.backends.sparkpost.EmailBackend")
 class SparkPostBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin):
     """Test ESP backend without required settings in place"""
 
@@ -580,3 +580,12 @@ class SparkPostBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin
             # Poke into implementation details to verify:
             self.assertIsNone(conn.api_key)  # Anymail prop
             self.assertEqual(conn.sp.api_key, 'key_from_environment')  # SparkPost prop
+
+
+class SparkPostBackendDeprecationTests(SparkPostBackendMockAPITestCase):
+    @override_settings(EMAIL_BACKEND='anymail.backends.sparkpost.SparkPostBackend')
+    def test_renamed_backend_warning(self):
+        # ...sparkpost.SparkPostBackend --> ...sparkpost.EmailBackend
+        with self.assertWarnsRegex(DeprecationWarning,
+                                   r'anymail\.backends\.sparkpost\.EmailBackend'):
+            self.message.send()

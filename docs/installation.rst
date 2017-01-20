@@ -54,7 +54,7 @@ To use Anymail for sending email, edit your Django project's :file:`settings.py`
 
     .. code-block:: python
 
-        EMAIL_BACKEND = "anymail.backends.mailgun.MailgunBackend"
+        EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
 
    (:setting:`EMAIL_BACKEND` sets Django's default for sending emails; you can also
    use :ref:`multiple Anymail backends <multiple-backends>` to send particular

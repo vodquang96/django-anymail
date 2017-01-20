@@ -1,6 +1,6 @@
 from django.dispatch import receiver
 
-from anymail.backends.test import TestBackend
+from anymail.backends.test import EmailBackend as TestEmailBackend
 from anymail.exceptions import AnymailCancelSend, AnymailRecipientsRefused
 from anymail.message import AnymailRecipientStatus
 from anymail.signals import pre_send, post_send
@@ -16,9 +16,9 @@ class TestPreSendSignal(TestBackendTestCase):
         @receiver(pre_send, weak=False)
         def handle_pre_send(sender, message, esp_name, **kwargs):
             self.assertEqual(self.get_send_count(), 0)  # not sent yet
-            self.assertEqual(sender, TestBackend)
+            self.assertEqual(sender, TestEmailBackend)
             self.assertEqual(message, self.message)
-            self.assertEqual(esp_name, "Test")  # the TestBackend's ESP is named "Test"
+            self.assertEqual(esp_name, "Test")  # the TestEmailBackend's ESP is named "Test"
             self.receiver_called = True
         self.addCleanup(pre_send.disconnect, receiver=handle_pre_send)
 
@@ -62,13 +62,13 @@ class TestPostSendSignal(TestBackendTestCase):
         @receiver(post_send, weak=False)
         def handle_post_send(sender, message, status, esp_name, **kwargs):
             self.assertEqual(self.get_send_count(), 1)  # already sent
-            self.assertEqual(sender, TestBackend)
+            self.assertEqual(sender, TestEmailBackend)
             self.assertEqual(message, self.message)
             self.assertEqual(status.status, {'sent'})
-            self.assertEqual(status.message_id, 1)  # TestBackend default message_id
+            self.assertEqual(status.message_id, 1)  # TestEmailBackend default message_id
             self.assertEqual(status.recipients['to@example.com'].status, 'sent')
             self.assertEqual(status.recipients['to@example.com'].message_id, 1)
-            self.assertEqual(esp_name, "Test")  # the TestBackend's ESP is named "Test"
+            self.assertEqual(esp_name, "Test")  # the TestEmailBackend's ESP is named "Test"
             self.receiver_called = True
         self.addCleanup(post_send.disconnect, receiver=handle_post_send)
 

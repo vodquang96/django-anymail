@@ -101,7 +101,7 @@ or SparkPost or any other supported ESP where you see "mailgun":
             "MAILGUN_API_KEY": "<your Mailgun key>",
             "MAILGUN_SENDER_DOMAIN": 'mg.example.com',  # your Mailgun domain, if needed
         }
-        EMAIL_BACKEND = "anymail.backends.mailgun.MailgunBackend"  # or sendgrid.SendGridBackend, or...
+        EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"  # or sendgrid.EmailBackend, or...
         DEFAULT_FROM_EMAIL = "you@example.com"  # if you don't already have this in settings
 
 

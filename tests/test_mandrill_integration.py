@@ -17,7 +17,7 @@ MANDRILL_TEST_API_KEY = os.getenv('MANDRILL_TEST_API_KEY')
 @unittest.skipUnless(MANDRILL_TEST_API_KEY,
                      "Set MANDRILL_TEST_API_KEY environment variable to run integration tests")
 @override_settings(MANDRILL_API_KEY=MANDRILL_TEST_API_KEY,
-                   EMAIL_BACKEND="anymail.backends.mandrill.MandrillBackend")
+                   EMAIL_BACKEND="anymail.backends.mandrill.EmailBackend")
 class MandrillBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     """Mandrill API integration tests
 

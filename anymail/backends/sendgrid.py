@@ -5,15 +5,17 @@ from django.core.mail import make_msgid
 from requests.structures import CaseInsensitiveDict
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload
-from ..exceptions import AnymailConfigurationError, AnymailRequestsAPIError, AnymailWarning
+from ..exceptions import AnymailConfigurationError, AnymailRequestsAPIError, AnymailWarning, AnymailDeprecationWarning
 from ..message import AnymailRecipientStatus
 from ..utils import get_anymail_setting, timestamp, update_deep
 
 
-class SendGridBackend(AnymailRequestsBackend):
+class EmailBackend(AnymailRequestsBackend):
     """
     SendGrid v3 API Email Backend
     """
+
+    esp_name = "SendGrid"
 
     def __init__(self, **kwargs):
         """Init options from Django settings"""
@@ -46,7 +48,7 @@ class SendGridBackend(AnymailRequestsBackend):
                                       default="https://api.sendgrid.com/v3/")
         if not api_url.endswith("/"):
             api_url += "/"
-        super(SendGridBackend, self).__init__(api_url, **kwargs)
+        super(EmailBackend, self).__init__(api_url, **kwargs)
 
     def build_message_payload(self, message, defaults):
         return SendGridPayload(message, defaults, self)
@@ -62,6 +64,15 @@ class SendGridBackend(AnymailRequestsBackend):
         # so simulate a per-recipient status of "queued":
         status = AnymailRecipientStatus(message_id=payload.message_id, status="queued")
         return {recipient.email: status for recipient in payload.all_recipients}
+
+
+# Pre-v0.8 naming (deprecated)
+class SendGridBackend(EmailBackend):
+    def __init__(self, **kwargs):
+        warnings.warn(AnymailDeprecationWarning(
+            "Please update your EMAIL_BACKEND setting to "
+            "'anymail.backends.sendgrid.EmailBackend'"))
+        super(SendGridBackend, self).__init__(**kwargs)
 
 
 class SendGridPayload(RequestsPayload):

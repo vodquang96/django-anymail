@@ -20,7 +20,7 @@ from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharin
 from .utils import sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME, AnymailTestMixin
 
 
-@override_settings(EMAIL_BACKEND='anymail.backends.sendgrid.SendGridBackend',
+@override_settings(EMAIL_BACKEND='anymail.backends.sendgrid.EmailBackend',
                    ANYMAIL={'SENDGRID_API_KEY': 'test_api_key'})
 class SendGridBackendMockAPITestCase(RequestsBackendMockAPITestCase):
     DEFAULT_RAW_RESPONSE = b""  # SendGrid v3 success responses are empty
@@ -619,7 +619,7 @@ class SendGridBackendSessionSharingTestCase(SessionSharingTestCasesMixin, SendGr
     pass  # tests are defined in the mixin
 
 
-@override_settings(EMAIL_BACKEND="anymail.backends.sendgrid.SendGridBackend")
+@override_settings(EMAIL_BACKEND="anymail.backends.sendgrid.EmailBackend")
 class SendGridBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin):
     """Test ESP backend without required settings in place"""
 
@@ -628,7 +628,7 @@ class SendGridBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin)
             mail.send_mail('Subject', 'Message', 'from@example.com', ['to@example.com'])
 
 
-@override_settings(EMAIL_BACKEND="anymail.backends.sendgrid.SendGridBackend")
+@override_settings(EMAIL_BACKEND="anymail.backends.sendgrid.EmailBackend")
 class SendGridBackendDisallowsV2Tests(SimpleTestCase, AnymailTestMixin):
     """Using v2-API-only features should cause errors with v3 backend"""
 
@@ -645,3 +645,12 @@ class SendGridBackendDisallowsV2Tests(SimpleTestCase, AnymailTestMixin):
         message.esp_extra = {'x-smtpapi': {'asm_group_id': 1}}
         with self.assertRaisesRegex(AnymailConfigurationError, r'\bsendgrid_v2\.EmailBackend\b'):
             message.send()
+
+
+class SendGridBackendDeprecationTests(SendGridBackendMockAPITestCase):
+    @override_settings(EMAIL_BACKEND='anymail.backends.sendgrid.SendGridBackend')
+    def test_renamed_backend_warning(self):
+        # ...sendgrid.SendGridBackend --> ...sendgrid.EmailBackend
+        with self.assertWarnsRegex(DeprecationWarning,
+                                   r'anymail\.backends\.sendgrid\.EmailBackend'):
+            self.message.send()
