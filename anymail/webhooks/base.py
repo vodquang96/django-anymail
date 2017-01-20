@@ -1,15 +1,14 @@
-import base64
 import re
-import six
 import warnings
 
+import six
 from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 
 from ..exceptions import AnymailInsecureWebhookWarning, AnymailWebhookValidationFailure
-from ..utils import get_anymail_setting, collect_all_methods
+from ..utils import get_anymail_setting, collect_all_methods, get_request_basic_auth
 
 
 class AnymailBasicAuthMixin(object):
@@ -42,16 +41,8 @@ class AnymailBasicAuthMixin(object):
     def validate_request(self, request):
         """If configured for webhook basic auth, validate request has correct auth."""
         if self.basic_auth:
-            valid = False
-            try:
-                authtype, authdata = request.META['HTTP_AUTHORIZATION'].split()
-                if authtype.lower() == "basic":
-                    auth = base64.b64decode(authdata).decode('utf-8')
-                    if auth in self.basic_auth:
-                        valid = True
-            except (IndexError, KeyError, TypeError, ValueError):
-                valid = False
-            if not valid:
+            basic_auth = get_request_basic_auth(request)
+            if basic_auth is None or basic_auth not in self.basic_auth:
                 # noinspection PyUnresolvedReferences
                 raise AnymailWebhookValidationFailure(
                     "Missing or invalid basic auth in Anymail %s webhook" % self.esp_name)

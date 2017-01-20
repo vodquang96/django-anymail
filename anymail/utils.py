@@ -1,3 +1,4 @@
+import base64
 import mimetypes
 from base64 import b64encode
 from collections import Mapping, MutableMapping
@@ -12,6 +13,8 @@ from django.core.mail.message import sanitize_address, DEFAULT_ATTACHMENT_MIME_T
 from django.utils.encoding import force_text
 from django.utils.functional import Promise
 from django.utils.timezone import utc
+# noinspection PyUnresolvedReferences
+from six.moves.urllib.parse import urlsplit, urlunsplit
 
 from .exceptions import AnymailConfigurationError, AnymailInvalidAddress
 
@@ -342,3 +345,33 @@ def force_non_lazy_dict(obj):
         return {key: force_non_lazy_dict(value) for key, value in obj.items()}
     except (AttributeError, TypeError):
         return force_non_lazy(obj)
+
+
+def get_request_basic_auth(request):
+    """Returns HTTP basic auth string sent with request, or None.
+
+    If request includes basic auth, result is string 'username:password'.
+    """
+    try:
+        authtype, authdata = request.META['HTTP_AUTHORIZATION'].split()
+        if authtype.lower() == "basic":
+            return base64.b64decode(authdata).decode('utf-8')
+    except (IndexError, KeyError, TypeError, ValueError):
+        pass
+    return None
+
+
+def get_request_uri(request):
+    """Returns the "exact" url used to call request.
+
+    Like :func:`django.http.request.HTTPRequest.build_absolute_uri`,
+    but also inlines HTTP basic auth, if present.
+    """
+    url = request.build_absolute_uri()
+    basic_auth = get_request_basic_auth(request)
+    if basic_auth is not None:
+        # must reassemble url with auth
+        parts = urlsplit(url)
+        url = urlunsplit((parts.scheme, basic_auth + '@' + parts.netloc,
+                          parts.path, parts.query, parts.fragment))
+    return url

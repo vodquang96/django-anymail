@@ -43,6 +43,9 @@ class WebhookTestCase(AnymailTestMixin, SimpleTestCase):
         credentials = base64.b64encode("{}:{}".format(username, password).encode('utf-8')).decode('utf-8')
         self.client.defaults['HTTP_AUTHORIZATION'] = "Basic {}".format(credentials)
 
+    def clear_basic_auth(self):
+        self.client.defaults.pop('HTTP_AUTHORIZATION', None)
+
     def assert_handler_called_once_with(self, mockfn, *expected_args, **expected_kwargs):
         """Verifies mockfn was called with expected_args and at least expected_kwargs.
 
@@ -98,7 +101,7 @@ class WebhookBasicAuthTestsMixin(object):
         self.assertEqual(response.status_code, 400)
 
     def test_verifies_missing_auth(self):
-        del self.client.defaults['HTTP_AUTHORIZATION']
+        self.clear_basic_auth()
         response = self.call_webhook()
         self.assertEqual(response.status_code, 400)
 

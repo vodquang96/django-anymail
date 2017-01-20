@@ -10,7 +10,7 @@ from django.utils.timezone import utc
 from .base import AnymailBaseWebhookView
 from ..exceptions import AnymailWebhookValidationFailure, AnymailConfigurationError
 from ..signals import tracking, AnymailTrackingEvent, EventType
-from ..utils import get_anymail_setting, getfirst
+from ..utils import get_anymail_setting, getfirst, get_request_uri
 
 
 class MandrillSignatureMixin(object):
@@ -45,16 +45,18 @@ class MandrillSignatureMixin(object):
         except KeyError:
             raise AnymailWebhookValidationFailure("X-Mandrill-Signature header missing from webhook POST")
 
-        # Mandrill signs the exact URL plus the sorted POST params:
-        signed_data = self.webhook_url or request.build_absolute_uri()
+        # Mandrill signs the exact URL (including basic auth, if used) plus the sorted POST params:
+        url = self.webhook_url or get_request_uri(request)
         params = request.POST.dict()
+        signed_data = url
         for key in sorted(params.keys()):
             signed_data += key + params[key]
 
         expected_signature = b64encode(hmac.new(key=self.webhook_key, msg=signed_data.encode('utf-8'),
                                                 digestmod=hashlib.sha1).digest())
         if not constant_time_compare(signature, expected_signature):
-            raise AnymailWebhookValidationFailure("Mandrill webhook called with incorrect signature")
+            raise AnymailWebhookValidationFailure(
+                "Mandrill webhook called with incorrect signature (for url %r)" % url)
 
 
 class MandrillBaseWebhookView(MandrillSignatureMixin, AnymailBaseWebhookView):

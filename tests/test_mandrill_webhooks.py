@@ -19,21 +19,31 @@ from .webhook_cases import WebhookTestCase, WebhookBasicAuthTestsMixin
 TEST_WEBHOOK_KEY = 'TEST_WEBHOOK_KEY'
 
 
-def mandrill_args(events=None, url='/anymail/mandrill/tracking/', key=TEST_WEBHOOK_KEY):
+def mandrill_args(events=None,
+                  host="http://testserver/",  # Django test-client default
+                  path='/anymail/mandrill/tracking/',  # Anymail urlconf default
+                  auth="username:password",  # WebhookTestCase default
+                  key=TEST_WEBHOOK_KEY):
     """Returns TestClient.post kwargs for Mandrill webhook call with events
 
     Computes correct signature.
     """
     if events is None:
         events = []
-    url = urljoin('http://testserver/', url)
+    test_client_path = urljoin(host, path)  # https://testserver/anymail/mandrill/tracking/
+    if auth:
+        # we can get away with this simplification in these controlled tests,
+        # but don't ever construct urls like this in production code -- it's not safe!
+        full_url = test_client_path.replace("://", "://" + auth + "@")
+    else:
+        full_url = test_client_path
     mandrill_events = json.dumps(events)
-    signed_data = url + 'mandrill_events' + mandrill_events
+    signed_data = full_url + 'mandrill_events' + mandrill_events
     signature = b64encode(hmac.new(key=key.encode('ascii'),
                                    msg=signed_data.encode('utf-8'),
                                    digestmod=hashlib.sha1).digest())
     return {
-        'path': url,
+        'path': test_client_path,
         'data': {'mandrill_events': mandrill_events},
         'HTTP_X_MANDRILL_SIGNATURE': signature,
     }
@@ -76,6 +86,43 @@ class MandrillWebhookSecurityTestCase(WebhookTestCase, WebhookBasicAuthTestsMixi
     def test_verifies_bad_signature(self):
         kwargs = mandrill_args([{'event': 'send'}], key="wrong API key")
         response = self.client.post(**kwargs)
+        self.assertEqual(response.status_code, 400)
+
+    @override_settings(ANYMAIL={})  # clear WEBHOOK_AUTHORIZATION from WebhookTestCase
+    def test_no_basic_auth(self):
+        # Signature validation should work properly if you're not using basic auth
+        self.clear_basic_auth()
+        kwargs = mandrill_args([{'event': 'send'}], auth="")
+        response = self.client.post(**kwargs)
+        self.assertEqual(response.status_code, 200)
+
+    @override_settings(ANYMAIL={
+        "MANDRILL_WEBHOOK_URL": "https://abcde:12345@example.com/anymail/mandrill/tracking/",
+        "WEBHOOK_AUTHORIZATION": "abcde:12345",
+    })
+    def test_webhook_url_setting(self):
+        # If Django can't build_absolute_uri correctly (e.g., because your proxy
+        # frontend isn't setting the proxy headers correctly), you must set
+        # MANDRILL_WEBHOOK_URL to the actual public url where Mandrill calls the webhook.
+        self.set_basic_auth("abcde", "12345")
+        kwargs = mandrill_args([{'event': 'send'}], host="https://example.com/", auth="abcde:12345")
+        response = self.client.post(SERVER_NAME="127.0.0.1", **kwargs)
+        self.assertEqual(response.status_code, 200)
+
+    # override WebhookBasicAuthTestsMixin version of this test
+    @override_settings(ANYMAIL={'WEBHOOK_AUTHORIZATION': ['cred1:pass1', 'cred2:pass2']})
+    def test_supports_credential_rotation(self):
+        """You can supply a list of basic auth credentials, and any is allowed"""
+        self.set_basic_auth('cred1', 'pass1')
+        response = self.client.post(**mandrill_args(auth="cred1:pass1"))
+        self.assertEqual(response.status_code, 200)
+
+        self.set_basic_auth('cred2', 'pass2')
+        response = self.client.post(**mandrill_args(auth="cred2:pass2"))
+        self.assertEqual(response.status_code, 200)
+
+        self.set_basic_auth('baduser', 'wrongpassword')
+        response = self.client.post(**mandrill_args(auth="baduser:wrongpassword"))
         self.assertEqual(response.status_code, 400)
 
 

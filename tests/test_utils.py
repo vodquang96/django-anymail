@@ -1,11 +1,16 @@
 # Tests for the anymail/utils.py module
 # (not to be confused with utilities for testing found in in tests/utils.py)
+import base64
+
 import six
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, RequestFactory, override_settings
 from django.utils.translation import ugettext_lazy, string_concat
 
 from anymail.exceptions import AnymailInvalidAddress
-from anymail.utils import ParsedEmail, is_lazy, force_non_lazy, force_non_lazy_dict, force_non_lazy_list, update_deep
+from anymail.utils import (ParsedEmail,
+                           is_lazy, force_non_lazy, force_non_lazy_dict, force_non_lazy_list,
+                           update_deep,
+                           get_request_uri, get_request_basic_auth)
 
 
 class ParsedEmailTests(SimpleTestCase):
@@ -142,3 +147,61 @@ class UpdateDeepTests(SimpleTestCase):
         second = defaultdict(None, a=dict(a2=2))
         update_deep(first, second)
         self.assertEqual(first, {'a': {'a1': 1, 'a2': 2}, 'c': {'c1': 1}})
+
+
+class RequestUtilsTests(SimpleTestCase):
+    """Test utils.get_request_* helpers"""
+
+    def setUp(self):
+        self.request_factory = RequestFactory()
+        super(RequestUtilsTests, self).setUp()
+
+    @staticmethod
+    def basic_auth(username, password):
+        """Return HTTP_AUTHORIZATION header value for basic auth with username, password"""
+        credentials = base64.b64encode("{}:{}".format(username, password).encode('utf-8')).decode('utf-8')
+        return "Basic {}".format(credentials)
+
+    def test_get_request_basic_auth(self):
+        # without auth:
+        request = self.request_factory.post('/path/to/?query',
+                                            HTTP_HOST='www.example.com',
+                                            HTTP_SCHEME='https')
+        self.assertIsNone(get_request_basic_auth(request))
+
+        # with basic auth:
+        request = self.request_factory.post('/path/to/?query',
+                                            HTTP_HOST='www.example.com',
+                                            HTTP_AUTHORIZATION=self.basic_auth('user', 'pass'))
+        self.assertEqual(get_request_basic_auth(request), "user:pass")
+
+        # with some other auth
+        request = self.request_factory.post('/path/to/?query',
+                                            HTTP_HOST='www.example.com',
+                                            HTTP_AUTHORIZATION="Bearer abcde12345")
+        self.assertIsNone(get_request_basic_auth(request))
+
+    def test_get_request_uri(self):
+        # without auth:
+        request = self.request_factory.post('/path/to/?query', secure=True,
+                                            HTTP_HOST='www.example.com')
+        self.assertEqual(get_request_uri(request),
+                         "https://www.example.com/path/to/?query")
+
+        # with basic auth:
+        request = self.request_factory.post('/path/to/?query', secure=True,
+                                            HTTP_HOST='www.example.com',
+                                            HTTP_AUTHORIZATION=self.basic_auth('user', 'pass'))
+        self.assertEqual(get_request_uri(request),
+                         "https://user:pass@www.example.com/path/to/?query")
+
+    @override_settings(SECURE_PROXY_SSL_HEADER=('HTTP_X_FORWARDED_PROTO', 'https'),
+                       USE_X_FORWARDED_HOST=True)
+    def test_get_request_uri_with_proxy(self):
+        request = self.request_factory.post('/path/to/?query', secure=False,
+                                            HTTP_HOST='web1.internal',
+                                            HTTP_X_FORWARDED_PROTO='https',
+                                            HTTP_X_FORWARDED_HOST='secret.example.com:8989',
+                                            HTTP_AUTHORIZATION=self.basic_auth('user', 'pass'))
+        self.assertEqual(get_request_uri(request),
+                         "https://user:pass@secret.example.com:8989/path/to/?query")
