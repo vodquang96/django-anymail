@@ -1,10 +1,12 @@
 Anymail: Django email backends for Mailgun, Postmark, SendGrid, SparkPost and more
 ==================================================================================
 
- **EARLY DEVELOPMENT**
+ **PRE-1.0**
 
- This project is undergoing rapid development to get to a 1.0 release.
- Before 1.0, minor version bumps might include breaking changes.
+ Although several projects are using this package in production,
+ the API and feature set are still evolving, and the package has
+ not yet reached 1.0 status. Before 1.0, minor version bumps might
+ include breaking changes (following semantic versioning rules).
  Please check the
  `release notes <https://github.com/anymail/django-anymail/releases>`_
 
@@ -45,7 +47,7 @@ built-in `django.core.mail` package. It includes:
   your ESP's webhooks to Django signals
 * "Batch transactional" sends using your ESP's merge and template features
 
-Anymail is released under the BSD license. It is extensively tested against Django 1.8--1.10
+Anymail is released under the BSD license. It is extensively tested against Django 1.8--1.11
 (including Python 2.7, Python 3 and PyPy).
 Anymail releases follow `semantic versioning <http://semver.org/>`_.
 
