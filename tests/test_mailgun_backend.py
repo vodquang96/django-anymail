@@ -227,9 +227,8 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
 
     def test_api_failure(self):
         self.set_mock_response(status_code=400)
-        with self.assertRaises(AnymailAPIError):
-            sent = mail.send_mail('Subject', 'Body', 'from@example.com', ['to@example.com'])
-            self.assertEqual(sent, 0)
+        with self.assertRaisesMessage(AnymailAPIError, "Mailgun API response 400"):
+            mail.send_mail('Subject', 'Body', 'from@example.com', ['to@example.com'])
 
         # Make sure fail_silently is respected
         self.set_mock_response(status_code=400)

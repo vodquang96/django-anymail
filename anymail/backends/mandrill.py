@@ -42,7 +42,8 @@ class EmailBackend(AnymailRequestsBackend):
                 recipient_status[email] = AnymailRecipientStatus(message_id=message_id, status=status)
         except (KeyError, TypeError):
             raise AnymailRequestsAPIError("Invalid Mandrill API response format",
-                                          email_message=message, payload=payload, response=response)
+                                          email_message=message, payload=payload, response=response,
+                                          backend=self)
         return recipient_status
 
 

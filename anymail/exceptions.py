@@ -17,15 +17,19 @@ class AnymailError(Exception):
         Optional kwargs:
           email_message: the original EmailMessage being sent
           status_code: HTTP status code of response to ESP send call
+          backend: the backend instance involved
           payload: data arg (*not* json-stringified) for the ESP send call
           response: requests.Response from the send call
           raised_from: original/wrapped Exception
+          esp_name: what to call the ESP (read from backend if provided)
         """
         self.backend = kwargs.pop('backend', None)
         self.email_message = kwargs.pop('email_message', None)
         self.payload = kwargs.pop('payload', None)
         self.status_code = kwargs.pop('status_code', None)
         self.raised_from = kwargs.pop('raised_from', None)
+        self.esp_name = kwargs.pop('esp_name',
+                                   self.backend.esp_name if self.backend else None)
         if isinstance(self, HTTPError):
             # must leave response in kwargs for HTTPError
             self.response = kwargs.get('response', None)
@@ -61,7 +65,7 @@ class AnymailError(Exception):
         """Return a formatted string of self.status_code and response, or None"""
         if self.status_code is None:
             return None
-        description = "ESP API response %d:" % self.status_code
+        description = "%s API response %d:" % (self.esp_name or "ESP", self.status_code)
         try:
             json_response = self.response.json()
             description += "\n" + json.dumps(json_response, indent=2)
@@ -131,7 +135,9 @@ class AnymailSerializationError(AnymailError, TypeError):
 
     def __init__(self, message=None, orig_err=None, *args, **kwargs):
         if message is None:
-            esp_name = kwargs["backend"].esp_name if "backend" in kwargs else "the ESP"
+            # self.esp_name not set until super init, so duplicate logic to get esp_name
+            backend = kwargs.get('backend', None)
+            esp_name = kwargs.get('esp_name', backend.esp_name if backend else "the ESP")
             message = "Don't know how to send this data to %s. " \
                       "Try converting it to a string or number first." % esp_name
         if orig_err is not None:

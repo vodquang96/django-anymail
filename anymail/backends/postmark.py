@@ -42,7 +42,8 @@ class EmailBackend(AnymailRequestsBackend):
             msg = parsed_response["Message"]
         except (KeyError, TypeError):
             raise AnymailRequestsAPIError("Invalid Postmark API response format",
-                                          email_message=message, payload=payload, response=response)
+                                          email_message=message, payload=payload, response=response,
+                                          backend=self)
 
         message_id = parsed_response.get("MessageID", None)
         rejected_emails = []
@@ -51,7 +52,8 @@ class EmailBackend(AnymailRequestsBackend):
             # Either the From address or at least one recipient was invalid. Email not sent.
             if "'From' address" in msg:
                 # Normal error
-                raise AnymailRequestsAPIError(email_message=message, payload=payload, response=response)
+                raise AnymailRequestsAPIError(email_message=message, payload=payload, response=response,
+                                              backend=self)
             else:
                 # Use AnymailRecipientsRefused logic
                 default_status = 'invalid'
@@ -64,7 +66,8 @@ class EmailBackend(AnymailRequestsBackend):
             default_status = 'sent'
             rejected_emails = self.parse_inactive_recipients(msg)
         else:
-            raise AnymailRequestsAPIError(email_message=message, payload=payload, response=response)
+            raise AnymailRequestsAPIError(email_message=message, payload=payload, response=response,
+                                          backend=self)
 
         return {
             recipient.email: AnymailRecipientStatus(

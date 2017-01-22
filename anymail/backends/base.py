@@ -183,7 +183,8 @@ class AnymailBaseBackend(BaseEmailBackend):
             # Error if *all* recipients are invalid or refused
             # (This behavior parallels smtplib.SMTPRecipientsRefused from Django's SMTP EmailBackend)
             if anymail_status.status.issubset({"invalid", "rejected"}):
-                raise AnymailRecipientsRefused(email_message=message, payload=payload, response=response)
+                raise AnymailRecipientsRefused(email_message=message, payload=payload, response=response,
+                                               backend=self)
 
     @property
     def esp_name(self):

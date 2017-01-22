@@ -46,10 +46,12 @@ class EmailBackend(AnymailRequestsBackend):
             mailgun_message = parsed_response["message"]
         except (KeyError, TypeError):
             raise AnymailRequestsAPIError("Invalid Mailgun API response format",
-                                          email_message=message, payload=payload, response=response)
+                                          email_message=message, payload=payload, response=response,
+                                          backend=self)
         if not mailgun_message.startswith("Queued"):
             raise AnymailRequestsAPIError("Unrecognized Mailgun API message '%s'" % mailgun_message,
-                                          email_message=message, payload=payload, response=response)
+                                          email_message=message, payload=payload, response=response,
+                                          backend=self)
         # Simulate a per-recipient status of "queued":
         status = AnymailRecipientStatus(message_id=message_id, status="queued")
         return {recipient.email: status for recipient in payload.all_recipients}

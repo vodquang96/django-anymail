@@ -289,12 +289,8 @@ class SparkPostBackendStandardEmailTests(SparkPostBackendMockAPITestCase):
         self.assertNotIn('recipients', params)
 
     def test_api_failure(self):
-        failure_response = b"""{ "errors": [ {
-            "message": "Something went wrong",
-            "description": "Helpful explanation from your ESP"
-        } ] }"""
-        self.set_mock_failure(raw=failure_response)
-        with self.assertRaisesMessage(AnymailAPIError, "Helpful explanation from your ESP"):
+        self.set_mock_failure(status_code=400)
+        with self.assertRaisesMessage(AnymailAPIError, "SparkPost API response 400"):
             self.message.send()
 
     def test_api_failure_fail_silently(self):
@@ -302,6 +298,16 @@ class SparkPostBackendStandardEmailTests(SparkPostBackendMockAPITestCase):
         self.set_mock_failure()
         sent = self.message.send(fail_silently=True)
         self.assertEqual(sent, 0)
+
+    def test_api_error_includes_details(self):
+        """AnymailAPIError should include ESP's error message"""
+        failure_response = b"""{ "errors": [ {
+            "message": "Something went wrong",
+            "description": "Helpful explanation from your ESP"
+        } ] }"""
+        self.set_mock_failure(raw=failure_response)
+        with self.assertRaisesMessage(AnymailAPIError, "Helpful explanation from your ESP"):
+            self.message.send()
 
 
 class SparkPostBackendAnymailFeatureTests(SparkPostBackendMockAPITestCase):

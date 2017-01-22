@@ -54,11 +54,13 @@ class EmailBackend(AnymailRequestsBackend):
             sendgrid_message = parsed_response["message"]
         except (KeyError, TypeError):
             raise AnymailRequestsAPIError("Invalid SendGrid API response format",
-                                          email_message=message, payload=payload, response=response)
+                                          email_message=message, payload=payload, response=response,
+                                          backend=self)
         if sendgrid_message != "success":
             errors = parsed_response.get("errors", [])
             raise AnymailRequestsAPIError("SendGrid send failed: '%s'" % "; ".join(errors),
-                                          email_message=message, payload=payload, response=response)
+                                          email_message=message, payload=payload, response=response,
+                                          backend=self)
         # Simulate a per-recipient status of "queued":
         status = AnymailRecipientStatus(message_id=payload.message_id, status="queued")
         return {recipient.email: status for recipient in payload.all_recipients}

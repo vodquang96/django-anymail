@@ -85,7 +85,8 @@ class AnymailRequestsBackend(AnymailBaseBackend):
         parse_recipient_status)
         """
         if response.status_code != 200:
-            raise AnymailRequestsAPIError(email_message=message, payload=payload, response=response)
+            raise AnymailRequestsAPIError(email_message=message, payload=payload, response=response,
+                                          backend=self)
 
     def deserialize_json_response(self, response, payload, message):
         """Deserialize an ESP API response that's in json.
@@ -96,7 +97,8 @@ class AnymailRequestsBackend(AnymailBaseBackend):
             return response.json()
         except ValueError:
             raise AnymailRequestsAPIError("Invalid JSON in %s API response" % self.esp_name,
-                                          email_message=message, payload=payload, response=response)
+                                          email_message=message, payload=payload, response=response,
+                                          backend=self)
 
 
 class RequestsPayload(BasePayload):
