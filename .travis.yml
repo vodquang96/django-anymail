@@ -30,9 +30,9 @@ matrix:
     - { env: DJANGO="--pre django", python: 3.5 }
     - { env: DJANGO="--pre django", python: 3.6 }
     - { env: DJANGO="--pre django", python: pypy }
-
-  allow_failures:
-    - python: 3.6
+  # allow_failures:
+  #   - env: DJANGO="--pre django"
+  #   - python: 3.6
 
 cache:
   directories:

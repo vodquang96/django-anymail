@@ -124,7 +124,7 @@ class PostmarkBackendStandardEmailTests(PostmarkBackendMockAPITestCase):
 
     def test_extra_headers_serialization_error(self):
         self.message.extra_headers = {'X-Custom': Decimal(12.5)}
-        with self.assertRaisesMessage(AnymailSerializationError, "Decimal('12.5')"):
+        with self.assertRaisesMessage(AnymailSerializationError, "Decimal"):
             self.message.send()
 
     def test_reply_to(self):
@@ -457,7 +457,7 @@ class PostmarkBackendAnymailFeatureTests(PostmarkBackendMockAPITestCase):
         err = cm.exception
         self.assertIsInstance(err, TypeError)  # compatibility with json.dumps
         self.assertIn("Don't know how to send this data to Postmark", str(err))  # our added context
-        self.assertIn("Decimal('19.99') is not JSON serializable", str(err))  # original message
+        self.assertRegex(str(err), r"Decimal.*is not JSON serializable")  # original message
 
 
 class PostmarkBackendRecipientsRefusedTests(PostmarkBackendMockAPITestCase):
