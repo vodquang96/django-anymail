@@ -32,11 +32,11 @@ but send admin emails directly through an SMTP server:
               connection=sendgrid_backend)
 
     # You can override settings.py settings with kwargs to get_connection.
-    # This example supplies credentials to use a SendGrid subuser acccount:
-    alt_sendgrid_backend = get_connection('anymail.backends.sendgrid.EmailBackend',
-                                          username='marketing_subuser', password='abc123')
-    send_mail("Here's that info", "you wanted", "marketing@example.com", ["prospect@example.com"],
-              connection=alt_sendgrid_backend)
+    # This example supplies credentials for a different Mailgun sub-acccount:
+    alt_mailgun_backend = get_connection('anymail.backends.mailgun.EmailBackend',
+                                         api_key=MAILGUN_API_KEY_FOR_MARKETING)
+    send_mail("Here's that info", "you wanted", "info@marketing.example.com", ["prospect@example.org"],
+              connection=alt_mailgun_backend)
 
 
 You can supply a different connection to Django's
