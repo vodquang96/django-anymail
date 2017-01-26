@@ -3,10 +3,12 @@ Anymail: Django email backends for Mailgun, Postmark, SendGrid and more
 
 Version |release|
 
-.. attention:: **EARLY DEVELOPMENT**
+.. attention:: **PRE-1.0**
 
-   This project is undergoing rapid development to get to a 1.0 release.
-   Before 1.0, minor version bumps might include breaking changes.
+   Although several projects are using this package in production,
+   the API and feature set are still evolving, and the package has
+   not yet reached 1.0 status. Before 1.0, minor version bumps might
+   include breaking changes (following semantic versioning rules).
    Please check the
    `release notes <https://github.com/anymail/django-anymail/releases>`_
 
