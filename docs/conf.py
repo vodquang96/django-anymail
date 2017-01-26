@@ -51,7 +51,7 @@ master_doc = 'index'
 # General information about the project.
 project = u'Anymail'
 # noinspection PyShadowingBuiltins
-copyright = u'2016, Anymail contributors (see AUTHORS.txt)'
+copyright = u'Anymail contributors (see AUTHORS.txt)'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
