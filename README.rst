@@ -57,13 +57,14 @@ Anymail releases follow `semantic versioning <http://semver.org/>`_.
        :target: https://travis-ci.org/anymail/django-anymail
        :alt:    build status on Travis-CI
 
-.. image:: https://readthedocs.org/projects/anymail/badge/?version=latest
-       :target: https://anymail.readthedocs.io/en/latest/
+.. image:: https://readthedocs.org/projects/anymail/badge/?version=stable
+       :target: https://anymail.readthedocs.io/en/stable/
        :alt:    documentation on ReadTheDocs
 
 **Resources**
 
-* Full documentation: https://anymail.readthedocs.io/en/latest/
+* Full documentation: https://anymail.readthedocs.io/en/stable/
+  (`development version <https://anymail.readthedocs.io/en/latest/>`_)
 * Package on PyPI: https://pypi.python.org/pypi/django-anymail
 * Project on Github: https://github.com/anymail/django-anymail
 
@@ -151,5 +152,5 @@ or SparkPost or any other supported ESP where you see "mailgun":
 .. END quickstart
 
 
-See the `full documentation <https://anymail.readthedocs.io/en/latest/>`_
+See the `full documentation <https://anymail.readthedocs.io/en/stable/>`_
 for more features and options.

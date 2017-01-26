@@ -11,12 +11,12 @@ with open("anymail/_version.py") as f:
 
 
 def long_description_from_readme(rst):
-    # Freeze external links to refer to this X.Y version (on PyPI).
-    # (This relies on tagging or branching releases with 'vX.Y' in GitHub.)
-    release = 'v%s' % __minor_version__  # vX.Y
-    rst = re.sub(r'(?<=branch=)master'     # Travis build status: branch=master --> branch=vX.Y
-                 r'|(?<=/)latest'          # ReadTheDocs links: /latest --> /vX.Y
-                 r'|(?<=version=)latest',  # ReadTheDocs badge: version=latest --> version=vX.Y
+    # Freeze external links (on PyPI) to refer to this X.Y or X.Y.Z tag.
+    # (This relies on tagging releases with 'vX.Y' or 'vX.Y.Z' in GitHub.)
+    release = 'v%s' % __version__  # vX.Y or vX.Y.Z
+    rst = re.sub(r'(?<=branch=)master'     # Travis build status: branch=master --> branch=vX.Y.Z
+                 r'|(?<=/)stable'          # ReadTheDocs links: /stable --> /vX.Y.Z
+                 r'|(?<=version=)stable',  # ReadTheDocs badge: version=stable --> version=vX.Y.Z
                  release, rst)  # (?<=...) is "positive lookbehind": must be there, but won't get replaced
     return rst
 
