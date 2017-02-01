@@ -206,7 +206,7 @@ setting up Anymail's webhook URL requires deploying your Django project twice:
         * *yoursite.example.com* is your Django site
 
    Be sure to check the boxes in the Mandrill settings for the event types you want to receive.
-   The same Anymail tracking URL can handle all Mandrill "message" and "sync" events.
+   The same Anymail tracking URL can handle all Mandrill "message" and "change" events.
 
 2. Mandrill will provide you a "webhook authentication key" once it verifies the URL
    is working. Add this to your Django project's Anymail settings under
@@ -214,13 +214,21 @@ setting up Anymail's webhook URL requires deploying your Django project twice:
    (You may also need to set :setting:`MANDRILL_WEBHOOK_URL <ANYMAIL_MANDRILL_WEBHOOK_URL>`
    depending on your server config.) Then deploy your project again.
 
-Mandrill implements webhook signing on the entire event payload, and Anymail will
-verify the signature. Until the correct webhook key is set, Anymail will raise
+Mandrill implements webhook signing on the entire event payload, and Anymail verifies this
+signature. Until the correct webhook key is set, Anymail will raise
 an exception for any webhook calls from Mandrill (other than the initial validation request).
+
+Mandrill's webhook signature also covers the exact posting URL. Anymail can usually
+figure out the correct (public) URL where Mandrill called your webhook. But if you're
+getting an :exc:`AnymailWebhookValidationFailure` with a different URL than you
+provided Mandrill, you may need to examine your Django :setting:`SECURE_PROXY_SSL_HEADER`,
+:setting:`USE_X_FORWARDED_HOST`, and/or :setting:`USE_X_FORWARDED_PORT` settings. If all
+else fails, you can set Anymail's :setting:`MANDRILL_WEBHOOK_URL <ANYMAIL_MANDRILL_WEBHOOK_URL>`
+to the same public webhook URL you gave Mandrill.
 
 Mandrill will report these Anymail :attr:`~anymail.signals.AnymailTrackingEvent.event_type`\s:
 sent, rejected, deferred, bounced, opened, clicked, complained, unsubscribed. Mandrill does
-not support delivered events. Mandrill "whitelist" and "blacklist" sync events will show up
+not support delivered events. Mandrill "whitelist" and "blacklist" change events will show up
 as Anymail's unknown event_type.
 
 The event's :attr:`~anymail.signals.AnymailTrackingEvent.esp_event` field will be
