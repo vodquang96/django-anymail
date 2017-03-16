@@ -36,7 +36,7 @@ class PostmarkTrackingWebhookView(PostmarkBaseWebhookView):
         'SpamNotification': (EventType.COMPLAINED, RejectReason.SPAM),
         'OpenRelayTest': (EventType.DEFERRED, None),  # Receiving MTA is testing Postmark
         'Unknown': (EventType.UNKNOWN, None),
-        'SoftBounce': (EventType.DEFERRED, RejectReason.BOUNCED),  # until HardBounce later
+        'SoftBounce': (EventType.BOUNCED, RejectReason.BOUNCED),  # might also receive HardBounce later
         'VirusNotification': (EventType.BOUNCED, RejectReason.OTHER),
         'ChallengeVerification': (EventType.AUTORESPONDED, None),
         'BadEmailAddress': (EventType.REJECTED, RejectReason.INVALID),
@@ -48,8 +48,8 @@ class PostmarkTrackingWebhookView(PostmarkBaseWebhookView):
         'InboundError': (EventType.INBOUND_FAILED, None),
         'DMARCPolicy': (EventType.REJECTED, RejectReason.BLOCKED),
         'TemplateRenderingFailed': (EventType.FAILED, None),
-        # Postmark does not report DELIVERED
-        # Postmark does not report CLICKED (because it doesn't implement click-tracking)
+        # DELIVERED doesn't have a Type field; detected separately below
+        # CLICKED doesn't have a Postmark webhook (yet?)
         # OPENED doesn't have a Type field; detected separately below
         # INBOUND doesn't have a Type field; should come in through different webhook
     }

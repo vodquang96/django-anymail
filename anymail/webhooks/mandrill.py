@@ -81,7 +81,7 @@ class MandrillTrackingWebhookView(MandrillBaseWebhookView):
         'send': EventType.SENT,
         'deferral': EventType.DEFERRED,
         'hard_bounce': EventType.BOUNCED,
-        'soft_bounce': EventType.DEFERRED,
+        'soft_bounce': EventType.BOUNCED,
         'open': EventType.OPENED,
         'click': EventType.CLICKED,
         'spam': EventType.COMPLAINED,
