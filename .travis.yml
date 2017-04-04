@@ -8,7 +8,7 @@ matrix:
     # Live API integration tests are only run on a few, representative Python/Django version
     # combinations, to avoid rapidly consuming the testing accounts' entire send allotments.
 
-    # Django 1.8: Python 2.7, 3.2 (until the end of 2016), 3.3, 3.4, 3.5
+    # Django 1.8: Python 2.7, 3.3, 3.4, 3.5
     - { env: DJANGO=django==1.8 RUN_LIVE_TESTS=true, python: 2.7 }
     - { env: DJANGO=django==1.8, python: 3.3 }
     - { env: DJANGO=django==1.8, python: 3.4 }
@@ -22,14 +22,17 @@ matrix:
     # Django 1.10: Python 2.7, 3.4, 3.5
     - { env: DJANGO=django==1.10, python: 2.7 }
     - { env: DJANGO=django==1.10, python: 3.4 }
-    - { env: DJANGO=django==1.10 RUN_LIVE_TESTS=true, python: 3.5 }
+    - { env: DJANGO=django==1.10, python: 3.5 }
     - { env: DJANGO=django==1.10, python: pypy }
-    # Django 1.11 (prerelease): Python 2.7, 3.4, 3.5, or 3.6
-    - { env: DJANGO="--pre django", python: 2.7 }
-    - { env: DJANGO="--pre django", python: 3.4 }
-    - { env: DJANGO="--pre django", python: 3.5 }
-    - { env: DJANGO="--pre django", python: 3.6 }
-    - { env: DJANGO="--pre django", python: pypy }
+    # Django 1.11: Python 2.7, 3.4, 3.5, or 3.6
+    - { env: DJANGO=django==1.11, python: 2.7 }
+    - { env: DJANGO=django==1.11, python: 3.4 }
+    - { env: DJANGO=django==1.11, python: 3.5 }
+    - { env: DJANGO=django==1.11, python: 3.6 }
+    - { env: DJANGO=django==1.11 RUN_LIVE_TESTS=true, python: pypy }
+    # Django 2.0 (prerelease): Python 3.5+
+    # - { env: DJANGO="--pre django", python: 3.5 }
+    # - { env: DJANGO="--pre django", python: 3.6 }
   # allow_failures:
   #   - env: DJANGO="--pre django"
   #   - python: 3.6
