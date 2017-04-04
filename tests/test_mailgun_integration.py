@@ -137,9 +137,8 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
                          {"meta1": "simple string", "meta2": "2"})  # all metadata values become strings
 
         self.assertEqual(event["message"]["scheduled-for"], send_at_timestamp)
-        self.assertCountEqual(event["message"]["recipients"],
-                              ['to1@example.com', 'to2@example.com', 'cc1@example.com', 'cc2@example.com',
-                               'bcc1@example.com', 'bcc2@example.com'])  # don't care about order
+        self.assertIn(event["recipient"], ['to1@example.com', 'to2@example.com', 'cc1@example.com',
+                                           'cc2@example.com', 'bcc1@example.com', 'bcc2@example.com'])
 
         headers = event["message"]["headers"]
         self.assertEqual(headers["from"], "Test From <from@example.com>")
