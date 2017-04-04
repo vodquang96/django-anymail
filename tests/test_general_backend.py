@@ -293,3 +293,26 @@ class LazyStringsTest(TestBackendTestCase):
         params = self.get_send_params()
         self.assertNotLazy(params['merge_data']['to@example.com']['duration'])
         self.assertNotLazy(params['merge_global_data']['order_type'])
+
+
+class CatchCommonErrorsTests(TestBackendTestCase):
+    """Anymail should catch and provide useful errors for common mistakes"""
+
+    def test_explains_reply_to_must_be_list(self):
+        """reply_to must be a list (or other iterable), not a single string"""
+        # Django's EmailMessage.__init__ catches this and warns, but isn't
+        # involved if you assign attributes later. Anymail should catch that case.
+        # (This also applies to to, cc, and bcc, but Django stumbles over those cases
+        # in EmailMessage.recipients (called from EmailMessage.send) before
+        # Anymail gets a chance to complain.)
+        self.message.reply_to = "single-reply-to@example.com"
+        with self.assertRaisesMessage(TypeError, '"reply_to" attribute must be a list or other iterable'):
+            self.message.send()
+
+    def test_explains_reply_to_must_be_list_lazy(self):
+        """Same as previous tests, with lazy strings"""
+        # Lazy strings can fool string/iterable detection
+        self.message.reply_to = ugettext_lazy("single-reply-to@example.com")
+        with self.assertRaisesMessage(TypeError, '"reply_to" attribute must be a list or other iterable'):
+            self.message.send()
+

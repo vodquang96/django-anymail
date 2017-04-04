@@ -1,5 +1,6 @@
 from datetime import date, datetime
 
+import six
 from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
 from django.utils.timezone import is_naive, get_current_timezone, make_aware, utc
@@ -8,7 +9,7 @@ from ..exceptions import AnymailCancelSend, AnymailError, AnymailUnsupportedFeat
 from ..message import AnymailStatus
 from ..signals import pre_send, post_send
 from ..utils import (Attachment, ParsedEmail, UNSET, combine, last, get_anymail_setting,
-                     force_non_lazy, force_non_lazy_list, force_non_lazy_dict)
+                     force_non_lazy, force_non_lazy_list, force_non_lazy_dict, is_lazy)
 
 
 class AnymailBaseBackend(BaseEmailBackend):
@@ -252,6 +253,8 @@ class BasePayload(object):
         message_attrs = self.base_message_attrs + self.anymail_message_attrs + self.esp_message_attrs
         for attr, combiner, converter in message_attrs:
             value = getattr(message, attr, UNSET)
+            if attr in ('to', 'cc', 'bcc', 'reply_to') and value is not UNSET:
+                self.validate_not_bare_string(attr, value)
             if combiner is not None:
                 default_value = self.defaults.get(attr, UNSET)
                 value = combiner(default_value, value)
@@ -272,6 +275,26 @@ class BasePayload(object):
         if not self.backend.ignore_unsupported_features:
             raise AnymailUnsupportedFeature("%s does not support %s" % (self.esp_name, feature),
                                             email_message=self.message, payload=self, backend=self.backend)
+
+    #
+    # Attribute validators
+    #
+
+    def validate_not_bare_string(self, attr, value):
+        """EmailMessage to, cc, bcc, and reply_to are specced to be lists of strings.
+        
+        This catches the common error where a single string is used instead.
+        (See also checks in EmailMessage.__init__.)
+        """
+        # Note: this actually only runs for reply_to. If to, cc, or bcc are
+        # set to single strings, you'll end up with an earlier cryptic TypeError
+        # from EmailMesssage.recipients (called from EmailMessage.send) before
+        # the Anymail backend even gets involved:
+        #   TypeError: must be str, not list
+        #   TypeError: can only concatenate list (not "str") to list
+        #   TypeError: Can't convert 'list' object to str implicitly
+        if isinstance(value, six.string_types) or is_lazy(value):
+            raise TypeError('"{attr}" attribute must be a list or other iterable'.format(attr=attr))
 
     #
     # Attribute converters
