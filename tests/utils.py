@@ -36,6 +36,7 @@ def decode_att(att):
 
 
 SAMPLE_IMAGE_FILENAME = "sample_image.png"
+SAMPLE_EMAIL_FILENAME = "sample_email.txt"
 
 
 def sample_image_path(filename=SAMPLE_IMAGE_FILENAME):
@@ -52,7 +53,14 @@ def sample_image_content(filename=SAMPLE_IMAGE_FILENAME):
         return f.read()
 
 
-SAMPLE_FORWARDED_EMAIL = b'Received: by luna.mailgun.net with SMTP mgrt 8734663311733; Fri, 03 May 2013\n 18:26:27 +0000\nContent-Type: multipart/alternative; boundary="eb663d73ae0a4d6c9153cc0aec8b7520"\nMime-Version: 1.0\nSubject: Test email\nFrom: Someone <someone@example.com>\nTo: someoneelse@example.com\nReply-To: reply.to@example.com\nMessage-Id: <20130503182626.18666.16540@example.com>\nList-Unsubscribe: <mailto:u+na6tmy3ege4tgnldmyytqojqmfsdembyme3tmy3cha4wcndbgaydqyrgoi6wszdpovrhi5dinfzw63tfmv4gs43uomstimdhnvqws3bomnxw2jtuhusteqjgmq6tm@example.com>\nX-Mailgun-Sid: WyIwNzI5MCIsICJhbGljZUBleGFtcGxlLmNvbSIsICI2Il0=\nX-Mailgun-Variables: {"my_var_1": "Mailgun Variable #1", "my-var-2": "awesome"}\nDate: Fri, 03 May 2013 18:26:27 +0000\nSender: someone@example.com\n\n--eb663d73ae0a4d6c9153cc0aec8b7520\nMime-Version: 1.0\nContent-Type: text/plain; charset="ascii"\nContent-Transfer-Encoding: 7bit\n\nHi Bob, This is a message. Thanks!\n\n--eb663d73ae0a4d6c9153cc0aec8b7520\nMime-Version: 1.0\nContent-Type: text/html; charset="ascii"\nContent-Transfer-Encoding: 7bit\n\n<html>\n                            <body>Hi Bob, This is a message. Thanks!\n                            <br>\n</body></html>\n--eb663d73ae0a4d6c9153cc0aec8b7520--\n'
+def sample_email_path(filename=SAMPLE_EMAIL_FILENAME):
+    """Returns path to an email file (e.g., for forwarding as an attachment)"""
+    return sample_image_path(filename)  # borrow path logic from above
+
+
+def sample_email_content(filename=SAMPLE_EMAIL_FILENAME):
+    """Returns bytes contents of an email file (e.g., for forwarding as an attachment)"""
+    return sample_image_content(filename)  # borrow read logic from above
 
 
 # noinspection PyUnresolvedReferences
@@ -106,6 +114,12 @@ class AnymailTestMixin:
             return super(AnymailTestMixin, self).assertRegex(*args, **kwargs)
         except TypeError:
             return self.assertRegexpMatches(*args, **kwargs)  # Python 2
+
+    def assertEqualIgnoringWhitespace(self, first, second, msg=None):
+        # Useful for message/rfc822 attachment tests
+        self.assertEqual(first.replace(b'\n', b'').replace(b' ', b''),
+                         second.replace(b'\n', b'').replace(b' ', b''),
+                         msg)
 
 
 # Backported from python 3.5

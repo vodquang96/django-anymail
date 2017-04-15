@@ -22,7 +22,8 @@ from anymail.exceptions import AnymailAPIError, AnymailRequestsAPIError, Anymail
 from anymail.message import attach_inline_image_file
 
 from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
-from .utils import sample_image_content, sample_image_path, SAMPLE_FORWARDED_EMAIL, SAMPLE_IMAGE_FILENAME, AnymailTestMixin
+from .utils import (AnymailTestMixin, sample_email_content,
+                    sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME)
 
 
 @override_settings(EMAIL_BACKEND='anymail.backends.mailgun.EmailBackend',
@@ -140,7 +141,8 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         self.message.attach(mimeattachment)
 
         # And also with an message/rfc822 attachment
-        forwarded_email = message_from_bytes(SAMPLE_FORWARDED_EMAIL)
+        forwarded_email_content = sample_email_content()
+        forwarded_email = message_from_bytes(forwarded_email_content)
         rfcmessage = MIMEBase("message", "rfc822")
         rfcmessage.attach(forwarded_email)
         self.message.attach(rfcmessage)
@@ -152,12 +154,12 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         self.assertEqual(attachments[0], ('test.txt', text_content, 'text/plain'))
         self.assertEqual(attachments[1], ('test.png', png_content, 'image/png'))  # type inferred from filename
         self.assertEqual(attachments[2], (None, pdf_content, 'application/pdf'))  # no filename
-        # Email messages can get a bit changed with respect to
-        # whitespace characters in headers, without breaking the message, so we
-        # tolerate that:
+        # Email messages can get a bit changed with respect to whitespace characters
+        # in headers, without breaking the message, so we tolerate that:
         self.assertEqual(attachments[3][0], None)
-        self.assertEqual(attachments[3][1].replace(b'\n', b'').replace(b' ', b''),
-                         (b'Content-Type: message/rfc822\nMIME-Version: 1.0\n\n' + SAMPLE_FORWARDED_EMAIL).replace(b'\n', b'').replace(b' ', b''))
+        self.assertEqualIgnoringWhitespace(
+            attachments[3][1],
+            b'Content-Type: message/rfc822\nMIME-Version: 1.0\n\n' + forwarded_email_content)
         self.assertEqual(attachments[3][2], 'message/rfc822')
 
         # Make sure the image attachment is not treated as embedded:
