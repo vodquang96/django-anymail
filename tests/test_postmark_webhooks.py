@@ -106,4 +106,3 @@ class PostmarkDeliveryTestCase(WebhookTestCase):
         self.assertEqual(event.message_id, "f4830d10-9c35-4f0c-bca3-3d9b459821f8")
         self.assertEqual(event.recipient, "recipient@example.com")
         self.assertEqual(event.user_agent, "Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0")
-

@@ -282,7 +282,7 @@ class BasePayload(object):
 
     def validate_not_bare_string(self, attr, value):
         """EmailMessage to, cc, bcc, and reply_to are specced to be lists of strings.
-        
+
         This catches the common error where a single string is used instead.
         (See also checks in EmailMessage.__init__.)
         """

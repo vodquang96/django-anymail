@@ -315,4 +315,3 @@ class CatchCommonErrorsTests(TestBackendTestCase):
         self.message.reply_to = ugettext_lazy("single-reply-to@example.com")
         with self.assertRaisesMessage(TypeError, '"reply_to" attribute must be a list or other iterable'):
             self.message.send()
-

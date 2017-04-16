@@ -20,8 +20,10 @@ def long_description_from_readme(rst):
                  release, rst)  # (?<=...) is "positive lookbehind": must be there, but won't get replaced
     return rst
 
+
 with open('README.rst') as f:
     long_description = long_description_from_readme(f.read())
+
 
 setup(
     name="django-anymail",

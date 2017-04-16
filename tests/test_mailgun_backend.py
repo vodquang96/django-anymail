@@ -526,4 +526,3 @@ class MailgunBackendDeprecationTests(MailgunBackendMockAPITestCase):
         with self.assertWarnsRegex(DeprecationWarning,
                                    r'anymail\.backends\.mailgun\.EmailBackend'):
             self.message.send()
-

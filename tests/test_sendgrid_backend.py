@@ -599,9 +599,9 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
                        ['"Recipient, Ltd." <to@example.com>'])
         data = self.get_api_call_json()
         self.assertEqual(data["personalizations"][0]["to"][0],
-            {"email": "to@example.com", "name": "Recipient, Ltd."})  # no extra quotes on name
+                         {"email": "to@example.com", "name": "Recipient, Ltd."})  # no extra quotes on name
         self.assertEqual(data["from"],
-            {"email": "from@example.com", "name": "Sender, Inc."})
+                         {"email": "from@example.com", "name": "Sender, Inc."})
 
 
 class SendGridBackendRecipientsRefusedTests(SendGridBackendMockAPITestCase):

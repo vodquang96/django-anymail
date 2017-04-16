@@ -214,7 +214,7 @@ class MandrillPayload(RequestsPayload):
                         {'rcpt': rcpt, 'values': recipient_metadata[rcpt]}
                         for rcpt in sorted(recipient_metadata.keys())]
             # Merge esp_extra with payload data: shallow merge within ['message'] and top-level keys
-            self.data.update({k:v for k,v in esp_extra.items() if k != 'message'})
+            self.data.update({k: v for k, v in esp_extra.items() if k != 'message'})
             try:
                 self.data['message'].update(esp_extra['message'])
             except KeyError:
@@ -310,5 +310,6 @@ class MandrillPayload(RequestsPayload):
             self.esp_extra.setdefault('message', {})[attr] = value
         setter.__name__ = setter_name
         return setter
+
 
 MandrillPayload.define_message_attr_setters()

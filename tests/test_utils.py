@@ -112,7 +112,7 @@ class LazyCoercionTests(SimpleTestCase):
 
     def test_force_dict(self):
         result = force_non_lazy_dict({'a': 1, 'b': ugettext_lazy(u"b"),
-                                 'c': {'c1': ugettext_lazy(u"c1")}})
+                                      'c': {'c1': ugettext_lazy(u"c1")}})
         self.assertEqual(result, {'a': 1, 'b': u"b", 'c': {'c1': u"c1"}})
         self.assertIsInstance(result['b'], six.text_type)
         self.assertIsInstance(result['c']['c1'], six.text_type)

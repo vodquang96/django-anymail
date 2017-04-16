@@ -120,4 +120,3 @@ class SendGridTrackingWebhookView(SendGridBaseWebhookView):
         'url_offset',  # click tracking
         'useragent',  # click/open tracking
     }
-

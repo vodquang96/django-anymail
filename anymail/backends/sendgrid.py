@@ -344,4 +344,3 @@ class SendGridPayload(RequestsPayload):
                 "or use 'anymail.backends.sendgrid_v2.EmailBackend' for the old API."
             )
         update_deep(self.data, extra)
-

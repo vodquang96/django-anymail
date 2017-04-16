@@ -416,7 +416,7 @@ class MandrillBackendAnymailFeatureTests(MandrillBackendMockAPITestCase):
             # Anymail expands simple python dicts into the more-verbose
             # rcpt/values lists the Mandrill API uses
             "customer@example.com": {'cust_id': "67890", 'order_id': "54321"},
-            "guest@example.com": {'cust_id': "94107", 'order_id': "43215"} ,
+            "guest@example.com": {'cust_id': "94107", 'order_id': "43215"},
         }}}
         self.message.send()
         data = self.get_api_call_json()

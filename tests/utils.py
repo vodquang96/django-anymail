@@ -167,8 +167,7 @@ class _AssertWarnsContext(object):
                 continue
             if first_matching is None:
                 first_matching = w
-            if (self.expected_regex is not None and
-                not self.expected_regex.search(str(w))):
+            if self.expected_regex is not None and not self.expected_regex.search(str(w)):
                 continue
             # store warning for later retrieval
             self.warning = w
