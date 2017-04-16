@@ -1,5 +1,6 @@
 sudo: false
 language: python
+
 matrix:
   include:
     # Anymail supports the same python versions as Django, excluding Python 3.2, but adding pypy.
@@ -33,6 +34,10 @@ matrix:
     # Django 2.0 (prerelease): Python 3.5+
     # - { env: DJANGO="--pre django", python: 3.5 }
     # - { env: DJANGO="--pre django", python: 3.6 }
+
+    - { env: FLAKE8=true, python: 2.7 }
+    - { env: FLAKE8=true, python: 3.6 }
+
   # allow_failures:
   #   - env: DJANGO="--pre django"
   #   - python: 3.6
@@ -40,11 +45,18 @@ matrix:
 cache:
   directories:
     - $HOME/.cache/pip
+
+# If env DJANGO is set, install Anymail and run tests
+# If env FLAKE8 is set, run flake8
 install:
   - pip install --upgrade setuptools pip
-  - pip install $DJANGO
-  # For now, install all ESPs and test at once
+  - if [[ -n $DJANGO ]]; then pip install $DJANGO; fi
+  # For now, install Anymail including all optional ESPs, and test at once
   # (in future, might want to matrix ESPs to test cross-dependencies)
-  - pip install .[mailgun,mandrill,postmark,sendgrid,sparkpost]
+  - if [[ -n $DJANGO ]]; then pip install .[mailgun,mandrill,postmark,sendgrid,sparkpost]; fi
+  - if [[ -n $FLAKE8 ]]; then pip install flake8; fi
   - pip list
-script: python setup.py test
+
+script:
+  - if [[ -n $DJANGO ]]; then python setup.py test; fi
+  - if [[ -n $FLAKE8 ]]; then flake8; fi
