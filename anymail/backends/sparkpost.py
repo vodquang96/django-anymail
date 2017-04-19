@@ -129,8 +129,10 @@ class SparkPostPayload(BasePayload):
 
         return self.params
 
-    def set_from_email(self, email):
-        self.params['from_email'] = email.address
+    def set_from_email_list(self, emails):
+        # SparkPost supports multiple From email addresses,
+        # as a single comma-separated string
+        self.params['from_email'] = ", ".join([email.address for email in emails])
 
     def set_to(self, emails):
         if emails:

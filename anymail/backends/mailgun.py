@@ -124,15 +124,12 @@ class MailgunPayload(RequestsPayload):
         self.data = {}   # {field: [multiple, values]}
         self.files = []  # [(field, multiple), (field, values)]
 
-    def set_from_email(self, email):
-        self.data["from"] = str(email)
-        if self.sender_domain is None:
-            # try to intuit sender_domain from from_email
-            try:
-                _, domain = email.email.split('@')
-                self.sender_domain = domain
-            except ValueError:
-                pass
+    def set_from_email_list(self, emails):
+        # Mailgun supports multiple From email addresses
+        self.data["from"] = [email.address for email in emails]
+        if self.sender_domain is None and len(emails) > 0:
+            # try to intuit sender_domain from first from_email
+            self.sender_domain = emails[0].domain or None
 
     def set_recipients(self, recipient_type, emails):
         assert recipient_type in ["to", "cc", "bcc"]

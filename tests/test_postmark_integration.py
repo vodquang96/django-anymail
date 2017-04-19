@@ -43,7 +43,8 @@ class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         message = AnymailMessage(
             subject="Anymail all-options integration test",
             body="This is the text body",
-            from_email="Test From <from@example.com>",
+            # Postmark accepts multiple from_email addresses, but truncates to the first on their end
+            from_email="Test From <from@example.com>, also-from@example.com",
             to=["to1@example.com", "Recipient 2 <to2@example.com>"],
             cc=["cc1@example.com", "Copy 2 <cc2@example.com>"],
             bcc=["bcc1@example.com", "Blind Copy 2 <bcc2@example.com>"],

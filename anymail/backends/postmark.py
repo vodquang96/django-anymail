@@ -138,8 +138,10 @@ class PostmarkPayload(RequestsPayload):
     def init_payload(self):
         self.data = {}   # becomes json
 
-    def set_from_email(self, email):
-        self.data["From"] = email.address
+    def set_from_email_list(self, emails):
+        # Postmark accepts multiple From email addresses
+        # (though truncates to just the first, on their end, as of 4/2017)
+        self.data["From"] = ", ".join([email.address for email in emails])
 
     def set_recipients(self, recipient_type, emails):
         assert recipient_type in ["to", "cc", "bcc"]

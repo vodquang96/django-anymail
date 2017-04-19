@@ -8,7 +8,7 @@ from django.utils.timezone import is_naive, get_current_timezone, make_aware, ut
 from ..exceptions import AnymailCancelSend, AnymailError, AnymailUnsupportedFeature, AnymailRecipientsRefused
 from ..message import AnymailStatus
 from ..signals import pre_send, post_send
-from ..utils import (Attachment, ParsedEmail, UNSET, combine, last, get_anymail_setting,
+from ..utils import (Attachment, UNSET, combine, last, get_anymail_setting, parse_address_list,
                      force_non_lazy, force_non_lazy_list, force_non_lazy_dict, is_lazy)
 
 
@@ -216,12 +216,12 @@ class BasePayload(object):
     # the combined/converted results for each attr.
     base_message_attrs = (
         # Standard EmailMessage/EmailMultiAlternatives props
-        ('from_email', last, 'parsed_email'),
-        ('to', combine, 'parsed_emails'),
-        ('cc', combine, 'parsed_emails'),
-        ('bcc', combine, 'parsed_emails'),
+        ('from_email', last, parse_address_list),  # multiple from_emails are allowed
+        ('to', combine, parse_address_list),
+        ('cc', combine, parse_address_list),
+        ('bcc', combine, parse_address_list),
         ('subject', last, force_non_lazy),
-        ('reply_to', combine, 'parsed_emails'),
+        ('reply_to', combine, parse_address_list),
         ('extra_headers', combine, force_non_lazy_dict),
         ('body', last, force_non_lazy),  # special handling below checks message.content_subtype
         ('alternatives', combine, 'prepped_alternatives'),
@@ -266,6 +266,8 @@ class BasePayload(object):
             if value is not UNSET:
                 if attr == 'body':
                     setter = self.set_html_body if message.content_subtype == 'html' else self.set_text_body
+                elif attr == 'from_email':
+                    setter = self.set_from_email_list
                 else:
                     # AttributeError here? Your Payload subclass is missing a set_<attr> implementation
                     setter = getattr(self, 'set_%s' % attr)
@@ -299,14 +301,6 @@ class BasePayload(object):
     #
     # Attribute converters
     #
-
-    def parsed_email(self, address):
-        return ParsedEmail(address, self.message.encoding)  # (handles lazy address)
-
-    def parsed_emails(self, addresses):
-        encoding = self.message.encoding
-        return [ParsedEmail(address, encoding)  # (handles lazy address)
-                for address in addresses]
 
     def prepped_alternatives(self, alternatives):
         return [(force_non_lazy(content), mimetype)
@@ -348,8 +342,17 @@ class BasePayload(object):
         raise NotImplementedError("%s.%s must implement init_payload" %
                                   (self.__class__.__module__, self.__class__.__name__))
 
+    def set_from_email_list(self, emails):
+        # If your backend supports multiple from emails, override this to handle the whole list;
+        # otherwise just implement set_from_email
+        if len(emails) > 1:
+            self.unsupported_feature("multiple from emails")
+            # fall through if ignoring unsupported features
+        if len(emails) > 0:
+            self.set_from_email(emails[0])
+
     def set_from_email(self, email):
-        raise NotImplementedError("%s.%s must implement set_from_email" %
+        raise NotImplementedError("%s.%s must implement set_from_email or set_from_email_list" %
                                   (self.__class__.__module__, self.__class__.__name__))
 
     def set_to(self, emails):

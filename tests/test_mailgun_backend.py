@@ -18,7 +18,9 @@ from django.test import SimpleTestCase
 from django.test.utils import override_settings
 from django.utils.timezone import get_fixed_timezone, override as override_current_timezone
 
-from anymail.exceptions import AnymailAPIError, AnymailRequestsAPIError, AnymailUnsupportedFeature
+from anymail.exceptions import (
+    AnymailAPIError, AnymailInvalidAddress,
+    AnymailRequestsAPIError, AnymailUnsupportedFeature)
 from anymail.message import attach_inline_image_file
 
 from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
@@ -53,7 +55,7 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         data = self.get_api_call_data()
         self.assertEqual(data['subject'], "Subject here")
         self.assertEqual(data['text'], "Here is the message.")
-        self.assertEqual(data['from'], "from@example.com")
+        self.assertEqual(data['from'], ["from@example.com"])
         self.assertEqual(data['to'], ["to@example.com"])
 
     def test_name_addr(self):
@@ -68,7 +70,7 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
             bcc=['Blind Copy <bcc1@example.com>', 'bcc2@example.com'])
         msg.send()
         data = self.get_api_call_data()
-        self.assertEqual(data['from'], "From Name <from@example.com>")
+        self.assertEqual(data['from'], ["From Name <from@example.com>"])
         self.assertEqual(data['to'], ['Recipient #1 <to1@example.com>', 'to2@example.com'])
         self.assertEqual(data['cc'], ['Carbon Copy <cc1@example.com>', 'cc2@example.com'])
         self.assertEqual(data['bcc'], ['Blind Copy <bcc1@example.com>', 'bcc2@example.com'])
@@ -86,7 +88,7 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         data = self.get_api_call_data()
         self.assertEqual(data['subject'], "Subject")
         self.assertEqual(data['text'], "Body goes here")
-        self.assertEqual(data['from'], "from@example.com")
+        self.assertEqual(data['from'], ["from@example.com"])
         self.assertEqual(data['to'], ['to1@example.com', 'Also To <to2@example.com>'])
         self.assertEqual(data['bcc'], ['bcc1@example.com', 'Also BCC <bcc2@example.com>'])
         self.assertEqual(data['cc'], ['cc1@example.com', 'Also CC <cc2@example.com>'])
@@ -248,6 +250,20 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         self.message.send()
         data = self.get_api_call_data()
         self.assertNotIn('to', data)
+
+    def test_multiple_from_emails(self):
+        """Mailgun supports multiple addresses in from_email"""
+        self.message.from_email = 'first@example.com, "From, also" <second@example.com>'
+        self.message.send()
+        data = self.get_api_call_data()
+        self.assertEqual(data['from'], ['first@example.com',
+                                        '"From, also" <second@example.com>'])
+
+        # Make sure the far-more-likely scenario of a single from_email
+        # with an unquoted display-name issues a reasonable error:
+        self.message.from_email = 'Unquoted, display-name <from@example.com>'
+        with self.assertRaises(AnymailInvalidAddress):
+            self.message.send()
 
     def test_api_failure(self):
         self.set_mock_response(status_code=400)
@@ -488,15 +504,20 @@ class MailgunBackendRecipientsRefusedTests(MailgunBackendMockAPITestCase):
         "message": "'to' parameter is not a valid address. please check documentation"
     }"""
 
+    # NOTE: As of Anymail 0.10, Anymail catches actually-invalid recipient emails
+    # before attempting to pass them along to the ESP, so the tests below use technically
+    # valid emails that would actually be accepted by Mailgun. (We're just making sure
+    # the backend would correctly handle the 400 response if something slipped through.)
+
     def test_invalid_email(self):
         self.set_mock_response(status_code=400, raw=self.INVALID_TO_RESPONSE)
-        msg = mail.EmailMessage('Subject', 'Body', 'from@example.com', to=['not a valid email'])
+        msg = mail.EmailMessage('Subject', 'Body', 'from@example.com', to=['not-really@invalid'])
         with self.assertRaises(AnymailAPIError):
             msg.send()
 
     def test_fail_silently(self):
         self.set_mock_response(status_code=400, raw=self.INVALID_TO_RESPONSE)
-        sent = mail.send_mail('Subject', 'Body', 'from@example.com', ['not a valid email'],
+        sent = mail.send_mail('Subject', 'Body', 'from@example.com', ['not-really@invalid'],
                               fail_silently=True)
         self.assertEqual(sent, 0)
 

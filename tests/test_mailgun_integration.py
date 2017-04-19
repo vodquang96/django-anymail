@@ -102,7 +102,7 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         message = AnymailMessage(
             subject="Anymail all-options integration test",
             body="This is the text body",
-            from_email="Test From <from@example.com>",
+            from_email="Test From <from@example.com>, also-from@example.com",
             to=["to1@example.com", "Recipient 2 <to2@example.com>"],
             cc=["cc1@example.com", "Copy 2 <cc2@example.com>"],
             bcc=["bcc1@example.com", "Blind Copy 2 <bcc2@example.com>"],
@@ -141,7 +141,7 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
                                            'cc2@example.com', 'bcc1@example.com', 'bcc2@example.com'])
 
         headers = event["message"]["headers"]
-        self.assertEqual(headers["from"], "Test From <from@example.com>")
+        self.assertEqual(headers["from"], "Test From <from@example.com>, also-from@example.com")
         self.assertEqual(headers["to"], "to1@example.com, Recipient 2 <to2@example.com>")
         self.assertEqual(headers["subject"], "Anymail all-options integration test")
 
@@ -156,13 +156,15 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         # (We could try fetching the message from event["storage"]["url"]
         # to verify content and other headers.)
 
-    def test_invalid_from(self):
-        self.message.from_email = 'webmaster'
-        with self.assertRaises(AnymailAPIError) as cm:
-            self.message.send()
-        err = cm.exception
-        self.assertEqual(err.status_code, 400)
-        self.assertIn("'from' parameter is not a valid address", str(err))
+    # As of Anymail 0.10, this test is no longer possible, because
+    # Anymail now raises AnymailInvalidAddress without even calling Mailgun
+    # def test_invalid_from(self):
+    #     self.message.from_email = 'webmaster'
+    #     with self.assertRaises(AnymailAPIError) as cm:
+    #         self.message.send()
+    #     err = cm.exception
+    #     self.assertEqual(err.status_code, 400)
+    #     self.assertIn("'from' parameter is not a valid address", str(err))
 
     @override_settings(ANYMAIL={'MAILGUN_API_KEY': "Hey, that's not an API key",
                                 'MAILGUN_SENDER_DOMAIN': MAILGUN_TEST_DOMAIN,

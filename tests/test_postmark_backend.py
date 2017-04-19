@@ -10,8 +10,9 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 from django.test.utils import override_settings
 
-from anymail.exceptions import (AnymailAPIError, AnymailSerializationError,
-                                AnymailUnsupportedFeature, AnymailRecipientsRefused)
+from anymail.exceptions import (
+    AnymailAPIError, AnymailSerializationError,
+    AnymailUnsupportedFeature, AnymailRecipientsRefused, AnymailInvalidAddress)
 from anymail.message import attach_inline_image_file
 
 from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
@@ -270,6 +271,20 @@ class PostmarkBackendStandardEmailTests(PostmarkBackendMockAPITestCase):
         self.message.send()
         data = self.get_api_call_json()
         self.assertNotIn('To', data)
+
+    def test_multiple_from_emails(self):
+        """Postmark accepts multiple addresses in from_email (though only uses the first)"""
+        self.message.from_email = 'first@example.com, "From, also" <second@example.com>'
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertEqual(data['From'],
+                         'first@example.com, "From, also" <second@example.com>')
+
+        # Make sure the far-more-likely scenario of a single from_email
+        # with an unquoted display-name issues a reasonable error:
+        self.message.from_email = 'Unquoted, display-name <from@example.com>'
+        with self.assertRaises(AnymailInvalidAddress):
+            self.message.send()
 
     def test_api_failure(self):
         self.set_mock_response(status_code=500)

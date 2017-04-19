@@ -15,7 +15,7 @@ from mock import patch
 from sparkpost.exceptions import SparkPostAPIException
 
 from anymail.exceptions import (AnymailAPIError, AnymailUnsupportedFeature, AnymailRecipientsRefused,
-                                AnymailConfigurationError)
+                                AnymailConfigurationError, AnymailInvalidAddress)
 from anymail.message import attach_inline_image_file
 
 from .utils import AnymailTestMixin, decode_att, SAMPLE_IMAGE_FILENAME, sample_image_path, sample_image_content
@@ -287,6 +287,20 @@ class SparkPostBackendStandardEmailTests(SparkPostBackendMockAPITestCase):
         self.message.send()
         params = self.get_send_params()
         self.assertNotIn('recipients', params)
+
+    def test_multiple_from_emails(self):
+        """SparkPost supports multiple addresses in from_email"""
+        self.message.from_email = 'first@example.com, "From, also" <second@example.com>'
+        self.message.send()
+        params = self.get_send_params()
+        self.assertEqual(params['from_email'],
+                         'first@example.com, "From, also" <second@example.com>')
+
+        # Make sure the far-more-likely scenario of a single from_email
+        # with an unquoted display-name issues a reasonable error:
+        self.message.from_email = 'Unquoted, display-name <from@example.com>'
+        with self.assertRaises(AnymailInvalidAddress):
+            self.message.send()
 
     def test_api_failure(self):
         self.set_mock_failure(status_code=400)

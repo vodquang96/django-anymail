@@ -61,7 +61,7 @@ class SparkPostBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         message = AnymailMessage(
             subject="Anymail all-options integration test",
             body="This is the text body",
-            from_email="Test From <test@test-sp.anymail.info>",
+            from_email="Test From <test@test-sp.anymail.info>, also-from@test-sp.anymail.info",
             to=["to1@test.sink.sparkpostmail.com", "Recipient 2 <to2@test.sink.sparkpostmail.com>"],
             cc=["cc1@test.sink.sparkpostmail.com", "Copy 2 <cc2@test.sink.sparkpostmail.com>"],
             bcc=["bcc1@test.sink.sparkpostmail.com", "Blind Copy 2 <bcc2@test.sink.sparkpostmail.com>"],
