@@ -204,6 +204,25 @@ class MailgunDeliveryTestCase(WebhookTestCase):
         self.assertEqual(event.reject_reason, "bounced")
         self.assertIn("The email account that you tried to reach does not exist", event.mta_response)
 
+    def test_alt_smtp_code(self):
+        # In some cases, Mailgun uses RFC-3463 extended SMTP status codes (x.y.z, rather than nnn).
+        # See issue #62.
+        raw_event = mailgun_sign({
+            'code': '5.1.1',
+            'error': 'smtp;550 5.1.1 RESOLVER.ADR.RecipNotFound; not found',
+            'event': 'bounced',
+            'recipient': 'noreply@example.com',
+            # (omitting some fields that aren't relevant to the test)
+        })
+        response = self.client.post('/anymail/mailgun/tracking/', data=raw_event)
+        self.assertEqual(response.status_code, 200)
+        kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MailgunTrackingWebhookView,
+                                                      event=ANY, esp_name='Mailgun')
+        event = kwargs['event']
+        self.assertEqual(event.event_type, "bounced")
+        self.assertEqual(event.reject_reason, "bounced")
+        self.assertIn("RecipNotFound", event.mta_response)
+
     def test_metadata(self):
         # Metadata fields are interspersed with other data, but also in message-headers
         raw_event = mailgun_sign({

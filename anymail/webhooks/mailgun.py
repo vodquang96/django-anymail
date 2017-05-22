@@ -92,6 +92,15 @@ class MailgunTrackingWebhookView(MailgunBaseWebhookView):
             mta_status = int(esp_event['code'])
         except (KeyError, TypeError):
             pass
+        except ValueError:
+            # RFC-3463 extended SMTP status code (class.subject.detail, where class is "2", "4" or "5")
+            try:
+                status_class = esp_event['code'].split('.')[0]
+            except (TypeError, IndexError):
+                # illegal SMTP status code format
+                pass
+            else:
+                reject_reason = RejectReason.BOUNCED if status_class in ("4", "5") else RejectReason.OTHER
         else:
             reject_reason = self.reject_reasons.get(
                 mta_status,
