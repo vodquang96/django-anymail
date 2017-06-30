@@ -72,7 +72,7 @@ class SendGridTrackingWebhookView(SendGridBaseWebhookView):
         if len(metadata_keys) > 0:
             metadata = {key: esp_event[key] for key in metadata_keys}
         else:
-            metadata = None
+            metadata = {}
 
         return AnymailTrackingEvent(
             event_type=event_type,
@@ -82,7 +82,7 @@ class SendGridTrackingWebhookView(SendGridBaseWebhookView):
             recipient=esp_event.get('email', None),
             reject_reason=reject_reason,
             mta_response=mta_response,
-            tags=esp_event.get('category', None),
+            tags=esp_event.get('category', []),
             metadata=metadata,
             click_url=esp_event.get('url', None),
             user_agent=esp_event.get('useragent', None),

@@ -109,6 +109,8 @@ class MailgunDeliveryTestCase(WebhookTestCase):
         self.assertEqual(event.event_id, "06c96bafc3f42a66b9edd546347a2fe18dc23461fe80dc52f0")
         self.assertEqual(event.recipient, "recipient@example.com")
         self.assertEqual(querydict_to_postdict(event.esp_event), raw_event)
+        self.assertEqual(event.tags, [])
+        self.assertEqual(event.metadata, {})
 
     def test_dropped_bounce(self):
         raw_event = mailgun_sign({

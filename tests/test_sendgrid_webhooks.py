@@ -73,8 +73,8 @@ class SendGridDeliveryTestCase(WebhookTestCase):
         self.assertEqual(event.event_id, "nOSv8m0eTQ-vxvwNwt3fZQ")
         self.assertEqual(event.recipient, "recipient@example.com")
         self.assertEqual(event.mta_response, "250 2.0.0 OK 1461095248 m143si2210036ioe.159 - gsmtp ")
-        self.assertEqual(event.tags, None)
-        self.assertEqual(event.metadata, None)
+        self.assertEqual(event.tags, [])
+        self.assertEqual(event.metadata, {})
 
     def test_dropped_invalid_event(self):
         raw_events = [{

@@ -139,12 +139,14 @@ Normalized tracking event
 
     .. attribute:: metadata
 
-        A `dict` of unique data attached to the message, or `None`.
+        A `dict` of unique data attached to the message. Will be empty if the ESP
+        doesn't provide metadata with its tracking events.
         (See :attr:`AnymailMessage.metadata <anymail.message.AnymailMessage.metadata>`.)
 
     .. attribute:: tags
 
-        A `list` of `str` tags attached to the message, or `None`.
+        A `list` of `str` tags attached to the message. Will be empty if the ESP
+        doesn't provide tags with its tracking events.
         (See :attr:`AnymailMessage.tags <anymail.message.AnymailMessage.tags>`.)
 
     .. attribute:: reject_reason

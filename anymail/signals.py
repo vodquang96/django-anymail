@@ -32,11 +32,11 @@ class AnymailTrackingEvent(AnymailEvent):
         self.click_url = kwargs.pop('click_url', None)  # str
         self.description = kwargs.pop('description', None)  # str, usually human-readable, not normalized
         self.message_id = kwargs.pop('message_id', None)  # str, format may vary
-        self.metadata = kwargs.pop('metadata', None)  # dict
+        self.metadata = kwargs.pop('metadata', {})  # dict
         self.mta_response = kwargs.pop('mta_response', None)  # str, may include SMTP codes, not normalized
         self.recipient = kwargs.pop('recipient', None)  # str email address (just the email portion; no name)
         self.reject_reason = kwargs.pop('reject_reason', None)  # normalized to a RejectReason str
-        self.tags = kwargs.pop('tags', None)  # list of str
+        self.tags = kwargs.pop('tags', [])  # list of str
         self.user_agent = kwargs.pop('user_agent', None)  # str
 
 

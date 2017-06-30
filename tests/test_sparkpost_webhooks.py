@@ -97,8 +97,8 @@ class SparkPostDeliveryTestCase(WebhookTestCase):
         self.assertIsInstance(event, AnymailTrackingEvent)
         self.assertEqual(event.event_type, "delivered")
         self.assertEqual(event.recipient, "Recipient@example.com")
-        self.assertEqual(event.tags, None)
-        self.assertEqual(event.metadata, None)
+        self.assertEqual(event.tags, [])
+        self.assertEqual(event.metadata, {})
 
     def test_bounce_event(self):
         raw_events = [{

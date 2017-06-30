@@ -108,7 +108,7 @@ class SparkPostTrackingWebhookView(SparkPostBaseWebhookView):
             tag = event['campaign_id']  # not 'rcpt_tags' -- those don't come from sending a message
             tags = [tag] if tag else None
         except KeyError:
-            tags = None
+            tags = []
 
         try:
             reject_reason = self.reject_reasons.get(event['bounce_class'], RejectReason.OTHER)
@@ -129,7 +129,7 @@ class SparkPostTrackingWebhookView(SparkPostBaseWebhookView):
             mta_response=event.get('raw_reason', None),
             # description=???,
             tags=tags,
-            metadata=event.get('rcpt_meta', None) or None,  # message + recipient metadata
+            metadata=event.get('rcpt_meta', None) or {},  # message + recipient metadata
             click_url=event.get('target_link_url', None),
             user_agent=event.get('user_agent', None),
             esp_event=raw_event,

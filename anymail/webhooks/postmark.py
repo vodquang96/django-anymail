@@ -89,7 +89,7 @@ class PostmarkTrackingWebhookView(PostmarkBaseWebhookView):
         try:
             tags = [esp_event['Tag']]
         except KeyError:
-            tags = None
+            tags = []
 
         return AnymailTrackingEvent(
             description=esp_event.get('Description', None),

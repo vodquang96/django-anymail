@@ -113,7 +113,7 @@ class MailgunTrackingWebhookView(MailgunBaseWebhookView):
         try:
             headers = json.loads(esp_event['message-headers'])
         except (KeyError, ):
-            metadata = None
+            metadata = {}
         else:
             variables = [value for [field, value] in headers
                          if field == 'X-Mailgun-Variables']
@@ -121,10 +121,10 @@ class MailgunTrackingWebhookView(MailgunBaseWebhookView):
                 # Each X-Mailgun-Variables value is JSON. Parse and merge them all into single dict:
                 metadata = combine(*[json.loads(value) for value in variables])
             else:
-                metadata = None
+                metadata = {}
 
         # tags are sometimes delivered as X-Mailgun-Tag fields, sometimes as tag
-        tags = esp_event.getlist('tag', esp_event.getlist('X-Mailgun-Tag', None))
+        tags = esp_event.getlist('tag', esp_event.getlist('X-Mailgun-Tag', []))
 
         return AnymailTrackingEvent(
             event_type=event_type,

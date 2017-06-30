@@ -128,12 +128,12 @@ class MandrillTrackingWebhookView(MandrillBaseWebhookView):
         try:
             metadata = esp_event['msg']['metadata']
         except KeyError:
-            metadata = None
+            metadata = {}
 
         try:
             tags = esp_event['msg']['tags']
         except KeyError:
-            tags = None
+            tags = []
 
         return AnymailTrackingEvent(
             click_url=esp_event.get('url', None),
