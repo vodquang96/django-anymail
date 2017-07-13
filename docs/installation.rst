@@ -166,8 +166,15 @@ to :ref:`configure an Anymail backend <backend-configuration>`, and then:
    If so, you'll need to deploy your Django project to your live server before you
    can complete this step.
 
+   Some WSGI servers may need additional settings to pass HTTP authorization headers
+   through to Django. For example, Apache with `mod_wsgi`_ requires
+   `WSGIPassAuthorization On`, else Anymail will complain about "missing or invalid
+   basic auth" when your webhook is called.
+
 See :ref:`event-tracking` for information on creating signal handlers and the
 status tracking events you can receive.
+
+.. _mod_wsgi: http://modwsgi.readthedocs.io/en/latest/configuration-directives/WSGIPassAuthorization.html
 
 
 .. setting:: ANYMAIL
