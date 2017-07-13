@@ -1,5 +1,5 @@
-Anymail: Django email backends for Mailgun, Postmark, SendGrid and more
-=======================================================================
+Anymail: Django email backends for Mailgun, Mailjet, Postmark, SendGrid and more
+================================================================================
 
 Version |release|
 
