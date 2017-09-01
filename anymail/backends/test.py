@@ -1,37 +1,42 @@
-from anymail.exceptions import AnymailAPIError
-from anymail.message import AnymailRecipientStatus
+from django.core import mail
 
 from .base import AnymailBaseBackend, BasePayload
+from ..exceptions import AnymailAPIError
+from ..message import AnymailRecipientStatus
 from ..utils import get_anymail_setting
 
 
 class EmailBackend(AnymailBaseBackend):
     """
-    Anymail backend that doesn't do anything.
+    Anymail backend that simulates sending messages, useful for testing.
 
-    Used for testing Anymail common backend functionality.
+    Sent messages are collected in django.core.mail.outbox (as with Django's locmem backend).
+
+    In addition:
+    * Anymail send params parsed from the message will be attached to the outbox message
+      as a dict in the attr `anymail_test_params`
+    * If the caller supplies an `anymail_test_response` attr on the message, that will be
+      used instead of the default "sent" response. It can be either an AnymailRecipientStatus
+      or an instance of AnymailAPIError (or a subclass) to raise an exception.
     """
 
     esp_name = "Test"
 
     def __init__(self, *args, **kwargs):
-        # Init options from Django settings
-        esp_name = self.esp_name
-        self.sample_setting = get_anymail_setting('sample_setting', esp_name=esp_name,
-                                                  kwargs=kwargs, allow_bare=True)
-        self.recorded_send_params = get_anymail_setting('recorded_send_params', default=[],
-                                                        esp_name=esp_name, kwargs=kwargs)
         super(EmailBackend, self).__init__(*args, **kwargs)
+        if not hasattr(mail, 'outbox'):
+            mail.outbox = []  # see django.core.mail.backends.locmem
 
     def build_message_payload(self, message, defaults):
         return TestPayload(backend=self, message=message, defaults=defaults)
 
     def post_to_esp(self, payload, message):
-        # Keep track of the send params (for test-case access)
-        self.recorded_send_params.append(payload.params)
+        # Keep track of the sent messages and params (for test cases)
+        message.anymail_test_params = payload.params
+        mail.outbox.append(message)
         try:
             # Tests can supply their own message.test_response:
-            response = message.test_response
+            response = message.anymail_test_response
             if isinstance(response, AnymailAPIError):
                 raise response
         except AttributeError:
@@ -47,14 +52,6 @@ class EmailBackend(AnymailBaseBackend):
             return response['recipient_status']
         except KeyError:
             raise AnymailAPIError('Unparsable test response')
-
-
-# Pre-v0.8 naming (immediately deprecated for this undocumented test feature)
-class TestBackend(object):
-    def __init__(self, **kwargs):
-        raise NotImplementedError(
-            "Anymail's (undocumented) TestBackend has been renamed to "
-            "'anymail.backends.test.EmailBackend'")
 
 
 class TestPayload(BasePayload):
@@ -129,3 +126,16 @@ class TestPayload(BasePayload):
     def set_esp_extra(self, extra):
         # Merge extra into params
         self.params.update(extra)
+
+
+class _EmailBackendWithRequiredSetting(EmailBackend):
+    """Test backend with a required setting `sample_setting`.
+
+    Intended only for internal use by Anymail settings tests.
+    """
+
+    def __init__(self, *args, **kwargs):
+        esp_name = self.esp_name
+        self.sample_setting = get_anymail_setting('sample_setting', esp_name=esp_name,
+                                                  kwargs=kwargs, allow_bare=True)
+        super(_EmailBackendWithRequiredSetting, self).__init__(*args, **kwargs)

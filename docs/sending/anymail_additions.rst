@@ -218,11 +218,13 @@ ESP send status
     if you try to access it.
 
     This might cause problems in your test cases, because Django
-    `substitutes its own locmem email backend`_ during testing (so anymail_status
-    won't be set even after sending). Your code should either guard against
-    a missing anymail_status attribute, or use :class:`AnymailMessage`
-    (or the :class:`AnymailMessageMixin`) which initializes its anymail_status
-    attribute to a default AnymailStatus object.
+    :ref:`substitutes its own locmem EmailBackend <django:topics-testing-email>`
+    during testing (so anymail_status never gets attached to the EmailMessage).
+    If you run into this, you can: change your code to guard against
+    a missing anymail_status attribute; switch from using EmailMessage to
+    :class:`AnymailMessage` (or the :class:`AnymailMessageMixin`) to ensure the
+    anymail_status attribute is always there; or substitute
+    :ref:`Anymail's test backend <test-backend>` in any affected test cases.
 
     After sending through an Anymail backend,
     :attr:`~AnymailMessage.anymail_status` will be an object with these attributes:
@@ -319,10 +321,6 @@ ESP send status
 
             # This will work with a requests-based backend:
             message.anymail_status.esp_response.json()
-
-
-.. _substitutes its own locmem email backend:
-   https://docs.djangoproject.com/en/stable/topics/testing/tools/#email-services
 
 
 .. _inline-images:

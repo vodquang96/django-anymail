@@ -100,7 +100,7 @@ class TestPostSendSignal(TestBackendTestCase):
             self.receiver_called = True
         self.addCleanup(post_send.disconnect, receiver=handle_post_send)
 
-        self.message.test_response = {
+        self.message.anymail_test_response = {
             'recipient_status': {
                 'to@example.com': AnymailRecipientStatus(message_id=None, status='rejected')
             }

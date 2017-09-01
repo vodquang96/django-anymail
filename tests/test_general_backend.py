@@ -2,6 +2,7 @@ from datetime import datetime
 from email.mime.text import MIMEText
 
 import six
+from django.core import mail
 from django.core.exceptions import ImproperlyConfigured
 from django.core.mail import get_connection, send_mail
 from django.test import SimpleTestCase
@@ -16,34 +17,36 @@ from anymail.message import AnymailMessage
 from .utils import AnymailTestMixin
 
 
-recorded_send_params = []
-
-
-@override_settings(EMAIL_BACKEND='anymail.backends.test.EmailBackend',
-                   ANYMAIL_TEST_SAMPLE_SETTING='sample',  # required test EmailBackend setting
-                   ANYMAIL_TEST_RECORDED_SEND_PARAMS=recorded_send_params)
+@override_settings(EMAIL_BACKEND='anymail.backends.test.EmailBackend')
 class TestBackendTestCase(SimpleTestCase, AnymailTestMixin):
     """Base TestCase using Anymail's Test EmailBackend"""
 
     def setUp(self):
         super(TestBackendTestCase, self).setUp()
-        del recorded_send_params[:]  # empty the list from previous tests
         # Simple message useful for many tests
         self.message = AnymailMessage('Subject', 'Text Body', 'from@example.com', ['to@example.com'])
 
     @staticmethod
     def get_send_count():
         """Returns number of times "send api" has been called this test"""
-        return len(recorded_send_params)
+        try:
+            return len(mail.outbox)
+        except AttributeError:
+            return 0  # mail.outbox not initialized by either Anymail test or Django locmem backend
 
     @staticmethod
     def get_send_params():
         """Returns the params for the most recent "send api" call"""
-        return recorded_send_params[-1]
+        try:
+            return mail.outbox[-1].anymail_test_params
+        except IndexError:
+            raise IndexError("No messages have been sent through the Anymail test backend")
+        except AttributeError:
+            raise AttributeError("The last message sent was not processed through the Anymail test backend")
 
 
-@override_settings(EMAIL_BACKEND='anymail.backends.test.EmailBackend')  # but no ANYMAIL settings overrides
-class BackendSettingsTests(SimpleTestCase, AnymailTestMixin):           # (so not TestBackendTestCase)
+@override_settings(EMAIL_BACKEND='anymail.backends.test._EmailBackendWithRequiredSetting')
+class BackendSettingsTests(TestBackendTestCase):
     """Test settings initializations for Anymail EmailBackends"""
 
     @override_settings(ANYMAIL={'TEST_SAMPLE_SETTING': 'setting_from_anymail_settings'})
