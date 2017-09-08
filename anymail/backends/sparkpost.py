@@ -1,10 +1,7 @@
 from __future__ import absolute_import  # we want the sparkpost package, not our own module
 
-import warnings
-
 from .base import AnymailBaseBackend, BasePayload
-from ..exceptions import (AnymailAPIError, AnymailImproperlyInstalled,
-                          AnymailConfigurationError, AnymailDeprecationWarning)
+from ..exceptions import AnymailAPIError, AnymailImproperlyInstalled, AnymailConfigurationError
 from ..message import AnymailRecipientStatus
 from ..utils import get_anymail_setting
 
@@ -80,15 +77,6 @@ class EmailBackend(AnymailBaseBackend):
             status = 'unknown'
         recipient_status = AnymailRecipientStatus(message_id=transmission_id, status=status)
         return {recipient.email: recipient_status for recipient in payload.all_recipients}
-
-
-# Pre-v0.8 naming (deprecated)
-class SparkPostBackend(EmailBackend):
-    def __init__(self, **kwargs):
-        warnings.warn(AnymailDeprecationWarning(
-            "Please update your EMAIL_BACKEND setting to "
-            "'anymail.backends.sparkpost.EmailBackend'"))
-        super(SparkPostBackend, self).__init__(**kwargs)
 
 
 class SparkPostPayload(BasePayload):

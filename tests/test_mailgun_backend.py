@@ -538,12 +538,3 @@ class MailgunBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin):
         # Make sure the error mentions MAILGUN_API_KEY and ANYMAIL_MAILGUN_API_KEY
         self.assertRegex(errmsg, r'\bMAILGUN_API_KEY\b')
         self.assertRegex(errmsg, r'\bANYMAIL_MAILGUN_API_KEY\b')
-
-
-class MailgunBackendDeprecationTests(MailgunBackendMockAPITestCase):
-    @override_settings(EMAIL_BACKEND='anymail.backends.mailgun.MailgunBackend')
-    def test_renamed_backend_warning(self):
-        # ...mailgun.MailgunBackend --> ...mailgun.EmailBackend
-        with self.assertWarnsRegex(DeprecationWarning,
-                                   r'anymail\.backends\.mailgun\.EmailBackend'):
-            self.message.send()

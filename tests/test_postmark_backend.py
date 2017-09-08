@@ -584,12 +584,3 @@ class PostmarkBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin)
         errmsg = str(cm.exception)
         self.assertRegex(errmsg, r'\bPOSTMARK_SERVER_TOKEN\b')
         self.assertRegex(errmsg, r'\bANYMAIL_POSTMARK_SERVER_TOKEN\b')
-
-
-class PostmarkBackendDeprecationTests(PostmarkBackendMockAPITestCase):
-    @override_settings(EMAIL_BACKEND='anymail.backends.postmark.PostmarkBackend')
-    def test_renamed_backend_warning(self):
-        # ...postmark.PostmarkBackend --> ...postmark.EmailBackend
-        with self.assertWarnsRegex(DeprecationWarning,
-                                   r'anymail\.backends\.postmark\.EmailBackend'):
-            self.message.send()

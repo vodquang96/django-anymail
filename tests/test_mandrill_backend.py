@@ -597,12 +597,3 @@ class MandrillBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin)
         errmsg = str(cm.exception)
         self.assertRegex(errmsg, r'\bMANDRILL_API_KEY\b')
         self.assertRegex(errmsg, r'\bANYMAIL_MANDRILL_API_KEY\b')
-
-
-class MandrillBackendDeprecationTests(MandrillBackendMockAPITestCase):
-    @override_settings(EMAIL_BACKEND='anymail.backends.mandrill.MandrillBackend')
-    def test_renamed_backend_warning(self):
-        # ...mandrill.MandrillBackend --> ...mandrill.EmailBackend
-        with self.assertWarnsRegex(DeprecationWarning,
-                                   r'anymail\.backends\.mandrill\.EmailBackend'):
-            self.message.send()

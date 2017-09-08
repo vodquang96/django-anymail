@@ -1,7 +1,7 @@
 import warnings
 from datetime import datetime
 
-from ..exceptions import AnymailRequestsAPIError, AnymailWarning, AnymailDeprecationWarning
+from ..exceptions import AnymailRequestsAPIError, AnymailWarning
 from ..message import AnymailRecipientStatus, ANYMAIL_STATUSES
 from ..utils import last, combine, get_anymail_setting
 
@@ -45,15 +45,6 @@ class EmailBackend(AnymailRequestsBackend):
                                           email_message=message, payload=payload, response=response,
                                           backend=self)
         return recipient_status
-
-
-# Pre-v0.8 naming (deprecated)
-class MandrillBackend(EmailBackend):
-    def __init__(self, **kwargs):
-        warnings.warn(AnymailDeprecationWarning(
-            "Please update your EMAIL_BACKEND setting to "
-            "'anymail.backends.mandrill.EmailBackend'"))
-        super(MandrillBackend, self).__init__(**kwargs)
 
 
 class DjrillDeprecationWarning(AnymailWarning, DeprecationWarning):

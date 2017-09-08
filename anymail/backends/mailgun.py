@@ -1,7 +1,6 @@
-import warnings
 from datetime import datetime
 
-from ..exceptions import AnymailRequestsAPIError, AnymailError, AnymailDeprecationWarning
+from ..exceptions import AnymailRequestsAPIError, AnymailError
 from ..message import AnymailRecipientStatus
 from ..utils import get_anymail_setting, rfc2822date
 
@@ -55,15 +54,6 @@ class EmailBackend(AnymailRequestsBackend):
         # Simulate a per-recipient status of "queued":
         status = AnymailRecipientStatus(message_id=message_id, status="queued")
         return {recipient.email: status for recipient in payload.all_recipients}
-
-
-# Pre-v0.8 naming (deprecated)
-class MailgunBackend(EmailBackend):
-    def __init__(self, **kwargs):
-        warnings.warn(AnymailDeprecationWarning(
-            "Please update your EMAIL_BACKEND setting to "
-            "'anymail.backends.mailgun.EmailBackend'"))
-        super(MailgunBackend, self).__init__(**kwargs)
 
 
 class MailgunPayload(RequestsPayload):

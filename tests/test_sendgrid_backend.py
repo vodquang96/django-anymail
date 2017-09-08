@@ -644,12 +644,3 @@ class SendGridBackendDisallowsV2Tests(SimpleTestCase, AnymailTestMixin):
         message.esp_extra = {'x-smtpapi': {'asm_group_id': 1}}
         with self.assertRaisesRegex(AnymailConfigurationError, r'\bsendgrid_v2\.EmailBackend\b'):
             message.send()
-
-
-class SendGridBackendDeprecationTests(SendGridBackendMockAPITestCase):
-    @override_settings(EMAIL_BACKEND='anymail.backends.sendgrid.SendGridBackend')
-    def test_renamed_backend_warning(self):
-        # ...sendgrid.SendGridBackend --> ...sendgrid.EmailBackend
-        with self.assertWarnsRegex(DeprecationWarning,
-                                   r'anymail\.backends\.sendgrid\.EmailBackend'):
-            self.message.send()

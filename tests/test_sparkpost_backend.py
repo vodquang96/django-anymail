@@ -600,12 +600,3 @@ class SparkPostBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin
             # Poke into implementation details to verify:
             self.assertIsNone(conn.api_key)  # Anymail prop
             self.assertEqual(conn.sp.api_key, 'key_from_environment')  # SparkPost prop
-
-
-class SparkPostBackendDeprecationTests(SparkPostBackendMockAPITestCase):
-    @override_settings(EMAIL_BACKEND='anymail.backends.sparkpost.SparkPostBackend')
-    def test_renamed_backend_warning(self):
-        # ...sparkpost.SparkPostBackend --> ...sparkpost.EmailBackend
-        with self.assertWarnsRegex(DeprecationWarning,
-                                   r'anymail\.backends\.sparkpost\.EmailBackend'):
-            self.message.send()

@@ -5,7 +5,7 @@ from django.core.mail import make_msgid
 from requests.structures import CaseInsensitiveDict
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload
-from ..exceptions import AnymailConfigurationError, AnymailRequestsAPIError, AnymailWarning, AnymailDeprecationWarning
+from ..exceptions import AnymailConfigurationError, AnymailRequestsAPIError, AnymailWarning
 from ..message import AnymailRecipientStatus
 from ..utils import get_anymail_setting, timestamp, update_deep, parse_address_list
 
@@ -65,15 +65,6 @@ class EmailBackend(AnymailRequestsBackend):
         # so simulate a per-recipient status of "queued":
         status = AnymailRecipientStatus(message_id=payload.message_id, status="queued")
         return {recipient.email: status for recipient in payload.all_recipients}
-
-
-# Pre-v0.8 naming (deprecated)
-class SendGridBackend(EmailBackend):
-    def __init__(self, **kwargs):
-        warnings.warn(AnymailDeprecationWarning(
-            "Please update your EMAIL_BACKEND setting to "
-            "'anymail.backends.sendgrid.EmailBackend'"))
-        super(SendGridBackend, self).__init__(**kwargs)
 
 
 class SendGridPayload(RequestsPayload):

@@ -1,9 +1,8 @@
 import re
-import warnings
 
 from requests.structures import CaseInsensitiveDict
 
-from ..exceptions import AnymailRequestsAPIError, AnymailDeprecationWarning
+from ..exceptions import AnymailRequestsAPIError
 from ..message import AnymailRecipientStatus
 from ..utils import get_anymail_setting
 
@@ -93,15 +92,6 @@ class EmailBackend(AnymailRequestsBackend):
             return [email.strip().lower() for email in emails.split(',')]
         else:
             return []
-
-
-# Pre-v0.8 naming (deprecated)
-class PostmarkBackend(EmailBackend):
-    def __init__(self, **kwargs):
-        warnings.warn(AnymailDeprecationWarning(
-            "Please update your EMAIL_BACKEND setting to "
-            "'anymail.backends.postmark.EmailBackend'"))
-        super(PostmarkBackend, self).__init__(**kwargs)
 
 
 class PostmarkPayload(RequestsPayload):
