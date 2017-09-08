@@ -4,16 +4,15 @@ SparkPost
 =========
 
 Anymail integrates with the `SparkPost`_ email service, using their
-`python-sparkpost`_ API client.
+:pypi:`python-sparkpost` API client.
 
 .. _SparkPost: https://www.sparkpost.com/
-.. _python-sparkpost: https://pypi.python.org/pypi/sparkpost
 
 
 Installation
 ------------
 
-You must ensure the `sparkpost` package is installed to use Anymail's SparkPost
+You must ensure the :pypi:`sparkpost` package is installed to use Anymail's SparkPost
 backend. Either include the "sparkpost" option when you install Anymail:
 
     .. code-block:: console

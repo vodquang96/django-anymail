@@ -20,8 +20,7 @@ transactional email service from MailChimp.
 
     If you are integrating only Mandrill, and not considering one of Anymail's
     other ESPs, you might prefer using MailChimp's official
-    `mandrill <https://pypi.python.org/pypi/mandrill/>`_ python package
-    instead of Anymail.
+    :pypi:`mandrill` python package instead of Anymail.
 
 
 Settings

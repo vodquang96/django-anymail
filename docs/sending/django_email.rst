@@ -16,7 +16,7 @@ Anymail supports most of the functionality of Django's :class:`~django.core.mail
 and :class:`~django.core.mail.EmailMultiAlternatives` classes.
 
 Anymail handles **all** outgoing email sent through Django's
-:mod:`django.core.mail` package, including :func:`~django.core.mail.send_mail`,
+:mod:`django.core.mail` module, including :func:`~django.core.mail.send_mail`,
 :func:`~django.core.mail.send_mass_mail`, the :class:`~django.core.mail.EmailMessage` class,
 and even :func:`~django.core.mail.mail_admins`.
 If you'd like to selectively send only some messages through Anymail,

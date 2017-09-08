@@ -50,6 +50,7 @@ in Django:
 
 .. TODO: flesh this out
 
-* django-templated-mail, django-mail-templated, django-mail-templated-simple
-* Premailer, for inlining css
-* BeautifulSoup, lxml, or html2text, for auto-generating plaintext from your html
+* :pypi:`django-templated-mail`, :pypi:`django-mail-templated`, or :pypi:`django-mail-templated-simple`
+  for building messages from sets of Django templates.
+* :pypi:`premailer` for inlining css before sending
+* :pypi:`BeautifulSoup`, :pypi:`lxml`, or :pypi:`html2text` for auto-generating plaintext from your html

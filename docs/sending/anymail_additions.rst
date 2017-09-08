@@ -468,7 +468,7 @@ AnymailMessageMixin
     Mixin class that adds Anymail's ESP extra attributes and convenience methods
     to other :class:`~django.core.mail.EmailMessage` subclasses.
 
-    For example, with the `django-mail-templated`_ package's custom EmailMessage:
+    For example, with the :pypi:`django-mail-templated` package's custom EmailMessage:
 
     .. code-block:: python
 
@@ -489,6 +489,3 @@ AnymailMessageMixin
         )
         msg.context = {"order_num": "12345"}  # Mail-Templated attribute
         msg.tags = ["templated"]  # Anymail attribute
-
-
-.. _django-mail-templated: https://pypi.python.org/pypi/django-mail-templated
