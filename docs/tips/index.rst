@@ -7,6 +7,7 @@ done with Anymail:
 .. toctree::
    :maxdepth: 1
 
+   transient_errors
    multiple_backends
    django_templates
    securing_webhooks

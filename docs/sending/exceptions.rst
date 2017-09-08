@@ -35,6 +35,11 @@ Exceptions
     help explain what went wrong. (Tip: you may also be able to check the API log in
     your ESP's dashboard. See :ref:`troubleshooting`.)
 
+    In production, it's not unusual for sends to occasionally fail due to transient
+    connectivity problems, ESP maintenance, or other operational issues. Typically
+    these failures have a 5xx :attr:`status_code`. See :ref:`transient-errors`
+    for suggestions on retrying these failed sends.
+
 
 .. exception:: AnymailInvalidAddress
 
