@@ -12,8 +12,4 @@ done with Anymail:
    django_templates
    securing_webhooks
    test_backend
-
-.. TODO:
-..    Working with django-mailer(2)
-..    Sharing backend connections (sessions)
-
+   performance
