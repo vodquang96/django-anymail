@@ -1,15 +1,6 @@
 Anymail: Django email backends for Mailgun, Mailjet, Postmark, SendGrid, SparkPost and more
 ===========================================================================================
 
- **PRE-1.0**
-
- Although several projects are using this package in production,
- the API and feature set are still evolving, and the package has
- not yet reached 1.0 status. Before 1.0, minor version bumps might
- include breaking changes (following semantic versioning rules).
- Please check the
- `release notes <https://github.com/anymail/django-anymail/releases>`_
-
 ..  This README is reused in multiple places:
     * Github: project page, exactly as it appears here
     * Docs: shared-intro section gets included in docs/index.rst
@@ -66,6 +57,7 @@ Anymail releases follow `semantic versioning <http://semver.org/>`_.
 * Full documentation: https://anymail.readthedocs.io/en/stable/
 * Package on PyPI: https://pypi.python.org/pypi/django-anymail
 * Project on Github: https://github.com/anymail/django-anymail
+* Changelog: https://github.com/anymail/django-anymail/releases
 
 
 Anymail 1-2-3

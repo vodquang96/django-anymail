@@ -53,7 +53,7 @@ setup(
     test_suite="runtests.runtests",
     tests_require=["mock", "sparkpost"],
     classifiers=[
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python",
         "Programming Language :: Python :: Implementation :: PyPy",
         "Programming Language :: Python :: Implementation :: CPython",
