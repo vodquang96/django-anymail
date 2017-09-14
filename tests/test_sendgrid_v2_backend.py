@@ -7,6 +7,7 @@ from decimal import Decimal
 from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
 
+import six
 from django.core import mail
 from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
@@ -18,6 +19,9 @@ from anymail.message import attach_inline_image_file
 
 from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
 from .utils import sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME, AnymailTestMixin
+
+# noinspection PyUnresolvedReferences
+longtype = int if six.PY3 else long
 
 
 @override_settings(EMAIL_BACKEND='anymail.backends.sendgrid_v2.EmailBackend',
@@ -154,12 +158,13 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
         self.assertEqual(data['html'], html_content)
 
     def test_extra_headers(self):
-        self.message.extra_headers = {'X-Custom': 'string', 'X-Num': 123}
+        self.message.extra_headers = {'X-Custom': 'string', 'X-Num': 123, 'X-Long': longtype(123)}
         self.message.send()
         data = self.get_api_call_data()
         headers = json.loads(data['headers'])
         self.assertEqual(headers['X-Custom'], 'string')
         self.assertEqual(headers['X-Num'], '123')  # number converted to string (per SendGrid requirement)
+        self.assertEqual(headers['X-Long'], '123')  # number converted to string (per SendGrid requirement)
 
     def test_extra_headers_serialization_error(self):
         self.message.extra_headers = {'X-Custom': Decimal(12.5)}

@@ -7,6 +7,7 @@ from decimal import Decimal
 from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
 
+import six
 from django.core import mail
 from django.test import SimpleTestCase
 from django.test.utils import override_settings
@@ -18,6 +19,9 @@ from anymail.message import attach_inline_image_file
 
 from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
 from .utils import sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME, AnymailTestMixin
+
+# noinspection PyUnresolvedReferences
+longtype = int if six.PY3 else long
 
 
 @override_settings(EMAIL_BACKEND='anymail.backends.sendgrid.EmailBackend',
@@ -144,12 +148,13 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
         self.assertEqual(data['content'][0], {'type': "text/html", 'value': html_content})
 
     def test_extra_headers(self):
-        self.message.extra_headers = {'X-Custom': 'string', 'X-Num': 123,
+        self.message.extra_headers = {'X-Custom': 'string', 'X-Num': 123, 'X-Long': longtype(123),
                                       'Reply-To': '"Do Not Reply" <noreply@example.com>'}
         self.message.send()
         data = self.get_api_call_json()
         self.assertEqual(data['headers']['X-Custom'], 'string')
         self.assertEqual(data['headers']['X-Num'], '123')  # converted to string (undoc'd SendGrid requirement)
+        self.assertEqual(data['headers']['X-Long'], '123')  # converted to string (undoc'd SendGrid requirement)
         # Reply-To must be moved to separate param
         self.assertNotIn('Reply-To', data['headers'])
         self.assertEqual(data['reply_to'], {'name': "Do Not Reply", 'email': "noreply@example.com"})
@@ -331,12 +336,14 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
     """Test backend support for Anymail added features"""
 
     def test_metadata(self):
-        self.message.metadata = {'user_id': "12345", 'items': 6}
+        self.message.metadata = {'user_id': "12345", 'items': 6, 'float': 98.6, 'long': longtype(123)}
         self.message.send()
         data = self.get_api_call_json()
         data['custom_args'].pop('smtp-id', None)  # remove Message-ID we added as tracking workaround
         self.assertEqual(data['custom_args'], {'user_id': "12345",
-                                               'items': "6"})  # number converted to string
+                                               'items': "6",  # int converted to a string,
+                                               'float': "98.6",  # float converted to a string (watch binary rounding!)
+                                               'long': "123"})  # long converted to string
 
     def test_send_at(self):
         utc_plus_6 = get_fixed_timezone(6 * 60)

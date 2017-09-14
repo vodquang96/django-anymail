@@ -7,7 +7,7 @@ from requests.structures import CaseInsensitiveDict
 from .base_requests import AnymailRequestsBackend, RequestsPayload
 from ..exceptions import AnymailConfigurationError, AnymailRequestsAPIError, AnymailWarning
 from ..message import AnymailRecipientStatus
-from ..utils import get_anymail_setting, timestamp, update_deep, parse_address_list
+from ..utils import BASIC_NUMERIC_TYPES, get_anymail_setting, timestamp, update_deep, parse_address_list
 
 
 class EmailBackend(AnymailRequestsBackend):
@@ -240,7 +240,7 @@ class SendGridPayload(RequestsPayload):
         # SendGrid requires header values to be strings -- not integers.
         # We'll stringify ints and floats; anything else is the caller's responsibility.
         self.data["headers"].update({
-            k: str(v) if isinstance(v, (int, float)) else v
+            k: str(v) if isinstance(v, BASIC_NUMERIC_TYPES) else v
             for k, v in headers.items()
         })
 
@@ -290,7 +290,7 @@ class SendGridPayload(RequestsPayload):
         # if they're not.)
         # We'll stringify ints and floats; anything else is the caller's responsibility.
         self.data["custom_args"] = {
-            k: str(v) if isinstance(v, (int, float)) else v
+            k: str(v) if isinstance(v, BASIC_NUMERIC_TYPES) else v
             for k, v in metadata.items()
         }
 

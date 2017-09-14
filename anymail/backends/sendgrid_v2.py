@@ -5,7 +5,7 @@ from requests.structures import CaseInsensitiveDict
 
 from ..exceptions import AnymailConfigurationError, AnymailRequestsAPIError, AnymailWarning
 from ..message import AnymailRecipientStatus
-from ..utils import get_anymail_setting, timestamp
+from ..utils import BASIC_NUMERIC_TYPES, get_anymail_setting, timestamp
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload
 
@@ -238,7 +238,7 @@ class SendGridPayload(RequestsPayload):
         # We'll stringify ints and floats; anything else is the caller's responsibility.
         # (This field gets converted to json in self.serialize_data)
         self.data["headers"].update({
-            k: str(v) if isinstance(v, (int, float)) else v
+            k: str(v) if isinstance(v, BASIC_NUMERIC_TYPES) else v
             for k, v in headers.items()
         })
 
