@@ -38,7 +38,7 @@ built-in `django.core.mail` package. It includes:
   your ESP's webhooks to Django signals
 * "Batch transactional" sends using your ESP's merge and template features
 
-Anymail is released under the BSD license. It is extensively tested against Django 1.8--1.11
+Anymail is released under the BSD license. It is extensively tested against Django 1.8--2.0
 (including Python 2.7, Python 3 and PyPy).
 Anymail releases follow `semantic versioning <http://semver.org/>`_.
 
