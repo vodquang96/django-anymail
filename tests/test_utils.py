@@ -1,10 +1,21 @@
 # Tests for the anymail/utils.py module
 # (not to be confused with utilities for testing found in in tests/utils.py)
 import base64
+from unittest import skipIf
 
 import six
 from django.test import SimpleTestCase, RequestFactory, override_settings
-from django.utils.translation import ugettext_lazy, string_concat
+from django.utils.translation import ugettext_lazy
+
+try:
+    from django.utils.text import format_lazy  # Django >= 1.11
+except ImportError:
+    format_lazy = None
+
+try:
+    from django.utils.translation import string_concat  # Django < 2.1
+except ImportError:
+    string_concat = None
 
 from anymail.exceptions import AnymailInvalidAddress
 from anymail.utils import (parse_address_list, ParsedEmail,
@@ -143,8 +154,6 @@ class LazyCoercionTests(SimpleTestCase):
 
     def test_is_lazy(self):
         self.assertTrue(is_lazy(ugettext_lazy("lazy string is lazy")))
-        self.assertTrue(is_lazy(string_concat(ugettext_lazy("concatenation"),
-                                              ugettext_lazy("is lazy"))))
 
     def test_not_lazy(self):
         self.assertFalse(is_lazy(u"text not lazy"))
@@ -160,10 +169,22 @@ class LazyCoercionTests(SimpleTestCase):
         self.assertIsInstance(result, six.text_type)
         self.assertEqual(result, u"text")
 
+    @skipIf(string_concat is None, "string_concat not in this Django version")
     def test_force_concat(self):
+        self.assertTrue(is_lazy(string_concat(ugettext_lazy("concatenation"),
+                                              ugettext_lazy("is lazy"))))
         result = force_non_lazy(string_concat(ugettext_lazy(u"text"), ugettext_lazy("concat")))
         self.assertIsInstance(result, six.text_type)
         self.assertEqual(result, u"textconcat")
+
+    @skipIf(format_lazy is None, "format_lazy not in this Django version")
+    def test_format_lazy(self):
+        self.assertTrue(is_lazy(format_lazy("{0}{1}",
+                                            ugettext_lazy("concatenation"), ugettext_lazy("is lazy"))))
+        result = force_non_lazy(format_lazy("{first}/{second}",
+                                            first=ugettext_lazy(u"text"), second=ugettext_lazy("format")))
+        self.assertIsInstance(result, six.text_type)
+        self.assertEqual(result, u"text/format")
 
     def test_force_string(self):
         result = force_non_lazy(u"text")
