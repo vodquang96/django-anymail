@@ -1,6 +1,6 @@
 from ..exceptions import AnymailRequestsAPIError
 from ..message import AnymailRecipientStatus, ANYMAIL_STATUSES
-from ..utils import get_anymail_setting, ParsedEmail, parse_address_list
+from ..utils import get_anymail_setting, EmailAddress, parse_address_list
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload
 
@@ -127,11 +127,11 @@ class MailjetPayload(RequestsPayload):
                     # if there's a comma in the template's From display-name:
                     from_email = headers["From"].replace(",", "||COMMA||")
                     parsed = parse_address_list([from_email])[0]
-                    if parsed.name:
-                        parsed.name = parsed.name.replace("||COMMA||", ",")
+                    if parsed.display_name:
+                        parsed = EmailAddress(parsed.display_name.replace("||COMMA||", ","),
+                                              parsed.addr_spec)
                 else:
-                    name_addr = (headers["SenderName"], headers["SenderEmail"])
-                    parsed = ParsedEmail(name_addr)
+                    parsed = EmailAddress(headers["SenderName"], headers["SenderEmail"])
             except KeyError:
                 raise AnymailRequestsAPIError("Invalid Mailjet template API response",
                                               email_message=self.message, response=response, backend=self.backend)
@@ -165,7 +165,7 @@ class MailjetPayload(RequestsPayload):
             formatted_emails = [
                 email.address if "," not in email.name
                 # else name has a comma, so force it into MIME encoded-word utf-8 syntax:
-                else ParsedEmail((email.name.encode('utf-8'), email.email)).formataddr('utf-8')
+                else EmailAddress(email.name.encode('utf-8'), email.email).formataddr('utf-8')
                 for email in emails
             ]
             self.data[recipient_type.capitalize()] = ", ".join(formatted_emails)

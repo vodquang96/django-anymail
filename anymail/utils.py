@@ -118,7 +118,7 @@ def update_deep(dct, other):
 
 
 def parse_address_list(address_list):
-    """Returns a list of ParsedEmail objects from strings in address_list.
+    """Returns a list of EmailAddress objects from strings in address_list.
 
     Essentially wraps :func:`email.utils.getaddresses` with better error
     messaging and more-useful output objects
@@ -128,7 +128,7 @@ def parse_address_list(address_list):
 
     :param list[str]|str|None|list[None] address_list:
         the address or addresses to parse
-    :return list[:class:`ParsedEmail`]:
+    :return list[:class:`EmailAddress`]:
     :raises :exc:`AnymailInvalidAddress`:
     """
     if isinstance(address_list, six.string_types) or is_lazy(address_list):
@@ -145,14 +145,15 @@ def parse_address_list(address_list):
     name_email_pairs = getaddresses(address_list_strings)
     if name_email_pairs == [] and address_list_strings == [""]:
         name_email_pairs = [('', '')]  # getaddresses ignores a single empty string
-    parsed = [ParsedEmail(name_email_pair) for name_email_pair in name_email_pairs]
+    parsed = [EmailAddress(display_name=name, addr_spec=email)
+              for (name, email) in name_email_pairs]
 
     # Sanity-check, and raise useful errors
     for address in parsed:
-        if address.localpart == '' or address.domain == '':
-            # Django SMTP allows localpart-only emails, but they're not meaningful with an ESP
+        if address.username == '' or address.domain == '':
+            # Django SMTP allows username-only emails, but they're not meaningful with an ESP
             errmsg = "Invalid email address '%s' parsed from '%s'." % (
-                address.email, ", ".join(address_list_strings))
+                address.addr_spec, ", ".join(address_list_strings))
             if len(parsed) > len(address_list):
                 errmsg += " (Maybe missing quotes around a display-name?)"
             raise AnymailInvalidAddress(errmsg)
@@ -160,46 +161,46 @@ def parse_address_list(address_list):
     return parsed
 
 
-class ParsedEmail(object):
-    """A sanitized, complete email address with separate name and email properties.
+class EmailAddress(object):
+    """A sanitized, complete email address with easy access
+    to display-name, addr-spec (email), etc.
 
-    (Intended for Anymail internal use.)
+    Similar to Python 3.6+ email.headerregistry.Address
 
     Instance properties, all read-only:
-    :ivar str name:
+    :ivar str display_name:
         the address's display-name portion (unqouted, unescaped),
         e.g., 'Display Name, Inc.'
-    :ivar str email:
+    :ivar str addr_spec:
         the address's addr-spec portion (unquoted, unescaped),
         e.g., 'user@example.com'
+    :ivar str username:
+        the local part (before the '@') of the addr-spec,
+        e.g., 'user'
+    :ivar str domain:
+        the domain part (after the '@') of the addr-spec,
+        e.g., 'example.com'
+
     :ivar str address:
         the fully-formatted address, with any necessary quoting and escaping,
         e.g., '"Display Name, Inc." <user@example.com>'
-    :ivar str localpart:
-        the local part (before the '@') of email,
-        e.g., 'user'
-    :ivar str domain:
-        the domain part (after the '@') of email,
-        e.g., 'example.com'
+        (also available as `str(EmailAddress)`)
     """
 
-    def __init__(self, name_email_pair):
-        """Construct a ParsedEmail.
-
-        You generally should use :func:`parse_address_list` rather than creating
-        ParsedEmail objects directly.
-
-        :param tuple(str, str) name_email_pair:
-            the display-name and addr-spec (both unquoted) for the address,
-            as returned by :func:`email.utils.parseaddr` and
-            :func:`email.utils.getaddresses`
-        """
+    def __init__(self, display_name='', addr_spec=None):
         self._address = None  # lazy formatted address
-        self.name, self.email = name_email_pair
+        if addr_spec is None:
+            try:
+                display_name, addr_spec = display_name  # unpack (name,addr) tuple
+            except ValueError:
+                pass
+        self.display_name = display_name
+        self.addr_spec = addr_spec
         try:
-            self.localpart, self.domain = self.email.split("@", 1)
+            self.username, self.domain = addr_spec.split("@", 1)
+            # do we need to unquote username?
         except ValueError:
-            self.localpart = self.email
+            self.username = addr_spec
             self.domain = ''
 
     @property
@@ -215,7 +216,7 @@ class ParsedEmail(object):
         """Return a fully-formatted email address, using encoding.
 
         This is essentially the same as :func:`email.utils.formataddr`
-        on the ParsedEmail's name and email properties, but uses
+        on the EmailAddress's name and email properties, but uses
         Django's :func:`~django.core.mail.message.sanitize_address`
         for improved PY2/3 compatibility, consistent handling of
         encoding (a.k.a. charset), and proper handling of IDN
@@ -226,10 +227,26 @@ class ParsedEmail(object):
             default None uses ascii if possible, else 'utf-8'
             (quoted-printable utf-8/base64)
         """
-        return sanitize_address((self.name, self.email), encoding)
+        return sanitize_address((self.display_name, self.addr_spec), encoding)
 
     def __str__(self):
         return self.address
+
+    # Deprecated property names from old ParsedEmail (don't use in new code!)
+    @property
+    def name(self):
+        return self.display_name
+
+    @property
+    def email(self):
+        return self.addr_spec
+
+    @property
+    def localpart(self):
+        return self.username
+
+
+ParsedEmail = EmailAddress  # deprecated class name (don't use!)
 
 
 class Attachment(object):

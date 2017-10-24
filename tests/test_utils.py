@@ -19,7 +19,7 @@ except ImportError:
 
 from anymail.exceptions import AnymailInvalidAddress
 from anymail.utils import (
-    parse_address_list, ParsedEmail,
+    parse_address_list, EmailAddress,
     is_lazy, force_non_lazy, force_non_lazy_dict, force_non_lazy_list,
     update_deep,
     get_request_uri, get_request_basic_auth, parse_rfc2822date)
@@ -32,21 +32,21 @@ class ParseAddressListTests(SimpleTestCase):
         parsed_list = parse_address_list(["test@example.com"])
         self.assertEqual(len(parsed_list), 1)
         parsed = parsed_list[0]
-        self.assertIsInstance(parsed, ParsedEmail)
-        self.assertEqual(parsed.email, "test@example.com")
-        self.assertEqual(parsed.name, "")
+        self.assertIsInstance(parsed, EmailAddress)
+        self.assertEqual(parsed.addr_spec, "test@example.com")
+        self.assertEqual(parsed.display_name, "")
         self.assertEqual(parsed.address, "test@example.com")
-        self.assertEqual(parsed.localpart, "test")
+        self.assertEqual(parsed.username, "test")
         self.assertEqual(parsed.domain, "example.com")
 
     def test_display_name(self):
         parsed_list = parse_address_list(['"Display Name, Inc." <test@example.com>'])
         self.assertEqual(len(parsed_list), 1)
         parsed = parsed_list[0]
-        self.assertEqual(parsed.email, "test@example.com")
-        self.assertEqual(parsed.name, "Display Name, Inc.")
+        self.assertEqual(parsed.addr_spec, "test@example.com")
+        self.assertEqual(parsed.display_name, "Display Name, Inc.")
         self.assertEqual(parsed.address, '"Display Name, Inc." <test@example.com>')
-        self.assertEqual(parsed.localpart, "test")
+        self.assertEqual(parsed.username, "test")
         self.assertEqual(parsed.domain, "example.com")
 
     def test_obsolete_display_name(self):
@@ -55,16 +55,16 @@ class ParseAddressListTests(SimpleTestCase):
         parsed_list = parse_address_list(['Display Name <test@example.com>'])
         self.assertEqual(len(parsed_list), 1)
         parsed = parsed_list[0]
-        self.assertEqual(parsed.email, "test@example.com")
-        self.assertEqual(parsed.name, "Display Name")
+        self.assertEqual(parsed.addr_spec, "test@example.com")
+        self.assertEqual(parsed.display_name, "Display Name")
         self.assertEqual(parsed.address, 'Display Name <test@example.com>')
 
     def test_unicode_display_name(self):
         parsed_list = parse_address_list([u'"Unicode \N{HEAVY BLACK HEART}" <test@example.com>'])
         self.assertEqual(len(parsed_list), 1)
         parsed = parsed_list[0]
-        self.assertEqual(parsed.email, "test@example.com")
-        self.assertEqual(parsed.name, u"Unicode \N{HEAVY BLACK HEART}")
+        self.assertEqual(parsed.addr_spec, "test@example.com")
+        self.assertEqual(parsed.display_name, u"Unicode \N{HEAVY BLACK HEART}")
         # formatted display-name automatically shifts to quoted-printable/base64 for non-ascii chars:
         self.assertEqual(parsed.address, '=?utf-8?b?VW5pY29kZSDinaQ=?= <test@example.com>')
 
@@ -80,9 +80,9 @@ class ParseAddressListTests(SimpleTestCase):
         parsed_list = parse_address_list([u"idn@\N{ENVELOPE}.example.com"])
         self.assertEqual(len(parsed_list), 1)
         parsed = parsed_list[0]
-        self.assertEqual(parsed.email, u"idn@\N{ENVELOPE}.example.com")
+        self.assertEqual(parsed.addr_spec, u"idn@\N{ENVELOPE}.example.com")
         self.assertEqual(parsed.address, "idn@xn--4bi.example.com")  # punycode-encoded domain
-        self.assertEqual(parsed.localpart, "idn")
+        self.assertEqual(parsed.username, "idn")
         self.assertEqual(parsed.domain, u"\N{ENVELOPE}.example.com")
 
     def test_none_address(self):
@@ -113,8 +113,8 @@ class ParseAddressListTests(SimpleTestCase):
     def test_email_list(self):
         parsed_list = parse_address_list(["first@example.com", "second@example.com"])
         self.assertEqual(len(parsed_list), 2)
-        self.assertEqual(parsed_list[0].email, "first@example.com")
-        self.assertEqual(parsed_list[1].email, "second@example.com")
+        self.assertEqual(parsed_list[0].addr_spec, "first@example.com")
+        self.assertEqual(parsed_list[1].addr_spec, "second@example.com")
 
     def test_multiple_emails(self):
         # Django's EmailMessage allows multiple, comma-separated emails
@@ -122,8 +122,8 @@ class ParseAddressListTests(SimpleTestCase):
         # (Depending on this behavior is not recommended.)
         parsed_list = parse_address_list(["first@example.com, second@example.com"])
         self.assertEqual(len(parsed_list), 2)
-        self.assertEqual(parsed_list[0].email, "first@example.com")
-        self.assertEqual(parsed_list[1].email, "second@example.com")
+        self.assertEqual(parsed_list[0].addr_spec, "first@example.com")
+        self.assertEqual(parsed_list[1].addr_spec, "second@example.com")
 
     def test_invalid_in_list(self):
         # Make sure it's not just concatenating list items...
@@ -136,18 +136,18 @@ class ParseAddressListTests(SimpleTestCase):
         # bare strings are used by the from_email parsing in BasePayload
         parsed_list = parse_address_list("one@example.com")
         self.assertEqual(len(parsed_list), 1)
-        self.assertEqual(parsed_list[0].email, "one@example.com")
+        self.assertEqual(parsed_list[0].addr_spec, "one@example.com")
 
     def test_lazy_strings(self):
         parsed_list = parse_address_list([ugettext_lazy('"Example, Inc." <one@example.com>')])
         self.assertEqual(len(parsed_list), 1)
-        self.assertEqual(parsed_list[0].name, "Example, Inc.")
-        self.assertEqual(parsed_list[0].email, "one@example.com")
+        self.assertEqual(parsed_list[0].display_name, "Example, Inc.")
+        self.assertEqual(parsed_list[0].addr_spec, "one@example.com")
 
         parsed_list = parse_address_list(ugettext_lazy("one@example.com"))
         self.assertEqual(len(parsed_list), 1)
-        self.assertEqual(parsed_list[0].name, "")
-        self.assertEqual(parsed_list[0].email, "one@example.com")
+        self.assertEqual(parsed_list[0].display_name, "")
+        self.assertEqual(parsed_list[0].addr_spec, "one@example.com")
 
 
 class LazyCoercionTests(SimpleTestCase):
