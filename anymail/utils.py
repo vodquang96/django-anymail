@@ -12,7 +12,7 @@ from django.conf import settings
 from django.core.mail.message import sanitize_address, DEFAULT_ATTACHMENT_MIME_TYPE
 from django.utils.encoding import force_text
 from django.utils.functional import Promise
-from django.utils.timezone import utc
+from django.utils.timezone import utc, get_fixed_timezone
 # noinspection PyUnresolvedReferences
 from six.moves.urllib.parse import urlsplit, urlunsplit
 
@@ -466,3 +466,40 @@ def get_request_uri(request):
         url = urlunsplit((parts.scheme, basic_auth + '@' + parts.netloc,
                           parts.path, parts.query, parts.fragment))
     return url
+
+
+try:
+    from email.utils import parsedate_to_datetime  # Python 3.3+
+except ImportError:
+    from email.utils import parsedate_tz
+
+    # Backport Python 3.3+ email.utils.parsedate_to_datetime
+    def parsedate_to_datetime(s):
+        # *dtuple, tz = _parsedate_tz(data)
+        dtuple = parsedate_tz(s)
+        tz = dtuple[-1]
+        # if tz is None:  # parsedate_tz returns 0 for "-0000"
+        if tz is None or (tz == 0 and "-0000" in s):
+            # "... indicates that the date-time contains no information
+            # about the local time zone" (RFC 2822 #3.3)
+            return datetime(*dtuple[:6])
+        else:
+            # tzinfo = datetime.timezone(datetime.timedelta(seconds=tz))  # Python 3.2+ only
+            tzinfo = get_fixed_timezone(tz // 60)  # don't use timedelta (avoid Django bug #28739)
+            return datetime(*dtuple[:6], tzinfo=tzinfo)
+
+
+def parse_rfc2822date(s):
+    """Parses an RFC-2822 formatted date string into a datetime.datetime
+
+    Returns None if string isn't parseable. Returned datetime will be naive
+    if string doesn't include known timezone offset; aware if it does.
+
+    (Same as Python 3 email.utils.parsedate_to_datetime, with improved
+    handling for unparseable date strings.)
+    """
+    try:
+        return parsedate_to_datetime(s)
+    except (IndexError, TypeError, ValueError):
+        # despite the docs, parsedate_to_datetime often dies on unparseable input
+        return None

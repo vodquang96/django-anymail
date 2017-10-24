@@ -18,10 +18,11 @@ except ImportError:
     string_concat = None
 
 from anymail.exceptions import AnymailInvalidAddress
-from anymail.utils import (parse_address_list, ParsedEmail,
-                           is_lazy, force_non_lazy, force_non_lazy_dict, force_non_lazy_list,
-                           update_deep,
-                           get_request_uri, get_request_basic_auth)
+from anymail.utils import (
+    parse_address_list, ParsedEmail,
+    is_lazy, force_non_lazy, force_non_lazy_dict, force_non_lazy_list,
+    update_deep,
+    get_request_uri, get_request_basic_auth, parse_rfc2822date)
 
 
 class ParseAddressListTests(SimpleTestCase):
@@ -296,3 +297,35 @@ class RequestUtilsTests(SimpleTestCase):
                                             HTTP_AUTHORIZATION=self.basic_auth('user', 'pass'))
         self.assertEqual(get_request_uri(request),
                          "https://user:pass@secret.example.com:8989/path/to/?query")
+
+
+class ParseRFC2822DateTests(SimpleTestCase):
+    def test_with_timezones(self):
+        dt = parse_rfc2822date("Tue, 24 Oct 2017 10:11:35 -0700")
+        self.assertEqual(dt.isoformat(), "2017-10-24T10:11:35-07:00")
+        self.assertIsNotNone(dt.utcoffset())  # aware
+
+        dt = parse_rfc2822date("Tue, 24 Oct 2017 10:11:35 +0700")
+        self.assertEqual(dt.isoformat(), "2017-10-24T10:11:35+07:00")
+        self.assertIsNotNone(dt.utcoffset())  # aware
+
+        dt = parse_rfc2822date("Tue, 24 Oct 2017 10:11:35 +0000")
+        self.assertEqual(dt.isoformat(), "2017-10-24T10:11:35+00:00")
+        self.assertIsNotNone(dt.tzinfo)  # aware
+
+    def test_without_timezones(self):
+        dt = parse_rfc2822date("Tue, 24 Oct 2017 10:11:35 -0000")  # "no timezone information"
+        self.assertEqual(dt.isoformat(), "2017-10-24T10:11:35")
+        self.assertIsNone(dt.tzinfo)  # naive (compare with +0000 version in previous test)
+
+        dt = parse_rfc2822date("Tue, 24 Oct 2017 10:11:35")
+        self.assertEqual(dt.isoformat(), "2017-10-24T10:11:35")
+        self.assertIsNone(dt.tzinfo)  # naive
+
+    def test_unparseable_dates(self):
+        self.assertIsNone(parse_rfc2822date(""))
+        self.assertIsNone(parse_rfc2822date("  "))
+        self.assertIsNone(parse_rfc2822date("garbage"))
+        self.assertIsNone(parse_rfc2822date("Tue, 24 Oct"))
+        self.assertIsNone(parse_rfc2822date("Lug, 24 Nod 2017 10:11:35 +0000"))
+        self.assertIsNone(parse_rfc2822date("Tue, 99 Oct 9999 99:99:99 +9999"))
