@@ -35,33 +35,51 @@ def decode_att(att):
     return b64decode(att.encode('ascii'))
 
 
+#
+# Sample files for testing (in ./test_files subdir)
+#
+
+TEST_FILES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_files')
+
 SAMPLE_IMAGE_FILENAME = "sample_image.png"
 SAMPLE_EMAIL_FILENAME = "sample_email.txt"
 
 
+def test_file_path(filename):
+    """Returns path to a test file"""
+    return os.path.join(TEST_FILES_DIR, filename)
+
+
+def test_file_content(filename):
+    """Returns contents (bytes) of a test file"""
+    path = test_file_path(filename)
+    with open(path, "rb") as f:
+        return f.read()
+
+
 def sample_image_path(filename=SAMPLE_IMAGE_FILENAME):
     """Returns path to an actual image file in the tests directory"""
-    test_dir = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(test_dir, filename)
-    return path
+    return test_file_path(filename)
 
 
 def sample_image_content(filename=SAMPLE_IMAGE_FILENAME):
     """Returns contents of an actual image file from the tests directory"""
-    filename = sample_image_path(filename)
-    with open(filename, "rb") as f:
-        return f.read()
+    return test_file_content(filename)
 
 
 def sample_email_path(filename=SAMPLE_EMAIL_FILENAME):
     """Returns path to an email file (e.g., for forwarding as an attachment)"""
-    return sample_image_path(filename)  # borrow path logic from above
+    return test_file_path(filename)
 
 
 def sample_email_content(filename=SAMPLE_EMAIL_FILENAME):
     """Returns bytes contents of an email file (e.g., for forwarding as an attachment)"""
-    return sample_image_content(filename)  # borrow read logic from above
+    return test_file_content(filename)
 
+
+#
+# TestCase helpers
+#
 
 # noinspection PyUnresolvedReferences
 class AnymailTestMixin:
