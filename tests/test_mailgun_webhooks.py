@@ -225,20 +225,83 @@ class MailgunDeliveryTestCase(WebhookTestCase):
         self.assertEqual(event.reject_reason, "bounced")
         self.assertIn("RecipNotFound", event.mta_response)
 
-    def test_metadata(self):
+    def test_metadata_message_headers(self):
         # Metadata fields are interspersed with other data, but also in message-headers
+        # for delivered, bounced and dropped events
         raw_event = mailgun_sign({
             'event': 'delivered',
             'message-headers': json.dumps([
                 ["X-Mailgun-Variables", "{\"custom1\": \"value1\", \"custom2\": \"{\\\"key\\\":\\\"value\\\"}\"}"],
             ]),
-            'custom1': 'value',
+            'custom1': 'value1',
             'custom2': '{"key":"value"}',  # you can store JSON, but you'll need to unpack it yourself
         })
         self.client.post('/anymail/mailgun/tracking/', data=raw_event)
         kwargs = self.assert_handler_called_once_with(self.tracking_handler)
         event = kwargs['event']
         self.assertEqual(event.metadata, {"custom1": "value1", "custom2": '{"key":"value"}'})
+
+    def test_metadata_post_fields(self):
+        # Metadata fields are only interspersed with other event params
+        # for opened, clicked, unsubscribed events
+        raw_event = mailgun_sign({
+            'event': 'clicked',
+            'custom1': 'value1',
+            'custom2': '{"key":"value"}',  # you can store JSON, but you'll need to unpack it yourself
+        })
+        self.client.post('/anymail/mailgun/tracking/', data=raw_event)
+        kwargs = self.assert_handler_called_once_with(self.tracking_handler)
+        event = kwargs['event']
+        self.assertEqual(event.metadata, {"custom1": "value1", "custom2": '{"key":"value"}'})
+
+    def test_metadata_key_conflicts(self):
+        # If you happen to name metadata (user-variable) keys the same as Mailgun
+        # event properties, Mailgun will include both in the webhook post.
+        # Make sure we don't confuse them.
+        metadata = {
+            "event": "metadata-event",
+            "recipient": "metadata-recipient",
+            "signature": "metadata-signature",
+            "timestamp": "metadata-timestamp",
+            "token": "metadata-token",
+            "ordinary field": "ordinary metadata value",
+        }
+
+        raw_event = mailgun_sign({
+            'event': 'clicked',
+            'recipient': 'actual-recipient@example.com',
+            'token': 'actual-event-token',
+            'timestamp': '1461261330',
+            'url': 'http://clicked.example.com/actual/event/param',
+            'h': "an (undocumented) Mailgun event param",
+            'tag': ["actual-tag-1", "actual-tag-2"],
+        })
+
+        # Simulate how Mailgun merges user-variables fields into event:
+        for key in metadata.keys():
+            if key in raw_event:
+                if key in {'signature', 'timestamp', 'token'}:
+                    # For these fields, Mailgun's value appears after the metadata value
+                    raw_event[key] = [metadata[key], raw_event[key]]
+                elif key == 'message-headers':
+                    pass  # Mailgun won't merge this field into the event
+                else:
+                    # For all other fields, the defined event value comes first
+                    raw_event[key] = [raw_event[key], metadata[key]]
+            else:
+                raw_event[key] = metadata[key]
+
+        response = self.client.post('/anymail/mailgun/tracking/', data=raw_event)
+        self.assertEqual(response.status_code, 200)  # if this fails, signature checking is using metadata values
+
+        kwargs = self.assert_handler_called_once_with(self.tracking_handler)
+        event = kwargs['event']
+        self.assertEqual(event.event_type, "clicked")
+        self.assertEqual(event.recipient, "actual-recipient@example.com")
+        self.assertEqual(event.timestamp.isoformat(), "2016-04-21T17:55:30+00:00")
+        self.assertEqual(event.event_id, "actual-event-token")
+        self.assertEqual(event.tags, ["actual-tag-1", "actual-tag-2"])
+        self.assertEqual(event.metadata, metadata)
 
     def test_tags(self):
         # Most events include multiple 'tag' fields for message's tags

@@ -126,6 +126,20 @@ values directly to Mailgun. You can use any of the (non-file) parameters listed 
 .. _Mailgun sending docs: https://documentation.mailgun.com/api-sending.html#sending
 
 
+.. _mailgun-quirks:
+
+Limitations and quirks
+----------------------
+
+**Metadata keys and tracking webhooks**
+  Because of the way Mailgun supplies custom data (user-variables) to webhooks,
+  there are a few metadata keys that Anymail cannot reliably retrieve in some
+  tracking events. You should avoid using "body-plain", "h", "message-headers",
+  "message-id" or "tag" as :attr:`~anymail.message.AnymailMessage.metadata` keys
+  if you need to access that metadata from an opened, clicked, or unsubscribed
+  :ref:`tracking event <event-tracking>` handler.
+
+
 .. _mailgun-templates:
 
 Batch sending/merge and ESP templates

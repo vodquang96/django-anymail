@@ -4,6 +4,7 @@ import base64
 from unittest import skipIf
 
 import six
+from django.http import QueryDict
 from django.test import SimpleTestCase, RequestFactory, override_settings
 from django.utils.translation import ugettext_lazy
 
@@ -22,7 +23,7 @@ from anymail.utils import (
     parse_address_list, EmailAddress,
     is_lazy, force_non_lazy, force_non_lazy_dict, force_non_lazy_list,
     update_deep,
-    get_request_uri, get_request_basic_auth, parse_rfc2822date)
+    get_request_uri, get_request_basic_auth, parse_rfc2822date, querydict_getfirst)
 
 
 class ParseAddressListTests(SimpleTestCase):
@@ -297,6 +298,21 @@ class RequestUtilsTests(SimpleTestCase):
                                             HTTP_AUTHORIZATION=self.basic_auth('user', 'pass'))
         self.assertEqual(get_request_uri(request),
                          "https://user:pass@secret.example.com:8989/path/to/?query")
+
+
+class QueryDictUtilsTests(SimpleTestCase):
+    def test_querydict_getfirst(self):
+        q = QueryDict("a=one&a=two&a=three")
+        q.getfirst = querydict_getfirst.__get__(q)
+        self.assertEqual(q.getfirst('a'), "one")
+
+        # missing key exception:
+        with self.assertRaisesMessage(KeyError, "not a key"):
+            q.getfirst("not a key")
+
+        # defaults:
+        self.assertEqual(q.getfirst('not a key', "beta"), "beta")
+        self.assertIsNone(q.getfirst('not a key', None))
 
 
 class ParseRFC2822DateTests(SimpleTestCase):

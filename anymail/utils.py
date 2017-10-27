@@ -398,6 +398,34 @@ def collect_all_methods(cls, method_name):
     return methods
 
 
+def querydict_getfirst(qdict, field, default=UNSET):
+    """Like :func:`django.http.QueryDict.get`, but returns *first* value of multi-valued field.
+
+    >>> from django.http import QueryDict
+    >>> q = QueryDict('a=1&a=2&a=3')
+    >>> querydict_getfirst(q, 'a')
+    '1'
+    >>> q.get('a')
+    '3'
+    >>> q['a']
+    '3'
+
+    You can bind this to a QueryDict instance using the "descriptor protocol":
+    >>> q.getfirst = querydict_getfirst.__get__(q)
+    >>> q.getfirst('a')
+    '1'
+    """
+    # (Why not instead define a QueryDict subclass with this method? Because there's no simple way
+    # to efficiently initialize a QueryDict subclass with the contents of an existing instance.)
+    values = qdict.getlist(field)
+    if len(values) > 0:
+        return values[0]
+    elif default is not UNSET:
+        return default
+    else:
+        return qdict[field]  # raise appropriate KeyError
+
+
 EPOCH = datetime(1970, 1, 1, tzinfo=utc)
 
 
