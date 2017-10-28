@@ -65,8 +65,8 @@ class EmailBackend(AnymailRequestsBackend):
         # (Mailjet only communicates "Sent")
         for recipients in payload.recipients.values():
             for email in recipients:
-                if email.email not in recipient_status:
-                    recipient_status[email.email] = AnymailRecipientStatus(message_id=None, status='unknown')
+                if email.addr_spec not in recipient_status:
+                    recipient_status[email.addr_spec] = AnymailRecipientStatus(message_id=None, status='unknown')
 
         return recipient_status
 
@@ -144,9 +144,9 @@ class MailjetPayload(RequestsPayload):
         merge_data = self.merge_data or {}
         for email in self.recipients["to"]:
             recipient = {
-                "Email": email.email,
-                "Name": email.name,
-                "Vars": merge_data.get(email.email)
+                "Email": email.addr_spec,
+                "Name": email.display_name,
+                "Vars": merge_data.get(email.addr_spec)
             }
             # Strip out empty Name and Vars
             recipient = {k: v for k, v in recipient.items() if v}
@@ -163,9 +163,9 @@ class MailjetPayload(RequestsPayload):
             # Workaround Mailjet 3.0 bug parsing display-name with commas
             # (see test_comma_in_display_name in test_mailjet_backend for details)
             formatted_emails = [
-                email.address if "," not in email.name
+                email.address if "," not in email.display_name
                 # else name has a comma, so force it into MIME encoded-word utf-8 syntax:
-                else EmailAddress(email.name.encode('utf-8'), email.email).formataddr('utf-8')
+                else EmailAddress(email.display_name.encode('utf-8'), email.addr_spec).formataddr('utf-8')
                 for email in emails
             ]
             self.data[recipient_type.capitalize()] = ", ".join(formatted_emails)
@@ -175,9 +175,9 @@ class MailjetPayload(RequestsPayload):
         }
 
     def set_from_email(self, email):
-        self.data["FromEmail"] = email.email
-        if email.name:
-            self.data["FromName"] = email.name
+        self.data["FromEmail"] = email.addr_spec
+        if email.display_name:
+            self.data["FromName"] = email.display_name
 
     def set_recipients(self, recipient_type, emails):
         assert recipient_type in ["to", "cc", "bcc"]

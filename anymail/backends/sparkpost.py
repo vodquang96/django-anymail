@@ -76,7 +76,7 @@ class EmailBackend(AnymailBaseBackend):
         else:  # mixed results, or wrong total
             status = 'unknown'
         recipient_status = AnymailRecipientStatus(message_id=transmission_id, status=status)
-        return {recipient.email: recipient_status for recipient in payload.all_recipients}
+        return {recipient.addr_spec: recipient_status for recipient in payload.all_recipients}
 
 
 class SparkPostPayload(BasePayload):
@@ -92,11 +92,11 @@ class SparkPostPayload(BasePayload):
         if len(self.merge_data) > 0:
             # Build JSON recipient structures
             for email in self.to_emails:
-                rcpt = {'address': {'email': email.email}}
-                if email.name:
-                    rcpt['address']['name'] = email.name
+                rcpt = {'address': {'email': email.addr_spec}}
+                if email.display_name:
+                    rcpt['address']['name'] = email.display_name
                 try:
-                    rcpt['substitution_data'] = self.merge_data[email.email]
+                    rcpt['substitution_data'] = self.merge_data[email.addr_spec]
                 except KeyError:
                     pass  # no merge_data or none for this recipient
                 recipients.append(rcpt)

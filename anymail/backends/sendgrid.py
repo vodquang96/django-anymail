@@ -64,7 +64,7 @@ class EmailBackend(AnymailRequestsBackend):
         # SendGrid v3 doesn't provide any information in the response for a successful send,
         # so simulate a per-recipient status of "queued":
         status = AnymailRecipientStatus(message_id=payload.message_id, status="queued")
-        return {recipient.email: status for recipient in payload.all_recipients}
+        return {recipient.addr_spec: status for recipient in payload.all_recipients}
 
 
 class SendGridPayload(RequestsPayload):
@@ -199,17 +199,17 @@ class SendGridPayload(RequestsPayload):
 
     @staticmethod
     def email_object(email, workaround_name_quote_bug=False):
-        """Converts ParsedEmail to SendGrid API {email, name} dict"""
-        obj = {"email": email.email}
-        if email.name:
+        """Converts EmailAddress to SendGrid API {email, name} dict"""
+        obj = {"email": email.addr_spec}
+        if email.display_name:
             # Work around SendGrid API bug: v3 fails to properly quote display-names
             # containing commas or semicolons in personalizations (but not in from_email
             # or reply_to). See https://github.com/sendgrid/sendgrid-python/issues/291.
             # We can work around the problem by quoting the name for SendGrid.
             if workaround_name_quote_bug:
-                obj["name"] = '"%s"' % rfc822_quote(email.name)
+                obj["name"] = '"%s"' % rfc822_quote(email.display_name)
             else:
-                obj["name"] = email.name
+                obj["name"] = email.display_name
         return obj
 
     def set_from_email(self, email):

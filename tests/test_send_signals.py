@@ -38,7 +38,7 @@ class TestPreSendSignal(TestBackendTestCase):
         self.message.to = ['legit@example.com', 'bad@example.com']
         self.message.send()
         params = self.get_send_params()
-        self.assertEqual([email.email for email in params['to']],  # params['to'] is ParsedEmail list
+        self.assertEqual([email.addr_spec for email in params['to']],  # params['to'] is EmailAddress list
                          ['legit@example.com'])
         self.assertRegex(params['text_body'],
                          r"If you have received this message in error, ignore it$")

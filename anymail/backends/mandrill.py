@@ -95,14 +95,14 @@ class MandrillPayload(RequestsPayload):
         if getattr(self.message, "use_template_from", False):
             self.deprecation_warning('message.use_template_from', 'message.from_email = None')
         else:
-            self.data["message"]["from_email"] = email.email
-            if email.name:
-                self.data["message"]["from_name"] = email.name
+            self.data["message"]["from_email"] = email.addr_spec
+            if email.display_name:
+                self.data["message"]["from_name"] = email.display_name
 
     def add_recipient(self, recipient_type, email):
         assert recipient_type in ["to", "cc", "bcc"]
         to_list = self.data["message"].setdefault("to", [])
-        to_list.append({"email": email.email, "name": email.name, "type": recipient_type})
+        to_list.append({"email": email.addr_spec, "name": email.display_name, "type": recipient_type})
 
     def set_subject(self, subject):
         if getattr(self.message, "use_template_subject", False):

@@ -69,9 +69,9 @@ class EmailBackend(AnymailRequestsBackend):
                                           backend=self)
 
         return {
-            recipient.email: AnymailRecipientStatus(
+            recipient.addr_spec: AnymailRecipientStatus(
                 message_id=message_id,
-                status=('rejected' if recipient.email.lower() in rejected_emails
+                status=('rejected' if recipient.addr_spec.lower() in rejected_emails
                         else default_status)
             )
             for recipient in payload.all_recipients

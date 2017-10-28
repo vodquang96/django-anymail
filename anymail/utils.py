@@ -232,22 +232,6 @@ class EmailAddress(object):
     def __str__(self):
         return self.address
 
-    # Deprecated property names from old ParsedEmail (don't use in new code!)
-    @property
-    def name(self):
-        return self.display_name
-
-    @property
-    def email(self):
-        return self.addr_spec
-
-    @property
-    def localpart(self):
-        return self.username
-
-
-ParsedEmail = EmailAddress  # deprecated class name (don't use!)
-
 
 class Attachment(object):
     """A normalized EmailMessage.attachments item with additional functionality

@@ -63,7 +63,7 @@ class EmailBackend(AnymailRequestsBackend):
                                           backend=self)
         # Simulate a per-recipient status of "queued":
         status = AnymailRecipientStatus(message_id=payload.message_id, status="queued")
-        return {recipient.email: status for recipient in payload.all_recipients}
+        return {recipient.addr_spec: status for recipient in payload.all_recipients}
 
 
 class SendGridPayload(RequestsPayload):
@@ -166,7 +166,7 @@ class SendGridPayload(RequestsPayload):
             all_fields = set()
             for recipient_data in self.merge_data.values():
                 all_fields = all_fields.union(recipient_data.keys())
-            recipients = [email.email for email in self.to_list]
+            recipients = [email.addr_spec for email in self.to_list]
 
             if self.merge_field_format is None and all(field.isalnum() for field in all_fields):
                 warnings.warn(
@@ -203,9 +203,9 @@ class SendGridPayload(RequestsPayload):
         self.data['headers'] = CaseInsensitiveDict()  # headers keys are case-insensitive
 
     def set_from_email(self, email):
-        self.data["from"] = email.email
-        if email.name:
-            self.data["fromname"] = email.name
+        self.data["from"] = email.addr_spec
+        if email.display_name:
+            self.data["fromname"] = email.display_name
 
     def set_to(self, emails):
         self.to_list = emails  # track for later use by build_merge_data
@@ -214,9 +214,9 @@ class SendGridPayload(RequestsPayload):
     def set_recipients(self, recipient_type, emails):
         assert recipient_type in ["to", "cc", "bcc"]
         if emails:
-            self.data[recipient_type] = [email.email for email in emails]
+            self.data[recipient_type] = [email.addr_spec for email in emails]
             empty_name = " "  # SendGrid API balks on complete empty name fields
-            self.data[recipient_type + "name"] = [email.name or empty_name for email in emails]
+            self.data[recipient_type + "name"] = [email.display_name or empty_name for email in emails]
             self.all_recipients += emails  # used for backend.parse_recipient_status
 
     def set_subject(self, subject):

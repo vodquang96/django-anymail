@@ -53,7 +53,7 @@ class EmailBackend(AnymailRequestsBackend):
                                           backend=self)
         # Simulate a per-recipient status of "queued":
         status = AnymailRecipientStatus(message_id=message_id, status="queued")
-        return {recipient.email: status for recipient in payload.all_recipients}
+        return {recipient.addr_spec: status for recipient in payload.all_recipients}
 
 
 class MailgunPayload(RequestsPayload):
@@ -127,7 +127,7 @@ class MailgunPayload(RequestsPayload):
             self.data[recipient_type] = [email.address for email in emails]
             self.all_recipients += emails  # used for backend.parse_recipient_status
         if recipient_type == 'to':
-            self.to_emails = [email.email for email in emails]  # used for populate_recipient_variables
+            self.to_emails = [email.addr_spec for email in emails]  # used for populate_recipient_variables
 
     def set_subject(self, subject):
         self.data["subject"] = subject

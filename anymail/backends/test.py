@@ -68,15 +68,15 @@ class TestPayload(BasePayload):
 
     def set_to(self, emails):
         self.params['to'] = emails
-        self.recipient_emails += [email.email for email in emails]
+        self.recipient_emails += [email.addr_spec for email in emails]
 
     def set_cc(self, emails):
         self.params['cc'] = emails
-        self.recipient_emails += [email.email for email in emails]
+        self.recipient_emails += [email.addr_spec for email in emails]
 
     def set_bcc(self, emails):
         self.params['bcc'] = emails
-        self.recipient_emails += [email.email for email in emails]
+        self.recipient_emails += [email.addr_spec for email in emails]
 
     def set_subject(self, subject):
         self.params['subject'] = subject
