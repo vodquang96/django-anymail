@@ -49,7 +49,7 @@ class PostmarkTrackingWebhookView(PostmarkBaseWebhookView):
         'DMARCPolicy': (EventType.REJECTED, RejectReason.BLOCKED),
         'TemplateRenderingFailed': (EventType.FAILED, None),
         # DELIVERED doesn't have a Type field; detected separately below
-        # CLICKED doesn't have a Postmark webhook (yet?)
+        # CLICKED doesn't have a Type field; detected separately below
         # OPENED doesn't have a Type field; detected separately below
         # INBOUND doesn't have a Type field; should come in through different webhook
     }
@@ -62,6 +62,8 @@ class PostmarkTrackingWebhookView(PostmarkBaseWebhookView):
         except KeyError:
             if 'FirstOpen' in esp_event:
                 event_type = EventType.OPENED
+            elif 'OriginalLink' in esp_event:
+                event_type = EventType.CLICKED
             elif 'DeliveredAt' in esp_event:
                 event_type = EventType.DELIVERED
             elif 'From' in esp_event:
@@ -103,4 +105,5 @@ class PostmarkTrackingWebhookView(PostmarkBaseWebhookView):
             tags=tags,
             timestamp=timestamp,
             user_agent=esp_event.get('UserAgent', None),
+            click_url=esp_event.get('OriginalLink', None),
         )

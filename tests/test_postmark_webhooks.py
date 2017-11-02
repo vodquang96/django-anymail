@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from django.utils.timezone import get_fixed_timezone
+from django.utils.timezone import get_fixed_timezone, utc
 from mock import ANY
 
 from anymail.signals import AnymailTrackingEvent
@@ -108,4 +108,53 @@ class PostmarkDeliveryTestCase(WebhookTestCase):
         self.assertEqual(event.recipient, "recipient@example.com")
         self.assertEqual(event.user_agent, "Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0")
         self.assertEqual(event.tags, [])
+        self.assertEqual(event.metadata, {})
+
+    def test_click_event(self):
+        raw_event = {
+            "ClickLocation": "HTML",
+            "Client": {
+                "Name": "Chrome 35.0.1916.153",
+                "Company": "Google",
+                "Family": "Chrome"
+            },
+            "OS": {
+                "Name": "OS X 10.7 Lion",
+                "Company": "Apple Computer, Inc.",
+                "Family": "OS X 10"
+            },
+            "Platform": "Desktop",
+            "UserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) etc.",
+            "OriginalLink": "https://example.com/click/me",
+            "Geo": {
+                "CountryISOCode": "RS",
+                "Country": "Serbia",
+                "RegionISOCode": "VO",
+                "Region": "Autonomna Pokrajina Vojvodina",
+                "City": "Novi Sad",
+                "Zip": "21000",
+                "Coords": "45.2517,19.8369",
+                "IP": "8.8.8.8"
+            },
+            "MessageID": "f4830d10-9c35-4f0c-bca3-3d9b459821f8",
+            "ReceivedAt": "2017-10-25T15:21:11.9065619Z",
+            "Tag": "welcome-email",
+            "Recipient": "recipient@example.com"
+        }
+        response = self.client.post('/anymail/postmark/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_event))
+        self.assertEqual(response.status_code, 200)
+        kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=PostmarkTrackingWebhookView,
+                                                      event=ANY, esp_name='Postmark')
+        event = kwargs['event']
+        self.assertIsInstance(event, AnymailTrackingEvent)
+        self.assertEqual(event.event_type, "clicked")
+        self.assertEqual(event.esp_event, raw_event)
+        self.assertEqual(event.timestamp, datetime(2017, 10, 25, 15, 21, 11, microsecond=906561,
+                                                   tzinfo=utc))
+        self.assertEqual(event.message_id, "f4830d10-9c35-4f0c-bca3-3d9b459821f8")
+        self.assertEqual(event.recipient, "recipient@example.com")
+        self.assertEqual(event.user_agent, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) etc.")
+        self.assertEqual(event.click_url, "https://example.com/click/me")
+        self.assertEqual(event.tags, ["welcome-email"])
         self.assertEqual(event.metadata, {})

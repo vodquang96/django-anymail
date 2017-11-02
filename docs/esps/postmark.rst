@@ -191,8 +191,9 @@ If you use multiple Postmark servers, you'll need to repeat entering the webhook
 settings for each of them.
 
 Postmark will report these Anymail :attr:`~anymail.signals.AnymailTrackingEvent.event_type`\s:
-rejected, failed, bounced, deferred, delivered, autoresponded, opened, complained,
-unsubscribed, subscribed. (Postmark does not support sent or clicked events.)
+rejected, failed, bounced, deferred, delivered, autoresponded, opened, clicked, complained,
+unsubscribed, subscribed. (Postmark does not support sent--what it calls "processed"--events
+through webhooks.)
 
 The event's :attr:`~anymail.signals.AnymailTrackingEvent.esp_event` field will be
 a `dict` of Postmark `delivery <http://developer.postmarkapp.com/developer-delivery-webhook.html>`_,
