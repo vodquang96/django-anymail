@@ -29,11 +29,14 @@ matrix:
     - { env: DJANGO=django==1.11, python: 2.7 }
     - { env: DJANGO=django==1.11, python: 3.4 }
     - { env: DJANGO=django==1.11, python: 3.5 }
-    - { env: DJANGO=django==1.11 RUN_LIVE_TESTS=true, python: 3.6 }
+    - { env: DJANGO=django==1.11, python: 3.6 }
     - { env: DJANGO=django==1.11, python: pypy }
-    # Django 2.0 (prerelease): Python 3.5+
-    - { env: DJANGO="--pre django", python: 3.5 }
-    - { env: DJANGO="--pre django", python: 3.6 }
+    # Django 2.0: Python 3.5+
+    - { env: DJANGO=django==2.0, python: 3.5 }
+    - { env: DJANGO=django==2.0 RUN_LIVE_TESTS=true, python: 3.6 }
+    # Django 2.1 (prerelease): Python 3.5+
+    #- { env: DJANGO="--pre django", python: 3.5 }
+    #- { env: DJANGO="--pre django", python: 3.6 }
 
     - { env: FLAKE8=true, python: 2.7 }
     - { env: FLAKE8=true, python: 3.6 }
