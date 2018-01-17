@@ -265,8 +265,8 @@ extlinks = {
 # -- Options for Intersphinx ------------------------------------------------
 
 intersphinx_mapping = {
-    'python': ('http://docs.python.org/3.6', None),
-    'django': ('http://docs.djangoproject.com/en/stable/', 'http://docs.djangoproject.com/en/stable/_objects/'),
+    'python': ('https://docs.python.org/3.6', None),
+    'django': ('https://docs.djangoproject.com/en/stable/', 'https://docs.djangoproject.com/en/stable/_objects/'),
     'requests': ('http://docs.python-requests.org/en/latest/', None),
 }
 
