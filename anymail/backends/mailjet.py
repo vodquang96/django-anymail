@@ -115,7 +115,7 @@ class MailjetPayload(RequestsPayload):
         if template_id and not self.data.get("FromEmail"):
             response = self.backend.session.get(
                 "%sREST/template/%s/detailcontent" % (self.backend.api_url, template_id),
-                auth=self.auth
+                auth=self.auth, timeout=self.backend.timeout
             )
             self.backend.raise_for_status(response, None, self.message)
             json_response = self.backend.deserialize_json_response(response, None, self.message)

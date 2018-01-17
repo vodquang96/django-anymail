@@ -4,6 +4,7 @@ import requests
 # noinspection PyUnresolvedReferences
 from six.moves.urllib.parse import urljoin
 
+from anymail.utils import get_anymail_setting
 from .base import AnymailBaseBackend, BasePayload
 from ..exceptions import AnymailRequestsAPIError, AnymailSerializationError
 from .._version import __version__
@@ -17,6 +18,7 @@ class AnymailRequestsBackend(AnymailBaseBackend):
     def __init__(self, api_url, **kwargs):
         """Init options from Django settings"""
         self.api_url = api_url
+        self.timeout = get_anymail_setting('requests_timeout', kwargs=kwargs, default=30)
         super(AnymailRequestsBackend, self).__init__(**kwargs)
         self.session = None
 
@@ -65,6 +67,7 @@ class AnymailRequestsBackend(AnymailBaseBackend):
         Can raise AnymailRequestsAPIError for HTTP errors in the post
         """
         params = payload.get_request_params(self.api_url)
+        params.setdefault('timeout', self.timeout)
         try:
             response = self.session.request(**params)
         except requests.RequestException as err:

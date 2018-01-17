@@ -269,3 +269,14 @@ This is actually implemented using HTTP basic authorization, and the string is
 technically a "username:password" format. But you should *not* use any real
 username or password for this shared secret.
 
+
+.. setting:: ANYMAIL_REQUESTS_TIMEOUT
+
+.. rubric:: REQUESTS_TIMEOUT
+
+.. versionadded:: 1.3
+
+For Requests-based Anymail backends, the timeout value used for all API calls to your ESP.
+The default is 30 seconds. You can set to a single float, a 2-tuple of floats for
+separate connection and read timeouts, or `None` to disable timeouts (not recommended).
+See :ref:`requests:timeouts` in the Requests docs for more information.
