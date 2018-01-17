@@ -146,7 +146,7 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
         self.assertEqual(data['html'], html_content)
         # Don't accidentally send the html part as an attachment:
         files = self.get_api_call_files(required=False)
-        self.assertIsNone(files)
+        self.assertFalse(files)
 
     def test_html_only_message(self):
         html_content = '<p>This is an <strong>important</strong> message.</p>'
