@@ -65,9 +65,9 @@ class TestPostSendSignal(TestBackendTestCase):
             self.assertEqual(sender, TestEmailBackend)
             self.assertEqual(message, self.message)
             self.assertEqual(status.status, {'sent'})
-            self.assertEqual(status.message_id, 1)  # TestEmailBackend default message_id
+            self.assertEqual(status.message_id, 0)
             self.assertEqual(status.recipients['to@example.com'].status, 'sent')
-            self.assertEqual(status.recipients['to@example.com'].message_id, 1)
+            self.assertEqual(status.recipients['to@example.com'].message_id, 0)
             self.assertEqual(esp_name, "Test")  # the TestEmailBackend's ESP is named "Test"
             self.receiver_called = True
         self.addCleanup(post_send.disconnect, receiver=handle_post_send)
