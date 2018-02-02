@@ -185,27 +185,31 @@ See the `Mandrill's template docs`_ for more information.
 
 
 .. _mandrill-webhooks:
+.. _mandrill-inbound:
 
-Status tracking webhooks
-------------------------
+Status tracking and inbound webhooks
+------------------------------------
 
-If you are using Anymail's normalized :ref:`status tracking <event-tracking>`,
-setting up Anymail's webhook URL requires deploying your Django project twice:
+If you are using Anymail's normalized :ref:`status tracking <event-tracking>`
+and/or :ref:`inbound <inbound>` handling, setting up Anymail's webhook URL
+requires deploying your Django project twice:
 
 1. First, follow the instructions to
-   :ref:`configure Anymail's webhooks <webhooks-configuration>`. You *must*
-   deploy before adding the webhook URL to Mandrill, because it will attempt
+   :ref:`configure Anymail's webhooks <webhooks-configuration>`. You *must deploy*
+   before adding the webhook URL to Mandrill, because Mandrill will attempt
    to verify the URL against your production server.
 
-   Follow `Mandrill's instructions`_ to add Anymail's webhook URL in their settings:
+   Once you've deployed, then set Anymail's webhook URL in Mandrill, following their
+   instructions for `tracking event webhooks`_ (be sure to check the boxes for the
+   events you want to receive) and/or `inbound route webhooks`_.
+   In either case, the webhook url is:
 
-      :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/mandrill/tracking/`
+      :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/mandrill/`
 
         * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
         * *yoursite.example.com* is your Django site
-
-   Be sure to check the boxes in the Mandrill settings for the event types you want to receive.
-   The same Anymail tracking URL can handle all Mandrill "message" and "change" events.
+        * (Note: Unlike Anymail's other supported ESPs, the Mandrill webhook uses this
+          single url for both tracking and inbound events.)
 
 2. Mandrill will provide you a "webhook authentication key" once it verifies the URL
    is working. Add this to your Django project's Anymail settings under
@@ -226,7 +230,7 @@ else fails, you can set Anymail's :setting:`MANDRILL_WEBHOOK_URL <ANYMAIL_MANDRI
 to the same public webhook URL you gave Mandrill.
 
 Mandrill will report these Anymail :attr:`~anymail.signals.AnymailTrackingEvent.event_type`\s:
-sent, rejected, deferred, bounced, opened, clicked, complained, unsubscribed. Mandrill does
+sent, rejected, deferred, bounced, opened, clicked, complained, unsubscribed, inbound. Mandrill does
 not support delivered events. Mandrill "whitelist" and "blacklist" change events will show up
 as Anymail's unknown event_type.
 
@@ -235,8 +239,18 @@ a `dict` of Mandrill event fields, for a single event. (Although Mandrill calls
 webhooks with batches of events, Anymail will invoke your signal receiver separately
 for each event in the batch.)
 
-.. _Mandrill's instructions:
+.. _tracking event webhooks:
     https://mandrill.zendesk.com/hc/en-us/articles/205583217-Introduction-to-Webhooks
+.. _inbound route webhooks:
+    https://mandrill.zendesk.com/hc/en-us/articles/205583197-Inbound-Email-Processing-Overview
+
+
+.. versionchanged:: 1.3
+    Earlier Anymail releases used :samp:`.../anymail/mandrill/{tracking}/` as the tracking
+    webhook url. With the addition of inbound handling, Anymail has dropped "tracking"
+    from the recommended url for new installations. But the older url is still
+    supported. Existing installations can continue to use it---and can even install it
+    on a Mandrill *inbound* route to avoid issuing a new webhook key.
 
 
 .. _migrating-from-djrill:
@@ -298,8 +312,15 @@ Changes to settings
   Use :setting:`ANYMAIL_MANDRILL_WEBHOOK_KEY` instead.
 
 ``DJRILL_WEBHOOK_URL``
-  Use :setting:`ANYMAIL_MANDRILL_WEBHOOK_URL`, or eliminate if
-  your Django server is not behind a proxy that changes hostnames.
+  Often no longer required: Anymail can normally use Django's
+  :meth:`HttpRequest.build_absolute_uri <django.http.HttpRequest.build_absolute_uri>`
+  to figure out the complete webhook url that Mandrill called.
+
+  If you are experiencing webhook authorization errors, the best solution is to adjust
+  your Django :setting:`SECURE_PROXY_SSL_HEADER`, :setting:`USE_X_FORWARDED_HOST`, and/or
+  :setting:`USE_X_FORWARDED_PORT` settings to work with your proxy server.
+  If that's not possible, you can set :setting:`ANYMAIL_MANDRILL_WEBHOOK_URL` to explicitly
+  declare the webhook url.
 
 
 Changes to EmailMessage attributes
@@ -393,14 +414,17 @@ parameters is that most logging and analytics systems are aware of the
 need to keep auth secret.)
 
 Anymail replaces `djrill.signals.webhook_event` with
-`anymail.signals.tracking` for delivery tracking events.
-(It does not currently handle inbound message webhooks.)
+`anymail.signals.tracking` for delivery tracking events,
+and `anymail.signals.inbound` for inbound events.
 Anymail parses and normalizes
-the event data passed to the signal receiver: see :ref:`event-tracking`.
+the event data passed to the signal receiver: see :ref:`event-tracking`
+and :ref:`inbound`.
 
 The equivalent of Djrill's ``data`` parameter is available
 to your signal receiver as
 :attr:`event.esp_event <anymail.signals.AnymailTrackingEvent.esp_event>`,
 and for most events, the equivalent of Djrill's ``event_type`` parameter
 is `event.esp_event['event']`. But consider working with Anymail's
-normalized :class:`~anymail.signals.AnymailTrackingEvent` instead.
+normalized :class:`~anymail.signals.AnymailTrackingEvent` and
+:class:`~anymail.signals.AnymailInboundEvent` instead for easy portability
+to other ESPs.

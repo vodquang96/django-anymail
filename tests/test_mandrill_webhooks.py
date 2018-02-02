@@ -1,6 +1,5 @@
 import json
 from datetime import datetime
-# noinspection PyUnresolvedReferences
 from six.moves.urllib.parse import urljoin
 
 import hashlib
@@ -12,7 +11,7 @@ from django.utils.timezone import utc
 from mock import ANY
 
 from anymail.signals import AnymailTrackingEvent
-from anymail.webhooks.mandrill import MandrillTrackingWebhookView
+from anymail.webhooks.mandrill import MandrillCombinedWebhookView, MandrillTrackingWebhookView
 
 from .webhook_cases import WebhookTestCase, WebhookBasicAuthTestsMixin
 
@@ -21,7 +20,7 @@ TEST_WEBHOOK_KEY = 'TEST_WEBHOOK_KEY'
 
 def mandrill_args(events=None,
                   host="http://testserver/",  # Django test-client default
-                  path='/anymail/mandrill/tracking/',  # Anymail urlconf default
+                  path='/anymail/mandrill/',  # Anymail urlconf default
                   auth="username:password",  # WebhookTestCase default
                   key=TEST_WEBHOOK_KEY):
     """Returns TestClient.post kwargs for Mandrill webhook call with events
@@ -30,7 +29,7 @@ def mandrill_args(events=None,
     """
     if events is None:
         events = []
-    test_client_path = urljoin(host, path)  # https://testserver/anymail/mandrill/tracking/
+    test_client_path = urljoin(host, path)  # https://testserver/anymail/mandrill/
     if auth:
         # we can get away with this simplification in these controlled tests,
         # but don't ever construct urls like this in production code -- it's not safe!
@@ -52,14 +51,14 @@ def mandrill_args(events=None,
 class MandrillWebhookSettingsTestCase(WebhookTestCase):
     def test_requires_webhook_key(self):
         with self.assertRaisesRegex(ImproperlyConfigured, r'MANDRILL_WEBHOOK_KEY'):
-            self.client.post('/anymail/mandrill/tracking/',
+            self.client.post('/anymail/mandrill/',
                              data={'mandrill_events': '[]'})
 
     def test_head_does_not_require_webhook_key(self):
         # Mandrill issues an unsigned HEAD request to verify the wehbook url.
         # Only *after* that succeeds will Mandrill will tell you the webhook key.
         # So make sure that HEAD request will go through without any key set:
-        response = self.client.head('/anymail/mandrill/tracking/')
+        response = self.client.head('/anymail/mandrill/')
         self.assertEqual(response.status_code, 200)
 
 
@@ -79,7 +78,7 @@ class MandrillWebhookSecurityTestCase(WebhookTestCase, WebhookBasicAuthTestsMixi
         self.assertEqual(response.status_code, 200)
 
     def test_verifies_missing_signature(self):
-        response = self.client.post('/anymail/mandrill/tracking/',
+        response = self.client.post('/anymail/mandrill/',
                                     data={'mandrill_events': '[{"event":"send"}]'})
         self.assertEqual(response.status_code, 400)
 
@@ -99,7 +98,7 @@ class MandrillWebhookSecurityTestCase(WebhookTestCase, WebhookBasicAuthTestsMixi
     @override_settings(
         ALLOWED_HOSTS=['127.0.0.1', '.example.com'],
         ANYMAIL={
-            "MANDRILL_WEBHOOK_URL": "https://abcde:12345@example.com/anymail/mandrill/tracking/",
+            "MANDRILL_WEBHOOK_URL": "https://abcde:12345@example.com/anymail/mandrill/",
             "WEBHOOK_AUTHORIZATION": "abcde:12345",
         })
     def test_webhook_url_setting(self):
@@ -133,6 +132,7 @@ class MandrillTrackingTestCase(WebhookTestCase):
 
     def test_head_request(self):
         # Mandrill verifies webhooks at config time with a HEAD request
+        # (See MandrillWebhookSettingsTestCase above for equivalent without the key yet set)
         response = self.client.head('/anymail/mandrill/tracking/')
         self.assertEqual(response.status_code, 200)
 
@@ -159,7 +159,7 @@ class MandrillTrackingTestCase(WebhookTestCase):
         }]
         response = self.client.post(**mandrill_args(events=raw_events))
         self.assertEqual(response.status_code, 200)
-        kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MandrillTrackingWebhookView,
+        kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MandrillCombinedWebhookView,
                                                       event=ANY, esp_name='Mandrill')
         event = kwargs['event']
         self.assertIsInstance(event, AnymailTrackingEvent)
@@ -189,7 +189,7 @@ class MandrillTrackingTestCase(WebhookTestCase):
         }]
         response = self.client.post(**mandrill_args(events=raw_events))
         self.assertEqual(response.status_code, 200)
-        kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MandrillTrackingWebhookView,
+        kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MandrillCombinedWebhookView,
                                                       event=ANY, esp_name='Mandrill')
         event = kwargs['event']
         self.assertIsInstance(event, AnymailTrackingEvent)
@@ -219,7 +219,7 @@ class MandrillTrackingTestCase(WebhookTestCase):
         }]
         response = self.client.post(**mandrill_args(events=raw_events))
         self.assertEqual(response.status_code, 200)
-        kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MandrillTrackingWebhookView,
+        kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MandrillCombinedWebhookView,
                                                       event=ANY, esp_name='Mandrill')
         event = kwargs['event']
         self.assertIsInstance(event, AnymailTrackingEvent)
@@ -241,9 +241,31 @@ class MandrillTrackingTestCase(WebhookTestCase):
         }]
         response = self.client.post(**mandrill_args(events=raw_events))
         self.assertEqual(response.status_code, 200)
-        kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MandrillTrackingWebhookView,
+        kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MandrillCombinedWebhookView,
                                                       event=ANY, esp_name='Mandrill')
         event = kwargs['event']
         self.assertEqual(event.event_type, "unknown")
         self.assertEqual(event.recipient, "recipient@example.com")
         self.assertEqual(event.description, "manual edit")
+
+    def test_old_tracking_url(self):
+        # Earlier versions of Anymail used /mandrill/tracking/ (and didn't support inbound);
+        # make sure that URL continues to work.
+        raw_events = [{
+            "event": "send",
+            "msg": {
+                "ts": 1461095211,  # time send called
+                "subject": "Webhook Test",
+                "email": "recipient@example.com",
+                "sender": "sender@example.com",
+                "tags": ["tag1", "tag2"],
+                "metadata": {"custom1": "value1", "custom2": "value2"},
+                "_id": "abcdef012345789abcdef012345789"
+            },
+            "_id": "abcdef012345789abcdef012345789",
+            "ts": 1461095246  # time of event
+        }]
+        response = self.client.post(**mandrill_args(events=raw_events, path='/anymail/mandrill/tracking/'))
+        self.assertEqual(response.status_code, 200)
+        self.assert_handler_called_once_with(self.tracking_handler, sender=MandrillTrackingWebhookView,
+                                             event=ANY, esp_name='Mandrill')

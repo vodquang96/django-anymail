@@ -8,8 +8,9 @@ from django.utils.crypto import constant_time_compare
 from django.utils.timezone import utc
 
 from .base import AnymailBaseWebhookView
-from ..exceptions import AnymailWebhookValidationFailure, AnymailConfigurationError
-from ..signals import tracking, AnymailTrackingEvent, EventType
+from ..exceptions import AnymailWebhookValidationFailure
+from ..inbound import AnymailInboundMessage
+from ..signals import inbound, tracking, AnymailInboundEvent, AnymailTrackingEvent, EventType
 from ..utils import get_anymail_setting, getfirst, get_request_uri
 
 
@@ -59,22 +60,34 @@ class MandrillSignatureMixin(object):
                 "Mandrill webhook called with incorrect signature (for url %r)" % url)
 
 
-class MandrillBaseWebhookView(MandrillSignatureMixin, AnymailBaseWebhookView):
-    """Base view class for Mandrill webhooks"""
+class MandrillCombinedWebhookView(MandrillSignatureMixin, AnymailBaseWebhookView):
+    """Unified view class for Mandrill tracking and inbound webhooks"""
+
+    esp_name = "Mandrill"
 
     warn_if_no_basic_auth = False  # because we validate against signature
+    signal = None  # set in esp_to_anymail_event
 
     def parse_events(self, request):
         esp_events = json.loads(request.POST['mandrill_events'])
         return [self.esp_to_anymail_event(esp_event) for esp_event in esp_events]
 
     def esp_to_anymail_event(self, esp_event):
-        raise NotImplementedError()
+        """Route events to the inbound or tracking handler"""
+        esp_type = getfirst(esp_event, ['event', 'type'], 'unknown')
 
+        if esp_type == 'inbound':
+            assert self.signal is not tracking  # Mandrill should never mix event types in the same batch
+            self.signal = inbound
+            return self.mandrill_inbound_to_anymail_event(esp_event)
+        else:
+            assert self.signal is not inbound  # Mandrill should never mix event types in the same batch
+            self.signal = tracking
+            return self.mandrill_tracking_to_anymail_event(esp_event)
 
-class MandrillTrackingWebhookView(MandrillBaseWebhookView):
-
-    signal = tracking
+    #
+    #  Tracking events
+    #
 
     event_types = {
         # Message events:
@@ -94,13 +107,9 @@ class MandrillTrackingWebhookView(MandrillBaseWebhookView):
         'inbound': EventType.INBOUND,
     }
 
-    def esp_to_anymail_event(self, esp_event):
+    def mandrill_tracking_to_anymail_event(self, esp_event):
         esp_type = getfirst(esp_event, ['event', 'type'], None)
         event_type = self.event_types.get(esp_type, EventType.UNKNOWN)
-        if event_type == EventType.INBOUND:
-            raise AnymailConfigurationError(
-                "You seem to have set Mandrill's *inbound* webhook URL "
-                "to Anymail's Mandrill *tracking* webhook URL.")
 
         try:
             timestamp = datetime.fromtimestamp(esp_event['ts'], tz=utc)
@@ -149,3 +158,33 @@ class MandrillTrackingWebhookView(MandrillBaseWebhookView):
             timestamp=timestamp,
             user_agent=esp_event.get('user_agent', None),
         )
+
+    #
+    # Inbound events
+    #
+
+    def mandrill_inbound_to_anymail_event(self, esp_event):
+        # It's easier (and more accurate) to just work from the original raw mime message
+        message = AnymailInboundMessage.parse_raw_mime(esp_event['msg']['raw_msg'])
+        message.envelope_sender = None  # (Mandrill's 'sender' field only applies to outbound messages)
+        message.envelope_recipient = esp_event['msg'].get('email', None)
+
+        message.spam_detected = None  # no simple boolean field; would need to parse the spam_report
+        message.spam_score = esp_event['msg'].get('spam_report', {}).get('score', None)
+
+        try:
+            timestamp = datetime.fromtimestamp(esp_event['ts'], tz=utc)
+        except (KeyError, ValueError):
+            timestamp = None
+
+        return AnymailInboundEvent(
+            event_type=EventType.INBOUND,
+            timestamp=timestamp,
+            event_id=None,  # Mandrill doesn't provide an idempotent inbound message event id
+            esp_event=esp_event,
+            message=message,
+        )
+
+
+# Backwards-compatibility: earlier Anymail versions had only MandrillTrackingWebhookView:
+MandrillTrackingWebhookView = MandrillCombinedWebhookView
