@@ -4,6 +4,8 @@ Anymail
 Mike Edmunds
 Calvin Jeong
 Peter Wu
+Charlie DeTar
+Jonathan Baugh
 
 
 Anymail was forked from Djrill, which included contributions from:
