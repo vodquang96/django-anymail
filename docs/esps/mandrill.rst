@@ -206,7 +206,7 @@ requires deploying your Django project twice:
 
       :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/mandrill/`
 
-        * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
+        * *random:random* is an :setting:`ANYMAIL_WEBHOOK_SECRET` shared secret
         * *yoursite.example.com* is your Django site
         * (Note: Unlike Anymail's other supported ESPs, the Mandrill webhook uses this
           single url for both tracking and inbound events.)

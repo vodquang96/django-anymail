@@ -197,7 +197,7 @@ webhook in your `SparkPost account settings under "Webhooks"`_:
 
 * Target URL: :samp:`https://{yoursite.example.com}/anymail/sparkpost/tracking/`
 * Authentication: choose "Basic Auth." For username and password enter the two halves of the
-  *random:random* shared secret you created for your :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION`
+  *random:random* shared secret you created for your :setting:`ANYMAIL_WEBHOOK_SECRET`
   Django setting. (Anymail doesn't support OAuth webhook auth.)
 * Events: click "Select" and then *clear* the checkbox for "Relay Events" category (which is for
   inbound email). You can leave all the other categories of events checked, or disable
@@ -235,7 +235,7 @@ The target parameter for the Relay Webhook will be:
 
    :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/sparkpost/inbound/`
 
-     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
+     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_SECRET` shared secret
      * *yoursite.example.com* is your Django site
 
 .. _Enabling Inbound Email Relaying:

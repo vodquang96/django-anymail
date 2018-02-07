@@ -14,7 +14,7 @@ def event_handler(sender, event, esp_name, **kwargs):
     pass
 
 
-@override_settings(ANYMAIL={'WEBHOOK_AUTHORIZATION': 'username:password'})
+@override_settings(ANYMAIL={'WEBHOOK_SECRET': 'username:password'})
 class WebhookTestCase(AnymailTestMixin, SimpleTestCase):
     """Base for testing webhooks
 
@@ -111,7 +111,7 @@ class WebhookBasicAuthTestsMixin(object):
         response = self.call_webhook()
         self.assertEqual(response.status_code, 400)
 
-    @override_settings(ANYMAIL={'WEBHOOK_AUTHORIZATION': ['cred1:pass1', 'cred2:pass2']})
+    @override_settings(ANYMAIL={'WEBHOOK_SECRET': ['cred1:pass1', 'cred2:pass2']})
     def test_supports_credential_rotation(self):
         """You can supply a list of basic auth credentials, and any is allowed"""
         self.set_basic_auth('cred1', 'pass1')
@@ -125,3 +125,9 @@ class WebhookBasicAuthTestsMixin(object):
         self.set_basic_auth('baduser', 'wrongpassword')
         response = self.call_webhook()
         self.assertEqual(response.status_code, 400)
+
+    @override_settings(ANYMAIL={'WEBHOOK_AUTHORIZATION': "username:password"})
+    def test_deprecated_setting(self):
+        """The older WEBHOOK_AUTHORIZATION setting is still supported (for now)"""
+        response = self.call_webhook()
+        self.assertEqual(response.status_code, 200)

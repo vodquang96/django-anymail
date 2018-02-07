@@ -232,7 +232,7 @@ the url in your Mailjet account REST API settings under `Event tracking (trigger
 
    :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/mailjet/tracking/`
 
-     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
+     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_SECRET` shared secret
      * *yoursite.example.com* is your Django site
 
 Be sure to enter the URL in the Mailjet settings for all the event types you want to receive.
@@ -263,7 +263,7 @@ The parseroute Url parameter will be:
 
    :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/mailjet/inbound/`
 
-     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
+     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_SECRET` shared secret
      * *yoursite.example.com* is your Django site
 
 Once you've done Mailjet's "basic setup" to configure the Parse API webhook, you can skip

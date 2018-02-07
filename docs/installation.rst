@@ -98,7 +98,7 @@ Skip this section if you won't be using Anymail's webhooks.
     or subject your app to malicious input data.
 
     At a minimum, your site should **use https** and you should
-    configure **webhook authorization** as described below.
+    configure a **webhook secret** as described below.
 
     See :ref:`securing-webhooks` for additional information.
 
@@ -106,14 +106,14 @@ Skip this section if you won't be using Anymail's webhooks.
 If you want to use Anymail's inbound or tracking webhooks:
 
 1. In your :file:`settings.py`, add
-   :setting:`WEBHOOK_AUTHORIZATION <ANYMAIL_WEBHOOK_AUTHORIZATION>`
+   :setting:`WEBHOOK_SECRET <ANYMAIL_WEBHOOK_SECRET>`
    to the ``ANYMAIL`` block:
 
    .. code-block:: python
 
       ANYMAIL = {
           ...
-          'WEBHOOK_AUTHORIZATION': '<a random string>:<another random string>',
+          'WEBHOOK_SECRET': '<a random string>:<another random string>',
       }
 
    This setting should be a string with two sequences of random characters,
@@ -133,7 +133,7 @@ If you want to use Anymail's inbound or tracking webhooks:
 
    (This setting is actually an HTTP basic auth string. You can also set it
    to a list of auth strings, to simplify credential rotation or use different auth
-   with different ESPs. See :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` in the
+   with different ESPs. See :setting:`ANYMAIL_WEBHOOK_SECRET` in the
    :ref:`securing-webhooks` docs for more details.)
 
 
@@ -160,7 +160,7 @@ If you want to use Anymail's inbound or tracking webhooks:
    :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/{esp}/{type}/`
 
      * "https" (rather than http) is *strongly recommended*
-     * *random:random* is the WEBHOOK_AUTHORIZATION string you created in step 1
+     * *random:random* is the WEBHOOK_SECRET string you created in step 1
      * *yoursite.example.com* is your Django site
      * "anymail" is the url prefix (from step 2)
      * *esp* is the lowercase name of your ESP (e.g., "sendgrid" or "mailgun")
@@ -266,7 +266,7 @@ Set to `True` to ignore these problems and send the email anyway. See
 :ref:`unsupported-features`. (Default `False`.)
 
 
-.. rubric:: WEBHOOK_AUTHORIZATION
+.. rubric:: WEBHOOK_SECRET
 
 A `'random:random'` shared secret string. Anymail will reject incoming webhook calls
 from your ESP that don't include this authorization. You can also give a list of
@@ -274,11 +274,17 @@ shared secret strings, and Anymail will allow ESP webhook calls that match any o
 (to facilitate credential rotation). See :ref:`securing-webhooks`.
 
 Default is unset, which leaves your webhooks insecure. Anymail
-will warn if you try to use webhooks with setting up authorization.
+will warn if you try to use webhooks without a shared secret.
 
 This is actually implemented using HTTP basic authorization, and the string is
 technically a "username:password" format. But you should *not* use any real
 username or password for this shared secret.
+
+.. versionchanged:: 1.4
+
+    The earlier WEBHOOK_AUTHORIZATION setting was renamed WEBHOOK_SECRET, so that
+    Django error reporting sanitizes it. The old name is still allowed in v1.4,
+    but will be removed in a near-future release. You should update your settings.
 
 
 .. setting:: ANYMAIL_REQUESTS_TIMEOUT

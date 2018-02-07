@@ -87,7 +87,7 @@ class MandrillWebhookSecurityTestCase(WebhookTestCase, WebhookBasicAuthTestsMixi
         response = self.client.post(**kwargs)
         self.assertEqual(response.status_code, 400)
 
-    @override_settings(ANYMAIL={})  # clear WEBHOOK_AUTHORIZATION from WebhookTestCase
+    @override_settings(ANYMAIL={})  # clear WEBHOOK_SECRET from WebhookTestCase
     def test_no_basic_auth(self):
         # Signature validation should work properly if you're not using basic auth
         self.clear_basic_auth()
@@ -99,7 +99,7 @@ class MandrillWebhookSecurityTestCase(WebhookTestCase, WebhookBasicAuthTestsMixi
         ALLOWED_HOSTS=['127.0.0.1', '.example.com'],
         ANYMAIL={
             "MANDRILL_WEBHOOK_URL": "https://abcde:12345@example.com/anymail/mandrill/",
-            "WEBHOOK_AUTHORIZATION": "abcde:12345",
+            "WEBHOOK_SECRET": "abcde:12345",
         })
     def test_webhook_url_setting(self):
         # If Django can't build_absolute_uri correctly (e.g., because your proxy
@@ -111,7 +111,7 @@ class MandrillWebhookSecurityTestCase(WebhookTestCase, WebhookBasicAuthTestsMixi
         self.assertEqual(response.status_code, 200)
 
     # override WebhookBasicAuthTestsMixin version of this test
-    @override_settings(ANYMAIL={'WEBHOOK_AUTHORIZATION': ['cred1:pass1', 'cred2:pass2']})
+    @override_settings(ANYMAIL={'WEBHOOK_SECRET': ['cred1:pass1', 'cred2:pass2']})
     def test_supports_credential_rotation(self):
         """You can supply a list of basic auth credentials, and any is allowed"""
         self.set_basic_auth('cred1', 'pass1')

@@ -29,7 +29,7 @@ If you aren't able to use https on your Django site, then you should
 not set up your ESP's webhooks.
 
 
-.. setting:: ANYMAIL_WEBHOOK_AUTHORIZATION
+.. setting:: ANYMAIL_WEBHOOK_SECRET
 
 Use a shared authorization secret
 ---------------------------------
@@ -41,7 +41,7 @@ with webhook data, to prove the post is coming from your ESP.
 
 Most ESPs recommend using HTTP basic authorization as this shared
 secret. Anymail includes support for this, via the
-:setting:`!ANYMAIL_WEBHOOK_AUTHORIZATION` setting.
+:setting:`!ANYMAIL_WEBHOOK_SECRET` setting.
 Basic usage is covered in the
 :ref:`webhooks configuration <webhooks-configuration>` docs.
 
@@ -60,7 +60,7 @@ any of the authorization strings:
 
       ANYMAIL = {
           ...
-          'WEBHOOK_AUTHORIZATION': [
+          'WEBHOOK_SECRET': [
               'abcdefghijklmnop:qrstuvwxyz0123456789',
               'ZYXWVUTSRQPONMLK:JIHGFEDCBA9876543210',
           ],

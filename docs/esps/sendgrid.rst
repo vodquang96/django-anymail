@@ -284,7 +284,7 @@ the url in your `SendGrid mail settings`_, under "Event Notification":
 
    :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/sendgrid/tracking/`
 
-     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
+     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_SECRET` shared secret
      * *yoursite.example.com* is your Django site
 
 Be sure to check the boxes in the SendGrid settings for the event types you want to receive.
@@ -315,7 +315,7 @@ The Destination URL setting will be:
 
    :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/sendgrid/inbound/`
 
-     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
+     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_SECRET` shared secret
      * *yoursite.example.com* is your Django site
 
 Be sure the URL has a trailing slash. (SendGrid's inbound processing won't follow Django's

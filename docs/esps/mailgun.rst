@@ -197,7 +197,7 @@ for all events you want to receive:
 
    :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/mailgun/tracking/`
 
-     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
+     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_SECRET` shared secret
      * *yoursite.example.com* is your Django site
 
 If you use multiple Mailgun sending domains, you'll need to enter the webhook
@@ -232,7 +232,7 @@ The *action* for your route will be either:
    :samp:`forward("https://{random}:{random}@{yoursite.example.com}/anymail/mailgun/inbound/")`
    :samp:`forward("https://{random}:{random}@{yoursite.example.com}/anymail/mailgun/inbound_mime/")`
 
-     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
+     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_SECRET` shared secret
      * *yoursite.example.com* is your Django site
 
 Anymail accepts either of Mailgun's "fully-parsed" (.../inbound/) and "raw MIME" (.../inbound_mime/)

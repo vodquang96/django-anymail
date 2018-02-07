@@ -181,7 +181,7 @@ want to receive all these types of events):
 
    :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/postmark/tracking/`
 
-     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
+     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_SECRET` shared secret
      * *yoursite.example.com* is your Django site
 
 Anymail doesn't care about the "include bounce content" and "post only on first open"
@@ -216,7 +216,7 @@ The InboundHookUrl setting will be:
 
    :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/postmark/inbound/`
 
-     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_AUTHORIZATION` shared secret
+     * *random:random* is an :setting:`ANYMAIL_WEBHOOK_SECRET` shared secret
      * *yoursite.example.com* is your Django site
 
 Anymail handles the "parse an email" part of Postmark's instructions for you, but you'll
