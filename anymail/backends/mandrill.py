@@ -252,9 +252,9 @@ class MandrillPayload(RequestsPayload):
         ('template_content', combine, None),
     )
 
-    def set_async(self, async):
+    def set_async(self, is_async):
         self.deprecated_to_esp_extra('async')
-        self.esp_extra['async'] = async
+        self.esp_extra['async'] = is_async
 
     def set_ip_pool(self, ip_pool):
         self.deprecated_to_esp_extra('ip_pool')

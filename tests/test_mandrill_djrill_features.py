@@ -13,7 +13,12 @@ class MandrillBackendDjrillFeatureTests(MandrillBackendMockAPITestCase):
     # These features should now be accessed through esp_extra
 
     def test_async(self):
-        self.message.async = True
+        # async becomes a keyword in Python 3.7. If you have code like this:
+        #   self.message.async = True
+        # it should be changed to:
+        #   self.message.esp_extra = {"async": True}
+        # (The setattr below keeps these tests compatible, but isn't recommended for your code.)
+        setattr(self.message, 'async', True)  # don't do this; use esp_extra instead
         with self.assertWarnsRegex(DeprecationWarning, 'async'):
             self.message.send()
         data = self.get_api_call_json()
