@@ -3,7 +3,7 @@ from requests.structures import CaseInsensitiveDict
 from .base_requests import AnymailRequestsBackend, RequestsPayload
 from ..exceptions import AnymailRequestsAPIError
 from ..message import AnymailRecipientStatus
-from ..utils import get_anymail_setting, parse_address_list
+from ..utils import get_anymail_setting
 
 
 class EmailBackend(AnymailRequestsBackend):
@@ -88,15 +88,8 @@ class SendinBluePayload(RequestsPayload):
     def serialize_data(self):
         """Performs any necessary serialization on self.data, and returns the result."""
 
-        headers = self.data["headers"]
-        if "Reply-To" in headers:
-            # Reply-To must be in its own param
-            reply_to = headers.pop('Reply-To')
-            self.set_reply_to(parse_address_list([reply_to]))
-        if len(headers) > 0:
-            self.data["headers"] = dict(headers)  # flatten to normal dict for json serialization
-        else:
-            del self.data["headers"]  # don't send empty headers
+        if not self.data['headers']:
+            del self.data['headers']  # don't send empty headers
 
         # SendinBlue use different argument's name if we use template functionality
         if self.template_id:
@@ -179,8 +172,7 @@ class SendinBluePayload(RequestsPayload):
             self.data['replyTo'] = self.email_object(emails[0])
 
     def set_extra_headers(self, headers):
-        for key in headers.keys():
-            self.data['headers'][key] = headers[key]
+        self.data['headers'].update(headers)
 
     def set_tags(self, tags):
         if len(tags) > 0:

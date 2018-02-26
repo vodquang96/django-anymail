@@ -135,8 +135,8 @@ class SparkPostBackendStandardEmailTests(SparkPostBackendMockAPITestCase):
         self.assertEqual(params['recipients'], ['to1@example.com', 'Also To <to2@example.com>'])
         self.assertEqual(params['bcc'], ['bcc1@example.com', 'Also BCC <bcc2@example.com>'])
         self.assertEqual(params['cc'], ['cc1@example.com', 'Also CC <cc2@example.com>'])
+        self.assertEqual(params['reply_to'], 'another@example.com')
         self.assertEqual(params['custom_headers'], {
-            'Reply-To': 'another@example.com',
             'X-MyHeader': 'my value',
             'Message-ID': 'mycustommsgid@example.com'})
 

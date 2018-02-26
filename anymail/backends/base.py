@@ -4,6 +4,7 @@ import six
 from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
 from django.utils.timezone import is_naive, get_current_timezone, make_aware, utc
+from requests.structures import CaseInsensitiveDict
 
 from ..exceptions import AnymailCancelSend, AnymailError, AnymailUnsupportedFeature, AnymailRecipientsRefused
 from ..message import AnymailStatus
@@ -268,6 +269,8 @@ class BasePayload(object):
                     setter = self.set_html_body if message.content_subtype == 'html' else self.set_text_body
                 elif attr == 'from_email':
                     setter = self.set_from_email_list
+                elif attr == 'extra_headers':
+                    setter = self.process_extra_headers
                 else:
                     # AttributeError here? Your Payload subclass is missing a set_<attr> implementation
                     setter = getattr(self, 'set_%s' % attr)
@@ -277,6 +280,21 @@ class BasePayload(object):
         if not self.backend.ignore_unsupported_features:
             raise AnymailUnsupportedFeature("%s does not support %s" % (self.esp_name, feature),
                                             email_message=self.message, payload=self, backend=self.backend)
+
+    def process_extra_headers(self, headers):
+        # Handle some special-case headers, and pass the remainder to set_extra_headers.
+        # (Subclasses shouldn't need to override this.)
+        headers = CaseInsensitiveDict(headers)  # email headers are case-insensitive per RFC-822 et seq
+
+        reply_to = headers.pop('Reply-To', None)
+        if reply_to:
+            # message.extra_headers['Reply-To'] will override message.reply_to
+            # (because the extra_headers attr is processed after reply_to).
+            # This matches the behavior of Django's EmailMessage.message().
+            self.set_reply_to(parse_address_list([reply_to]))
+
+        if headers:
+            self.set_extra_headers(headers)
 
     #
     # Attribute validators
@@ -380,6 +398,7 @@ class BasePayload(object):
         self.unsupported_feature('reply_to')
 
     def set_extra_headers(self, headers):
+        # headers is a CaseInsensitiveDict, and is a copy (so is safe to modify)
         self.unsupported_feature('extra_headers')
 
     def set_text_body(self, body):

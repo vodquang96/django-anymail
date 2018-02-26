@@ -147,7 +147,7 @@ class SparkPostPayload(BasePayload):
 
     def set_extra_headers(self, headers):
         if headers:
-            self.params['custom_headers'] = headers
+            self.params['custom_headers'] = dict(headers)  # convert CaseInsensitiveDict to plain dict for SP lib
 
     def set_text_body(self, body):
         self.params['text'] = body

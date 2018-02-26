@@ -1,7 +1,5 @@
 import re
 
-from requests.structures import CaseInsensitiveDict
-
 from ..exceptions import AnymailRequestsAPIError
 from ..message import AnymailRecipientStatus
 from ..utils import get_anymail_setting
@@ -149,12 +147,9 @@ class PostmarkPayload(RequestsPayload):
             self.data["ReplyTo"] = reply_to
 
     def set_extra_headers(self, headers):
-        header_dict = CaseInsensitiveDict(headers)
-        if 'Reply-To' in header_dict:
-            self.data["ReplyTo"] = header_dict.pop('Reply-To')
         self.data["Headers"] = [
             {"Name": key, "Value": value}
-            for key, value in header_dict.items()
+            for key, value in headers.items()
         ]
 
     def set_text_body(self, body):

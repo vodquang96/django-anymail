@@ -318,3 +318,36 @@ class CatchCommonErrorsTests(TestBackendTestCase):
         self.message.reply_to = ugettext_lazy("single-reply-to@example.com")
         with self.assertRaisesMessage(TypeError, '"reply_to" attribute must be a list or other iterable'):
             self.message.send()
+
+
+def flatten_emails(emails):
+    return [str(email) for email in emails]
+
+
+class SpecialHeaderTests(TestBackendTestCase):
+    """Anymail should handle special extra_headers the same way Django does"""
+
+    def test_reply_to(self):
+        """Django allows message.reply_to and message.extra_headers['Reply-To'], and the latter takes precedence"""
+        self.message.reply_to = ["attr@example.com"]
+        self.message.extra_headers = {"X-Extra": "extra"}
+        self.message.send()
+        params = self.get_send_params()
+        self.assertEqual(flatten_emails(params['reply_to']), ["attr@example.com"])
+        self.assertEqual(params['extra_headers'], {"X-Extra": "extra"})
+
+        self.message.reply_to = None
+        self.message.extra_headers = {"Reply-To": "header@example.com", "X-Extra": "extra"}
+        self.message.send()
+        params = self.get_send_params()
+        self.assertEqual(flatten_emails(params['reply_to']), ["header@example.com"])
+        self.assertEqual(params['extra_headers'], {"X-Extra": "extra"})  # Reply-To no longer there
+
+        # If both are supplied, the header wins (to match Django EmailMessage.message() behavior).
+        # Also, header names are case-insensitive.
+        self.message.reply_to = ["attr@example.com"]
+        self.message.extra_headers = {"REPLY-to": "header@example.com", "X-Extra": "extra"}
+        self.message.send()
+        params = self.get_send_params()
+        self.assertEqual(flatten_emails(params['reply_to']), ["header@example.com"])
+        self.assertEqual(params['extra_headers'], {"X-Extra": "extra"})  # Reply-To no longer there

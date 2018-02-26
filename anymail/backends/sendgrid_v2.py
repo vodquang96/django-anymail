@@ -129,8 +129,10 @@ class SendGridPayload(RequestsPayload):
             self.data["x-smtpapi"] = self.serialize_json(self.data["x-smtpapi"])
 
         # Serialize extra headers to json:
-        headers = self.data["headers"]
-        self.data["headers"] = self.serialize_json(dict(headers.items()))
+        if self.data["headers"]:
+            self.data["headers"] = self.serialize_json(self.data["headers"])
+        else:
+            del self.data["headers"]
 
         return self.data
 

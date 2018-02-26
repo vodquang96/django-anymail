@@ -7,7 +7,7 @@ from requests.structures import CaseInsensitiveDict
 from .base_requests import AnymailRequestsBackend, RequestsPayload
 from ..exceptions import AnymailConfigurationError, AnymailRequestsAPIError, AnymailWarning
 from ..message import AnymailRecipientStatus
-from ..utils import BASIC_NUMERIC_TYPES, get_anymail_setting, timestamp, update_deep, parse_address_list
+from ..utils import BASIC_NUMERIC_TYPES, get_anymail_setting, timestamp, update_deep
 
 
 class EmailBackend(AnymailRequestsBackend):
@@ -102,14 +102,7 @@ class SendGridPayload(RequestsPayload):
             self.ensure_message_id()
         self.build_merge_data()
 
-        headers = self.data["headers"]
-        if "Reply-To" in headers:
-            # Reply-To must be in its own param
-            reply_to = headers.pop('Reply-To')
-            self.set_reply_to(parse_address_list([reply_to]))
-        if len(headers) > 0:
-            self.data["headers"] = dict(headers)  # flatten to normal dict for json serialization
-        else:
+        if not self.data["headers"]:
             del self.data["headers"]  # don't send empty headers
 
         return self.serialize_json(self.data)
