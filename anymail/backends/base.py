@@ -300,11 +300,21 @@ class BasePayload(object):
             # but message.from_email should be used as the envelope_sender. See:
             #   - https://code.djangoproject.com/ticket/9214
             #   - https://github.com/django/django/blob/1.8/django/core/mail/message.py#L269
-            #   - https://github.com/django/django/blob/1.8/django/core/mail/backends/smtp.py#L118-L123
-            header_from = parse_address_list(headers.pop('From', None))
+            #   - https://github.com/django/django/blob/1.8/django/core/mail/backends/smtp.py#L118
+            header_from = parse_address_list(headers.pop('From'))
             envelope_sender = parse_single_address(self.message.from_email)  # must be single address
             self.set_from_email_list(header_from)
             self.set_envelope_sender(envelope_sender)
+
+        if 'To' in headers:
+            # If message.extra_headers['To'] is supplied, message.to is used only as the envelope
+            # recipients (SMTP.sendmail to_addrs), and the header To is spoofed. See:
+            #   - https://github.com/django/django/blob/1.8/django/core/mail/message.py#L270
+            #   - https://github.com/django/django/blob/1.8/django/core/mail/backends/smtp.py#L119-L120
+            # No current ESP supports this, so this code is mainly here to flag
+            # the SMTP backend's behavior as an unsupported feature in Anymail:
+            header_to = headers.pop('To')
+            self.set_spoofed_to_header(header_to)
 
         if headers:
             self.set_extra_headers(headers)
@@ -442,6 +452,11 @@ class BasePayload(object):
     def add_attachment(self, attachment):
         raise NotImplementedError("%s.%s must implement add_attachment or set_attachments" %
                                   (self.__class__.__module__, self.__class__.__name__))
+
+    def set_spoofed_to_header(self, header_to):
+        # In the unlikely case an ESP supports *completely replacing* the To message header
+        # without altering the actual envelope recipients, the backend can implement this.
+        self.unsupported_feature("spoofing `To` header")
 
     # Anymail-specific payload construction
     def set_envelope_sender(self, email):

@@ -371,3 +371,11 @@ class SpecialHeaderTests(TestBackendTestCase):
         self.assertEqual(params['from'].address, "Header From <header@example.com>")
         self.assertEqual(params['envelope_sender'], "envelope@bounces.example.com")
         self.assertNotIn("From", params.get('extra_headers', {}))  # From was removed from extra-headers
+
+    def test_spoofed_to_header(self):
+        """Django treats message.to as envelope-recipient if message.extra_headers['To'] is set"""
+        # No current ESP supports this (and it's unlikely they would)
+        self.message.to = ["actual-recipient@example.com"]
+        self.message.extra_headers = {"To": "Apparent Recipient <but-not-really@example.com>"}
+        with self.assertRaisesMessage(AnymailUnsupportedFeature, "spoofing `To` header"):
+            self.message.send()

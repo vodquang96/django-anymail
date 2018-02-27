@@ -78,7 +78,7 @@ headers, Anymail will tell your ESP to treat them as inline rather than ordinary
 attached files. If you want to reference an attachment from an `<img>` in your
 HTML source, the attachment also needs a :mailheader:`Content-ID` header.
 
-Anymail's comes with :func:`~message.attach_inline_image` and
+Anymail comes with :func:`~message.attach_inline_image` and
 :func:`~message.attach_inline_image_file` convenience functions that
 do the right thing. See :ref:`inline-images` in the "Anymail additions" section.
 
@@ -95,16 +95,50 @@ Additional headers
 ------------------
 
 Anymail passes additional headers to your ESP. (Some ESPs may limit
-which headers they'll allow.)
+which headers they'll allow.) EmailMessage expects a `dict` of headers:
 
     .. code-block:: python
 
+        # Use `headers` when creating an EmailMessage
         msg = EmailMessage( ...
             headers={
                 "List-Unsubscribe": unsubscribe_url,
                 "X-Example-Header": "myapp",
             }
         )
+
+        # Or use the `extra_headers` attribute later
+        msg.extra_headers["In-Reply-To"] = inbound_msg["Message-ID"]
+
+Anymail treats header names as case-*insensitive* (because that's how email handles them).
+If you supply multiple headers that differ only in case, only one of them will make it
+into the resulting email.
+
+Django's default :class:`SMTP EmailBackend <django.core.mail.backends.smtp.EmailBackend>`
+has special handling for certain headers. Anymail replicates its behavior for compatibility:
+
+.. Django doesn't doc EmailMessage :attr:`to`, :attr:`from_email`, etc. So just link to
+   the :class:`EmailMessage` docs to refer to them.
+
+* If you supply a "Reply-To" header, it will *override* the message's
+  :class:`reply_to <django.core.mail.EmailMessage>` attribute.
+
+* If you supply a "From" header, it will override the message's
+  :class:`from_email <django.core.mail.EmailMessage>` and become the :mailheader:`From` field the
+  recipient sees. In addition, the original :class:`from_email <django.core.mail.EmailMessage>` value
+  will be used as the message's :attr:`~anymail.message.AnymailMessage.envelope_sender`, which becomes
+  the :mailheader:`Return-Path` at the recipient end. (Only if your ESP supports altering envelope
+  sender, otherwise you'll get an :ref:`unsupported feature <unsupported-features>` error.)
+
+* If you supply a "To" header, you'll get an :ref:`unsupported feature <unsupported-features>` error.
+  With Django's SMTP EmailBackend, this can be used to show the recipient a :mailheader:`To` address
+  that's different from the actual envelope recipients in the message's
+  :class:`to <django.core.mail.EmailMessage>` list. Spoofing the :mailheader:`To` header like this
+  is popular with spammers, and none of Anymail's supported ESPs allow it.
+
+.. versionchanged:: 2.0
+
+    Improved header-handling compatibility with Django's SMTP EmailBackend.
 
 
 .. _unsupported-features:
