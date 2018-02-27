@@ -221,6 +221,9 @@ class MailjetPayload(RequestsPayload):
             "content": attachment.b64content
         })
 
+    def set_envelope_sender(self, email):
+        self.data["Sender"] = email.addr_spec  # ??? v3 docs unclear
+
     def set_metadata(self, metadata):
         # Mailjet expects a single string payload
         self.data["Mj-EventPayLoad"] = self.serialize_json(metadata)

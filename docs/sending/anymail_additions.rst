@@ -68,6 +68,35 @@ ESP send options (AnymailMessage)
         :class:`~django.core.mail.EmailMessage` you send.
         (You don't have to use :class:`AnymailMessage`.)
 
+    .. attribute:: envelope_sender
+
+        .. versionadded:: 2.0
+
+        Set this to a `str` email address that should be used as the message's
+        envelope sender. If supported by your ESP, this will become the Return-Path
+        in the recipient's mailbox.
+
+        (Envelope sender is also known as bounce address, MAIL FROM, envelope from,
+        unixfrom, SMTP FROM command, return path, and `several other terms`_. Confused?
+        Here's some good info on `how envelope sender relates to return path`_.)
+
+        ESP support for envelope sender varies widely. Be sure to check Anymail's
+        docs for your :ref:`specific ESP <supported-esps>` before attempting to use it.
+        And note that those ESPs who do support it will often use only the domain
+        portion of the envelope sender address, overriding the part before the @ with
+        their own encoded bounce mailbox.
+
+        [The :attr:`!envelope_sender` attribute is unique to Anymail. If you also use Django's
+        SMTP EmailBackend, you can portably control envelope sender by *instead* setting
+        ``message.extra_headers["From"]`` to the desired email *header* :mailheader:`From`,
+        and ``message.from_email`` to the *envelope sender*. Anymail also allows this approach,
+        for compatibility with the SMTP EmailBackend. See the notes `in Django's bug tracker`_.]
+
+        .. _several other terms: https://en.wikipedia.org/wiki/Bounce_address
+        .. _in Django's bug tracker: https://code.djangoproject.com/ticket/9214
+        .. _how envelope sender relates to return path:
+            https://www.postmastery.com/blog/about-the-return-path-header/
+
     .. attribute:: metadata
 
         Set this to a `dict` of metadata values the ESP should store

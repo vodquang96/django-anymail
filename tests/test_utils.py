@@ -20,7 +20,7 @@ except ImportError:
 
 from anymail.exceptions import AnymailInvalidAddress
 from anymail.utils import (
-    parse_address_list, EmailAddress,
+    parse_address_list, parse_single_address, EmailAddress,
     is_lazy, force_non_lazy, force_non_lazy_dict, force_non_lazy_list,
     update_deep,
     get_request_uri, get_request_basic_auth, parse_rfc2822date, querydict_getfirst)
@@ -149,6 +149,16 @@ class ParseAddressListTests(SimpleTestCase):
         self.assertEqual(len(parsed_list), 1)
         self.assertEqual(parsed_list[0].display_name, "")
         self.assertEqual(parsed_list[0].addr_spec, "one@example.com")
+
+    def test_parse_one(self):
+        parsed = parse_single_address("one@example.com")
+        self.assertEqual(parsed.address, "one@example.com")
+
+        with self.assertRaisesMessage(AnymailInvalidAddress, "Only one email address is allowed; found 2"):
+            parse_single_address("one@example.com, two@example.com")
+
+        with self.assertRaisesMessage(AnymailInvalidAddress, "Invalid email address"):
+            parse_single_address(" ")
 
 
 class LazyCoercionTests(SimpleTestCase):

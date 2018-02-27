@@ -270,6 +270,12 @@ class SendinBlueBackendStandardEmailTests(SendinBlueBackendMockAPITestCase):
 class SendinBlueBackendAnymailFeatureTests(SendinBlueBackendMockAPITestCase):
     """Test backend support for Anymail added features"""
 
+    def test_envelope_sender(self):
+        # SendinBlue does not have a way to change envelope sender.
+        self.message.envelope_sender = "anything@bounces.example.com"
+        with self.assertRaisesMessage(AnymailUnsupportedFeature, 'envelope_sender'):
+            self.message.send()
+
     def test_metadata(self):
         self.message.metadata = {'user_id': "12345", 'items': 6, 'float': 98.6, 'long': longtype(123)}
         self.message.send()

@@ -417,13 +417,19 @@ class MailgunBackendAnymailFeatureTests(MailgunBackendMockAPITestCase):
         })
 
     def test_sender_domain(self):
-        """Mailgun send domain can come from from_email or esp_extra"""
+        """Mailgun send domain can come from from_email, envelope_sender, or esp_extra"""
         # You could also use MAILGUN_SENDER_DOMAIN in your ANYMAIL settings, as in the next test.
         # (The mailgun_integration_tests also do that.)
         self.message.from_email = "Test From <from@from-email.example.com>"
         self.message.send()
         self.assert_esp_called('/from-email.example.com/messages')  # API url includes the sender-domain
 
+        self.message.from_email = "Test From <from@from-email.example.com>"
+        self.message.envelope_sender = "anything@bounces.example.com"  # only the domain part is used
+        self.message.send()
+        self.assert_esp_called('/bounces.example.com/messages')  # overrides from_email
+
+        self.message.from_email = "Test From <from@from-email.example.com>"
         self.message.esp_extra = {'sender_domain': 'esp-extra.example.com'}
         self.message.send()
         self.assert_esp_called('/esp-extra.example.com/messages')  # overrides from_email

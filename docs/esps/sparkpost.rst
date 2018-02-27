@@ -127,6 +127,13 @@ Limitations and quirks
   (SparkPost's "recipient tags" are not available for tagging *messages*.
   They're associated with individual *addresses* in stored recipient lists.)
 
+**Envelope sender may use domain only**
+  Anymail's :attr:`~anymail.message.AnymailMessage.envelope_sender` is used to
+  populate SparkPost's `'return_path'` parameter. Anymail supplies the full
+  email address, but depending on your SparkPost configuration, SparkPost may
+  use only the domain portion and substitute its own encoded mailbox before
+  the @.
+
 
 .. _sparkpost-templates:
 

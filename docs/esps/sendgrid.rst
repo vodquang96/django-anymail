@@ -195,6 +195,10 @@ Limitations and quirks
 
   (Tested March, 2016)
 
+**No envelope sender overrides**
+  SendGrid does not support overriding :attr:`~anymail.message.AnymailMessage.envelope_sender`
+  on individual messages.
+
 
 .. _sendgrid-templates:
 

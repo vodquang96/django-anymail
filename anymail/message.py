@@ -20,6 +20,7 @@ class AnymailMessageMixin(object):
 
     def __init__(self, *args, **kwargs):
         self.esp_extra = kwargs.pop('esp_extra', UNSET)
+        self.envelope_sender = kwargs.pop('envelope_sender', UNSET)
         self.metadata = kwargs.pop('metadata', UNSET)
         self.send_at = kwargs.pop('send_at', UNSET)
         self.tags = kwargs.pop('tags', UNSET)

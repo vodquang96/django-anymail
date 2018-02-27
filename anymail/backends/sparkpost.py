@@ -172,6 +172,9 @@ class SparkPostPayload(BasePayload):
             'data': attachment.b64content})
 
     # Anymail-specific payload construction
+    def set_envelope_sender(self, email):
+        self.params['return_path'] = email.addr_spec
+
     def set_metadata(self, metadata):
         self.params['metadata'] = metadata
 

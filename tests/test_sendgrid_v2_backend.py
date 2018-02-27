@@ -343,6 +343,12 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
 class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
     """Test backend support for Anymail added features"""
 
+    def test_envelope_sender(self):
+        # SendGrid does not have a way to change envelope sender.
+        self.message.envelope_sender = "anything@bounces.example.com"
+        with self.assertRaisesMessage(AnymailUnsupportedFeature, 'envelope_sender'):
+            self.message.send()
+
     def test_metadata(self):
         # Note: SendGrid doesn't handle complex types in metadata
         self.message.metadata = {'user_id': "12345", 'items': 6}

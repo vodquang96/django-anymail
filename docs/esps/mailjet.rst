@@ -126,6 +126,11 @@ Limitations and quirks
 **No delayed sending**
   Mailjet does not support :attr:`~anymail.message.AnymailMessage.send_at`.
 
+**Envelope sender may require approval**
+  Anymail passes :attr:`~anymail.message.AnymailMessage.envelope_sender` to
+  Mailjet, but this may result in an API error if you have not received
+  special approval from Mailjet support to use custom senders.
+
 **Commas in recipient names**
   Mailjet's v3 API does not properly handle commas in recipient display-names
   *if* your message also uses the ``cc`` or ``bcc`` fields.

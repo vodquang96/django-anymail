@@ -327,6 +327,12 @@ class SparkPostBackendStandardEmailTests(SparkPostBackendMockAPITestCase):
 class SparkPostBackendAnymailFeatureTests(SparkPostBackendMockAPITestCase):
     """Test backend support for Anymail added features"""
 
+    def test_envelope_sender(self):
+        self.message.envelope_sender = "bounce-handler@bounces.example.com"
+        self.message.send()
+        params = self.get_send_params()
+        self.assertEqual(params['return_path'], "bounce-handler@bounces.example.com")
+
     def test_metadata(self):
         self.message.metadata = {'user_id': "12345", 'items': 'spark, post'}
         self.message.send()

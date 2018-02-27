@@ -139,6 +139,10 @@ class MandrillPayload(RequestsPayload):
             "content": attachment.b64content
         })
 
+    def set_envelope_sender(self, email):
+        # Only the domain is used
+        self.data["message"]["return_path_domain"] = email.domain
+
     def set_metadata(self, metadata):
         self.data["message"]["metadata"] = metadata
 
@@ -267,6 +271,10 @@ class MandrillPayload(RequestsPayload):
     def set_merge_vars(self, merge_vars):
         self.deprecation_warning('message.merge_vars', 'message.merge_data')
         self.set_merge_data(merge_vars)
+
+    def set_return_path_domain(self, domain):
+        self.deprecation_warning('message.return_path_domain', 'message.envelope_sender')
+        self.esp_extra.setdefault('message', {})['return_path_domain'] = domain
 
     def set_template_name(self, template_name):
         self.deprecation_warning('message.template_name', 'message.template_id')

@@ -129,6 +129,18 @@ as Mandrill's more complex list of name/content dicts.
 .. _messages/send API:
     https://mandrillapp.com/api/docs/messages.JSON.html#method=send
 
+
+.. _mandrill-quirks:
+
+Limitations and quirks
+----------------------
+
+**Envelope sender uses only domain**
+  Anymail's :attr:`~anymail.message.AnymailMessage.envelope_sender` is used to
+  populate Mandrill's `'return_path_domain'`---but only the domain portion.
+  (Mandrill always generates its own encoded mailbox for the envelope sender.)
+
+
 .. _mandrill-templates:
 
 Batch sending/merge and ESP templates
@@ -362,6 +374,13 @@ Changes to EmailMessage attributes
 ``message.use_template_from`` and ``message.use_template_subject``
   With Anymail, set ``message.from_email = None`` or ``message.subject = None``
   to use the values from the stored template.
+
+``message.return_path_domain``
+  With Anymail, set :attr:`~anymail.message.AnymailMessage.envelope_sender`
+  instead. You'll need to pass a valid email address (not just a domain),
+  but Anymail will use only the domain, and will ignore anything before the @.
+
+  .. versionchanged:: 2.0
 
 **Other Mandrill-specific attributes**
   Djrill allowed nearly all Mandrill API parameters to be set

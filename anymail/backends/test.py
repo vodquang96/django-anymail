@@ -74,6 +74,9 @@ class TestPayload(BasePayload):
     def set_from_email(self, email):
         self.params['from'] = email
 
+    def set_envelope_sender(self, email):
+        self.params['envelope_sender'] = email.addr_spec
+
     def set_to(self, emails):
         self.params['to'] = emails
         self.recipient_emails += [email.addr_spec for email in emails]

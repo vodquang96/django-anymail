@@ -9,8 +9,9 @@ from requests.structures import CaseInsensitiveDict
 from ..exceptions import AnymailCancelSend, AnymailError, AnymailUnsupportedFeature, AnymailRecipientsRefused
 from ..message import AnymailStatus
 from ..signals import pre_send, post_send
-from ..utils import (Attachment, UNSET, combine, last, get_anymail_setting, parse_address_list,
-                     force_non_lazy, force_non_lazy_list, force_non_lazy_dict, is_lazy)
+from ..utils import (
+    Attachment, UNSET, combine, last, get_anymail_setting, parse_address_list, parse_single_address,
+    force_non_lazy, force_non_lazy_list, force_non_lazy_dict, is_lazy)
 
 
 class AnymailBaseBackend(BaseEmailBackend):
@@ -230,6 +231,7 @@ class BasePayload(object):
     )
     anymail_message_attrs = (
         # Anymail expando-props
+        ('envelope_sender', last, parse_single_address),
         ('metadata', combine, force_non_lazy_dict),
         ('send_at', last, 'aware_datetime'),
         ('tags', combine, force_non_lazy_list),
@@ -292,6 +294,17 @@ class BasePayload(object):
             # (because the extra_headers attr is processed after reply_to).
             # This matches the behavior of Django's EmailMessage.message().
             self.set_reply_to(parse_address_list([reply_to]))
+
+        if 'From' in headers:
+            # If message.extra_headers['From'] is supplied, it should override message.from_email,
+            # but message.from_email should be used as the envelope_sender. See:
+            #   - https://code.djangoproject.com/ticket/9214
+            #   - https://github.com/django/django/blob/1.8/django/core/mail/message.py#L269
+            #   - https://github.com/django/django/blob/1.8/django/core/mail/backends/smtp.py#L118-L123
+            header_from = parse_address_list(headers.pop('From', None))
+            envelope_sender = parse_single_address(self.message.from_email)  # must be single address
+            self.set_from_email_list(header_from)
+            self.set_envelope_sender(envelope_sender)
 
         if headers:
             self.set_extra_headers(headers)
@@ -431,6 +444,9 @@ class BasePayload(object):
                                   (self.__class__.__module__, self.__class__.__name__))
 
     # Anymail-specific payload construction
+    def set_envelope_sender(self, email):
+        self.unsupported_feature("envelope_sender")
+
     def set_metadata(self, metadata):
         self.unsupported_feature("metadata")
 

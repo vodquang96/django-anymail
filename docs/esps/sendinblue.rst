@@ -1,7 +1,7 @@
 .. _sendinblue-backend:
 
 SendinBlue
-========
+==========
 
 Anymail integrates with the `SendinBlue`_ email service, using their `Web API v3`_.
 
@@ -88,3 +88,7 @@ Limitations and quirks
   If you use a template you will suffer some limitations:
   you can't change the subject or/and the body, and all email's
   display-names will be hidden.
+
+**No envelope sender overrides**
+  SendinBlue does not support overriding :attr:`~anymail.message.AnymailMessage.envelope_sender`
+  on individual messages.

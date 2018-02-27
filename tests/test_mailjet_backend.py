@@ -357,6 +357,12 @@ class MailjetBackendStandardEmailTests(MailjetBackendMockAPITestCase):
 class MailjetBackendAnymailFeatureTests(MailjetBackendMockAPITestCase):
     """Test backend support for Anymail added features"""
 
+    def test_envelope_sender(self):
+        self.message.envelope_sender = "bounce-handler@bounces.example.com"
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertEqual(data['Sender'], "bounce-handler@bounces.example.com")
+
     def test_metadata(self):
         # Mailjet expects the payload to be a single string
         # https://dev.mailjet.com/guides/#tagging-email-messages

@@ -94,14 +94,21 @@ Mailgun account is configured for "*mail1*.example.com", you should provide
 
 
 If you need to override the sender domain for an individual message,
-include `sender_domain` in Anymail's :attr:`~anymail.message.AnymailMessage.esp_extra`
-for that message:
+use Anymail's :attr:`~anymail.message.AnymailMessage.envelope_sender`
+(only the domain is used; anything before the @ is ignored):
 
     .. code-block:: python
 
         message = EmailMessage(from_email="marketing@example.com", ...)
-        message.esp_extra = {"sender_domain": "mail2.example.com"}
+        message.envelope_sender = "anything@mail2.example.com"  # the "anything@" is ignored
 
+
+.. versionchanged:: 2.0
+
+    Earlier Anymail versions looked for a special `sender_domain` key in the message's
+    :attr:`~anymail.message.AnymailMessage.esp_extra` to override Mailgun's sender domain.
+    This is still supported, but may be deprecated in a future release. Using
+    :attr:`~anymail.message.AnymailMessage.envelope_sender` as shown above is now preferred.
 
 .. _Mailgun sender domain:
     https://help.mailgun.com/hc/en-us/articles/202256730-How-do-I-pick-a-domain-name-for-my-Mailgun-account-
@@ -138,6 +145,12 @@ Limitations and quirks
   "message-id" or "tag" as :attr:`~anymail.message.AnymailMessage.metadata` keys
   if you need to access that metadata from an opened, clicked, or unsubscribed
   :ref:`tracking event <event-tracking>` handler.
+
+**Envelope sender uses only domain**
+  Anymail's :attr:`~anymail.message.AnymailMessage.envelope_sender` is used to
+  select your Mailgun :ref:`sender domain <mailgun-sender-domain>`. For
+  obvious reasons, only the domain portion applies. You can use anything before
+  the @, and it will be ignored.
 
 
 .. _mailgun-templates:

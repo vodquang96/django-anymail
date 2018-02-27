@@ -162,6 +162,10 @@ class MailgunPayload(RequestsPayload):
             (field, (name, attachment.content, attachment.mimetype))
         )
 
+    def set_envelope_sender(self, email):
+        # Only the domain is used
+        self.sender_domain = email.domain
+
     def set_metadata(self, metadata):
         for key, value in metadata.items():
             self.data["v:%s" % key] = value

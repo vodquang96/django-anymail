@@ -120,6 +120,11 @@ see :ref:`unsupported-features`.
 .. _several link-tracking options:
    http://developer.postmarkapp.com/developer-link-tracking.html
 
+**No envelope sender overrides**
+  Postmark does not support overriding :attr:`~anymail.message.AnymailMessage.envelope_sender`
+  on individual messages. (You can configure custom return paths for each sending domain in
+  the Postmark control panel.)
+
 
 .. _postmark-templates:
 

@@ -13,7 +13,6 @@ from django.core.mail.message import sanitize_address, DEFAULT_ATTACHMENT_MIME_T
 from django.utils.encoding import force_text
 from django.utils.functional import Promise
 from django.utils.timezone import utc, get_fixed_timezone
-# noinspection PyUnresolvedReferences
 from six.moves.urllib.parse import urlsplit, urlunsplit
 
 from .exceptions import AnymailConfigurationError, AnymailInvalidAddress
@@ -159,6 +158,21 @@ def parse_address_list(address_list):
             raise AnymailInvalidAddress(errmsg)
 
     return parsed
+
+
+def parse_single_address(address):
+    """Parses a single EmailAddress from str address, or raises AnymailInvalidAddress
+
+    :param str address: the fully-formatted email str to parse
+    :return :class:`EmailAddress`: if address contains a single email
+    :raises :exc:`AnymailInvalidAddress`: if address contains no or multiple emails
+    """
+    parsed = parse_address_list([address])
+    count = len(parsed)
+    if count > 1:
+        raise AnymailInvalidAddress("Only one email address is allowed; found %d in %r" % (count, address))
+    else:
+        return parsed[0]
 
 
 class EmailAddress(object):

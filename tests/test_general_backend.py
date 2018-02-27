@@ -351,3 +351,23 @@ class SpecialHeaderTests(TestBackendTestCase):
         params = self.get_send_params()
         self.assertEqual(flatten_emails(params['reply_to']), ["header@example.com"])
         self.assertEqual(params['extra_headers'], {"X-Extra": "extra"})  # Reply-To no longer there
+
+    def test_envelope_sender(self):
+        """Django treats message.from_email as envelope-sender if messsage.extra_headers['From'] is set"""
+        # Using Anymail's envelope_sender extension
+        self.message.from_email = "Header From <header@example.com>"
+        self.message.envelope_sender = "Envelope From <envelope@bounces.example.com>"  # Anymail extension
+        self.message.send()
+        params = self.get_send_params()
+        self.assertEqual(params['from'].address, "Header From <header@example.com>")
+        self.assertEqual(params['envelope_sender'], "envelope@bounces.example.com")
+
+        # Using Django's undocumented message.extra_headers['From'] extension
+        # (see https://code.djangoproject.com/ticket/9214)
+        self.message.from_email = "Envelope From <envelope@bounces.example.com>"
+        self.message.extra_headers = {"From": "Header From <header@example.com>"}
+        self.message.send()
+        params = self.get_send_params()
+        self.assertEqual(params['from'].address, "Header From <header@example.com>")
+        self.assertEqual(params['envelope_sender'], "envelope@bounces.example.com")
+        self.assertNotIn("From", params.get('extra_headers', {}))  # From was removed from extra-headers

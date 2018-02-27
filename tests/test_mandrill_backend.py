@@ -270,6 +270,12 @@ class MandrillBackendStandardEmailTests(MandrillBackendMockAPITestCase):
 class MandrillBackendAnymailFeatureTests(MandrillBackendMockAPITestCase):
     """Test backend support for Anymail added features"""
 
+    def test_envelope_sender(self):
+        self.message.envelope_sender = "anything@bounces.example.com"
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertEqual(data['message']['return_path_domain'], "bounces.example.com")
+
     def test_metadata(self):
         self.message.metadata = {'user_id': "12345", 'items': 6}
         self.message.send()
