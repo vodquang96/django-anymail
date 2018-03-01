@@ -3,6 +3,7 @@
 *.pyc
 *.egg
 *.egg-info
+build/
 dist/
 docs/_build/
 local.py
