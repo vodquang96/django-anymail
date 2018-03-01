@@ -26,9 +26,6 @@ class AnymailBasicAuthMixin(object):
     def __init__(self, **kwargs):
         self.basic_auth = get_anymail_setting('webhook_secret', default=[],
                                               kwargs=kwargs)  # no esp_name -- auth is shared between ESPs
-        if not self.basic_auth:
-            # Temporarily allow deprecated WEBHOOK_AUTHORIZATION setting
-            self.basic_auth = get_anymail_setting('webhook_authorization', default=[], kwargs=kwargs)
 
         # Allow a single string:
         if isinstance(self.basic_auth, six.string_types):

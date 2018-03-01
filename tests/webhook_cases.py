@@ -125,9 +125,3 @@ class WebhookBasicAuthTestsMixin(object):
         self.set_basic_auth('baduser', 'wrongpassword')
         response = self.call_webhook()
         self.assertEqual(response.status_code, 400)
-
-    @override_settings(ANYMAIL={'WEBHOOK_AUTHORIZATION': "username:password"})
-    def test_deprecated_setting(self):
-        """The older WEBHOOK_AUTHORIZATION setting is still supported (for now)"""
-        response = self.call_webhook()
-        self.assertEqual(response.status_code, 200)

@@ -283,8 +283,9 @@ username or password for this shared secret.
 .. versionchanged:: 1.4
 
     The earlier WEBHOOK_AUTHORIZATION setting was renamed WEBHOOK_SECRET, so that
-    Django error reporting sanitizes it. The old name is still allowed in v1.4,
-    but will be removed in a near-future release. You should update your settings.
+    Django error reporting sanitizes it. Support for the old name was dropped in
+    Anymail 2.0, and if you have not yet updated your settings.py, all webhook calls
+    will fail with a "missing or invalid basic auth" error.
 
 
 .. setting:: ANYMAIL_REQUESTS_TIMEOUT
