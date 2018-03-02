@@ -33,9 +33,10 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 setup(
     name="django-anymail",
     version=version,
-    description='Django email backends for Mailgun, Mailjet, Postmark, SendGrid, SparkPost '
+    description='Django email integration for Mailgun, Mailjet, Postmark, SendGrid, SendinBlue, SparkPost '
                 'and other transactional ESPs',
-    keywords="django, email, email backend, ESP, transactional mail, mailgun, mailjet, mandrill, postmark, sendgrid",
+    keywords="Django, email, email backend, ESP, transactional mail, "
+             "Mailgun, Mailjet, Mandrill, Postmark, SendinBlue, SendGrid, SparkPost",
     author="Mike Edmunds and Anymail contributors",
     author_email="medmunds@gmail.com",
     url="https://github.com/anymail/django-anymail",
@@ -52,6 +53,7 @@ setup(
         "mandrill": [],
         "postmark": [],
         "sendgrid": [],
+        "sendinblue": [],
         "sparkpost": ["sparkpost"],
     },
     include_package_data=True,

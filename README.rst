@@ -1,5 +1,5 @@
-Anymail: Django email backends for Mailgun, Mailjet, Postmark, SendGrid, SparkPost and more
-===========================================================================================
+Anymail: Django email integration for transactional ESPs
+========================================================
 
 ..  This README is reused in multiple places:
     * Github: project page, exactly as it appears here
@@ -23,8 +23,8 @@ Anymail integrates several transactional email service providers (ESPs) into Dja
 with a consistent API that lets you use ESP-added features without locking your code
 to a particular ESP.
 
-It currently fully supports Mailgun, Mailjet, Postmark, SendGrid, and SparkPost,
-and has limited support for Mandrill.
+It currently fully supports **Mailgun, Mailjet, Postmark, SendinBlue, SendGrid,**
+and **SparkPost,** and has limited support for **Mandrill.**
 
 Anymail normalizes ESP functionality so it "just works" with Django's
 built-in `django.core.mail` package. It includes:
