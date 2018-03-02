@@ -54,6 +54,7 @@ class SendinBlueBackendStandardEmailTests(SendinBlueBackendMockAPITestCase):
         self.assertEqual(data['subject'], "Subject here")
         self.assertEqual(data['textContent'], "Here is the message.")
         self.assertEqual(data['sender'], {'email': "from@sender.example.com"})
+        self.assertEqual(data['to'], [{'email': "to@example.com"}])
 
     def test_name_addr(self):
         """Make sure RFC2822 name-addr format (with display-name) is allowed
@@ -68,6 +69,12 @@ class SendinBlueBackendStandardEmailTests(SendinBlueBackendMockAPITestCase):
         msg.send()
         data = self.get_api_call_json()
         self.assertEqual(data['sender'], {'email': "from@example.com", 'name': "From Name"})
+        self.assertEqual(data['to'], [{'email': "to1@example.com", 'name': "Recipient #1"},
+                                      {'email': "to2@example.com"}])
+        self.assertEqual(data['cc'], [{'email': "cc1@example.com", 'name': "Carbon Copy"},
+                                      {'email': "cc2@example.com"}])
+        self.assertEqual(data['bcc'], [{'email': "bcc1@example.com", 'name': "Blind Copy"},
+                                       {'email': "bcc2@example.com"}])
 
     def test_email_message(self):
         email = mail.EmailMessage(
@@ -325,52 +332,98 @@ class SendinBlueBackendAnymailFeatureTests(SendinBlueBackendMockAPITestCase):
             self.message.send()
 
     def test_template_id(self):
-        # SendinBlue use incremental ID to identify templates
-        self.message.template_id = "12"
-        self.message.merge_global_data = {
-            'buttonUrl': 'https://mydomain.com',
+        # subject, body, and from_email must be None for SendinBlue template send:
+        message = mail.EmailMessage(
+            subject=None,
+            body=None,
+            # recipient and reply_to display names are not allowed
+            to=['alice@example.com'],  # single 'to' recommended (all 'to' get the same message)
+            cc=['cc1@example.com', 'cc2@example.com'],
+            bcc=['bcc@example.com'],
+            reply_to=['reply@example.com'],
+        )
+        message.from_email = None  # from_email must be cleared after constructing EmailMessage
+
+        message.template_id = 12  # SendinBlue uses per-account numeric ID to identify templates
+        message.merge_global_data = {
+            'buttonUrl': 'https://example.com',
         }
-
-        # SendinBlue doesn't support (if we use a template):
-        #  - subject
-        #  - body
-        #  - display name of emails
-        self.message.subject = ''
-        self.message.body = ''
-        self.message.to = ['alice@example.com', 'bob@example.com']
-        self.message.cc = ['cc@example.com']
-        self.message.bcc = ['bcc@example.com']
-        self.message.reply_to = ['reply@example.com']
-
-        self.message.send()
-
-        self.assert_esp_called('/v3/smtp/templates/12/send')
-
-        data = self.get_api_call_json()
-
-        self.assertEqual(data['emailTo'], ["alice@example.com", "bob@example.com"])
-        self.assertEqual(data['emailCc'], ["cc@example.com"])
-        self.assertEqual(data['emailBcc'], ["bcc@example.com"])
-        self.assertEqual(data['replyTo'], 'reply@example.com')
-        self.assertEqual(data['attributes']['buttonUrl'], "https://mydomain.com")
-
-    def test_template_id_with_empty_body(self):
-        message = mail.EmailMessage(from_email='from@example.com', to=['to@example.com'])
-        message.template_id = "9"
 
         message.send()
 
+        # Template API call uses different endpoint and payload format from normal send:
+        self.assert_esp_called('/v3/smtp/templates/12/send')
         data = self.get_api_call_json()
-        self.assertNotIn('htmlcontent', data)
-        self.assertNotIn('textContent', data)  # neither text nor html body
+        self.assertEqual(data['emailTo'], ["alice@example.com"])
+        self.assertEqual(data['emailCc'], ["cc1@example.com", "cc2@example.com"])
+        self.assertEqual(data['emailBcc'], ["bcc@example.com"])
+        self.assertEqual(data['replyTo'], 'reply@example.com')
+        self.assertEqual(data['attributes'], {'buttonUrl': 'https://example.com'})
+
+        # Make sure these normal-send parameters didn't get left in:
+        self.assertNotIn('to', data)
+        self.assertNotIn('cc', data)
+        self.assertNotIn('bcc', data)
+        self.assertNotIn('sender', data)
         self.assertNotIn('subject', data)
+        self.assertNotIn('textContent', data)
+        self.assertNotIn('htmlContent', data)
+
+    def test_unsupported_template_overrides(self):
+        # SendinBlue doesn't allow overriding any template headers/content
+        message = mail.EmailMessage(to=['to@example.com'])
+        message.template_id = "9"
+
+        message.from_email = "from@example.com"
+        with self.assertRaisesMessage(AnymailUnsupportedFeature, "overriding template from_email"):
+            message.send()
+        message.from_email = None
+
+        message.subject = "nope, can't change template subject"
+        with self.assertRaisesMessage(AnymailUnsupportedFeature, "overriding template subject"):
+            message.send()
+        message.subject = None
+
+        message.body = "nope, can't change text body"
+        with self.assertRaisesMessage(AnymailUnsupportedFeature, "overriding template body content"):
+            message.send()
+        message.content_subtype = "html"
+        with self.assertRaisesMessage(AnymailUnsupportedFeature, "overriding template body content"):
+            message.send()
+        message.body = None
+
+    def test_unsupported_template_display_names(self):
+        # SendinBlue doesn't support display names in template recipients or reply-to
+        message = mail.EmailMessage()
+        message.from_email = None
+        message.template_id = "9"
+
+        message.to = ["Recipient <to@example.com>"]
+        with self.assertRaisesMessage(AnymailUnsupportedFeature, "display names in to when sending with a template"):
+            message.send()
+        message.to = ["to@example.com"]
+
+        message.cc = ["Recipient <cc@example.com>"]
+        with self.assertRaisesMessage(AnymailUnsupportedFeature, "display names in cc when sending with a template"):
+            message.send()
+        message.cc = []
+
+        message.bcc = ["Recipient <bcc@example.com>"]
+        with self.assertRaisesMessage(AnymailUnsupportedFeature, "display names in bcc when sending with a template"):
+            message.send()
+        message.bcc = []
+
+        message.reply_to = ["Reply-To <reply@example.com>"]
+        with self.assertRaisesMessage(AnymailUnsupportedFeature,
+                                      "display names in reply_to when sending with a template"):
+            message.send()
+        message.reply_to = []
 
     def test_merge_data(self):
         self.message.merge_data = {
             'alice@example.com': {':name': "Alice", ':group': "Developers"},
             'bob@example.com': {':name': "Bob"},  # and leave :group undefined
         }
-
         with self.assertRaises(AnymailUnsupportedFeature):
             self.message.send()
 

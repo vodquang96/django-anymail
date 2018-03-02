@@ -90,6 +90,7 @@ class SendinBlueBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
             },
             metadata={"meta1": "simple string", "meta2": 2},
         )
+        message.from_email = None
 
         message.attach("attachment1.txt", "Here is some\ntext for you", "text/plain")
         message.attach("attachment2.csv", "ID,Name\n1,Amy Lina", "text/csv")

@@ -26,7 +26,7 @@ class EmailBackend(AnymailRequestsBackend):
             'api_url',
             esp_name=esp_name,
             kwargs=kwargs,
-            default="https://api.sendinblue.com/v3",
+            default="https://api.sendinblue.com/v3/",
         )
         if not api_url.endswith("/"):
             api_url += "/"
@@ -76,7 +76,7 @@ class SendinBluePayload(RequestsPayload):
 
     def get_api_endpoint(self):
         if self.template_id:
-            return "smtp/templates/%s/send" % (self.template_id)
+            return "smtp/templates/%s/send" % self.template_id
         else:
             return "smtp/email"
 
@@ -106,11 +106,11 @@ class SendinBluePayload(RequestsPayload):
         :param data: The data we want to transform
         :return: The transformed data
         """
-        if 'subject' in data:
+        if data.pop('subject', False):
             self.unsupported_feature("overriding template subject")
-        if 'subject' in data:
+        if data.pop('sender', False):
             self.unsupported_feature("overriding template from_email")
-        if 'textContent' in data or 'htmlContent' in data:
+        if data.pop('textContent', False) or data.pop('htmlContent', False):
             self.unsupported_feature("overriding template body content")
 
         transformation = {
@@ -118,22 +118,16 @@ class SendinBluePayload(RequestsPayload):
             'cc': 'emailCc',
             'bcc': 'emailBcc',
         }
-        for key in data:
-            if key in transformation:
-                new_key = transformation[key]
-                list_email = list()
-                for email in data.pop(key):
-                    if 'name' in email:
-                        self.unsupported_feature("display names in (%r) when sending with a template" % key)
-
-                    list_email.append(email.get('email'))
-
-                data[new_key] = list_email
+        for key, new_key in transformation.items():
+            if key in data:
+                if any(email.get('name') for email in data[key]):
+                    self.unsupported_feature("display names in %s when sending with a template" % key)
+                data[new_key] = [email['email'] for email in data[key]]
+                del data[key]
 
         if 'replyTo' in data:
-            if 'name' in data['replyTo']:
-                self.unsupported_feature("display names in (replyTo) when sending with a template")
-
+            if data['replyTo'].get('name'):
+                self.unsupported_feature("display names in reply_to when sending with a template")
             data['replyTo'] = data['replyTo']['email']
 
         return data
