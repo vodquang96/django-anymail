@@ -269,14 +269,14 @@ Set to `True` to ignore these problems and send the email anyway. See
 .. rubric:: WEBHOOK_SECRET
 
 A `'random:random'` shared secret string. Anymail will reject incoming webhook calls
-from your ESP that don't include this authorization. You can also give a list of
+from your ESP that don't include this authentication. You can also give a list of
 shared secret strings, and Anymail will allow ESP webhook calls that match any of them
 (to facilitate credential rotation). See :ref:`securing-webhooks`.
 
 Default is unset, which leaves your webhooks insecure. Anymail
 will warn if you try to use webhooks without a shared secret.
 
-This is actually implemented using HTTP basic authorization, and the string is
+This is actually implemented using HTTP basic authentication, and the string is
 technically a "username:password" format. But you should *not* use any real
 username or password for this shared secret.
 
