@@ -105,6 +105,15 @@ override this by enabling the :setting:`ANYMAIL_IGNORE_UNSUPPORTED_FEATURES`
 setting, and Anymail will try to limit the API request to features
 SendinBlue can handle.
 
+**HTML body required**
+  SendinBlue's API returns an error if you attempt to send a message with
+  only a plain-text body. Be sure to :ref:`include HTML <sending-html>`
+  content for your messages.
+
+  (SendinBlue *does* allow HTML without a plain-text body. This is generally
+  not recommended, though, as some email systems treat HTML-only content as a
+  spam signal.)
+
 **Inline images**
   SendinBlue's v3 API doesn't support inline images, at all.
   (Confirmed with SendinBlue support Feb 2018.)

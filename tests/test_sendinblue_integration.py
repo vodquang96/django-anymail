@@ -48,11 +48,11 @@ class SendinBlueBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         message_id = anymail_status.recipients['to@example.com'].message_id
 
         self.assertEqual(sent_status, 'queued')  # SendinBlue always queues
-        self.assertRegex(message_id, r'\<.+@smtp-relay\.mailin\.fr\>')  # should use from_email's domain
+        self.assertRegex(message_id, r'\<.+@.+\>')  # Message-ID can be ...@smtp-relay.mail.fr or .sendinblue.com
         self.assertEqual(anymail_status.status, {sent_status})  # set of all recipient statuses
         self.assertEqual(anymail_status.message_id, message_id)
 
-    def test_all_options_without_template(self):
+    def test_all_options(self):
         message = AnymailMessage(
             subject="Anymail all-options integration test",
             body="This is the text body",
@@ -61,42 +61,41 @@ class SendinBlueBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
             cc=["cc1@example.com", "Copy 2 <cc2@example.com>"],
             bcc=["bcc1@example.com", "Blind Copy 2 <bcc2@example.com>"],
             reply_to=['"Reply, with comma" <reply@example.com>'],  # SendinBlue API v3 only supports single reply-to
-            tags=["tag 1"],
             headers={"X-Anymail-Test": "value", "X-Anymail-Count": 3},
-            merge_global_data={
-                'global': 'global_value'
-            },
+
             metadata={"meta1": "simple string", "meta2": 2},
+            tags=["tag 1"],  # SendinBlue only supports single tags
         )
-        message.attach_alternative('<p>HTML content</p>', "text/html")  # SendinBlue need an HTML content to work
+        message.attach_alternative('<p>HTML content</p>', "text/html")  # SendinBlue requires an HTML body
 
         message.attach("attachment1.txt", "Here is some\ntext for you", "text/plain")
         message.attach("attachment2.csv", "ID,Name\n1,Amy Lina", "text/csv")
 
         message.send()
         self.assertEqual(message.anymail_status.status, {'queued'})  # SendinBlue always queues
+        self.assertRegex(message.anymail_status.message_id, r'\<.+@.+\>')
 
-    def test_all_options_with_template(self):
+    def test_template(self):
         message = AnymailMessage(
-            template_id='1',
-            to=["to1@example.com", 'to2@example.com'],
-            cc=["cc1@example.com", "cc2@example.com"],
-            bcc=["bcc1@example.com", "bcc2@example.com"],
-            reply_to=['reply@example.com'],  # SendinBlue API v3 only supports single reply-to
-            tags=["tag 1"],
-            headers={"X-Anymail-Test": "value", "X-Anymail-Count": 3},
+            template_id=1,  # There is a template with this id in the Anymail test account
+            to=["to1@example.com"],  # SendinBlue doesn't allow recipient display names with templates
+            reply_to=["reply@example.com"],
+            tags=["using-template"],
+            headers={"X-Anymail-Test": "group: A, variation: C"},
             merge_global_data={
-                'global': 'global_value'
+                # The Anymail test template includes `%SHIP_DATE%` and `%ORDER_ID%` variables
+                "SHIP_DATE": "yesterday",
+                "ORDER_ID": "12345",
             },
-            metadata={"meta1": "simple string", "meta2": 2},
+            metadata={"customer-id": "ZXK9123", "meta2": 2},
         )
-        message.from_email = None
+        message.from_email = None  # Required for SendinBlue templates
 
         message.attach("attachment1.txt", "Here is some\ntext for you", "text/plain")
-        message.attach("attachment2.csv", "ID,Name\n1,Amy Lina", "text/csv")
 
         message.send()
         self.assertEqual(message.anymail_status.status, {'queued'})  # SendinBlue always queues
+        self.assertRegex(message.anymail_status.message_id, r'\<.+@.+\>')
 
     @override_settings(ANYMAIL_SENDINBLUE_API_KEY="Hey, that's not an API key!")
     def test_invalid_api_key(self):
