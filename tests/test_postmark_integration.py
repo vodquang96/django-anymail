@@ -22,17 +22,17 @@ class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     def setUp(self):
         super(PostmarkBackendIntegrationTests, self).setUp()
         self.message = AnymailMessage('Anymail Postmark integration test', 'Text content',
-                                      'from@example.com', ['to@example.com'])
+                                      'from@example.com', ['anymail-test-to1@mailinator.com'])
         self.message.attach_alternative('<p>HTML content</p>', "text/html")
 
     def test_simple_send(self):
-        # Example of getting the SendGrid send status and message id from the message
+        # Example of getting the Postmark send status and message id from the message
         sent_count = self.message.send()
         self.assertEqual(sent_count, 1)
 
         anymail_status = self.message.anymail_status
-        sent_status = anymail_status.recipients['to@example.com'].status
-        message_id = anymail_status.recipients['to@example.com'].message_id
+        sent_status = anymail_status.recipients['anymail-test-to1@mailinator.com'].status
+        message_id = anymail_status.recipients['anymail-test-to1@mailinator.com'].message_id
 
         self.assertEqual(sent_status, 'sent')
         self.assertGreater(len(message_id), 0)  # non-empty string
@@ -41,13 +41,13 @@ class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
 
     def test_all_options(self):
         message = AnymailMessage(
-            subject="Anymail all-options integration test",
+            subject="Anymail Postmark all-options integration test",
             body="This is the text body",
             # Postmark accepts multiple from_email addresses, but truncates to the first on their end
             from_email="Test From <from@example.com>, also-from@example.com",
-            to=["to1@example.com", "Recipient 2 <to2@example.com>"],
-            cc=["cc1@example.com", "Copy 2 <cc2@example.com>"],
-            bcc=["bcc1@example.com", "Blind Copy 2 <bcc2@example.com>"],
+            to=["anymail-test-to1@mailinator.com", "Recipient 2 <anymail-test-to2@mailinator.com>"],
+            cc=["anymail-test-cc1@mailinator.com", "Copy 2 <anymail-test-cc2@mailinator.com>"],
+            bcc=["anymail-test-bcc1@mailinator.com", "Blind Copy 2 <anymail-test-bcc2@mailinator.com>"],
             reply_to=["reply1@example.com", "Reply 2 <reply2@example.com>"],
             headers={"X-Anymail-Test": "value"},
 

@@ -35,7 +35,7 @@ class SendinBlueBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         super(SendinBlueBackendIntegrationTests, self).setUp()
 
         self.message = AnymailMessage('Anymail SendinBlue integration test', 'Text content',
-                                      'from@example.com', ['to@example.com'])
+                                      'from@test-sb.anymail.info', ['anymail-test-to1@mailinator.com'])
         self.message.attach_alternative('<p>HTML content</p>', "text/html")
 
     def test_simple_send(self):
@@ -44,8 +44,8 @@ class SendinBlueBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         self.assertEqual(sent_count, 1)
 
         anymail_status = self.message.anymail_status
-        sent_status = anymail_status.recipients['to@example.com'].status
-        message_id = anymail_status.recipients['to@example.com'].message_id
+        sent_status = anymail_status.recipients['anymail-test-to1@mailinator.com'].status
+        message_id = anymail_status.recipients['anymail-test-to1@mailinator.com'].message_id
 
         self.assertEqual(sent_status, 'queued')  # SendinBlue always queues
         self.assertRegex(message_id, r'\<.+@.+\>')  # Message-ID can be ...@smtp-relay.mail.fr or .sendinblue.com
@@ -54,12 +54,12 @@ class SendinBlueBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
 
     def test_all_options(self):
         message = AnymailMessage(
-            subject="Anymail all-options integration test",
+            subject="Anymail SendinBlue all-options integration test",
             body="This is the text body",
-            from_email='"Test From, with comma" <from@example.com>',
-            to=["to1@example.com", '"Recipient 2, OK?" <to2@example.com>'],
-            cc=["cc1@example.com", "Copy 2 <cc2@example.com>"],
-            bcc=["bcc1@example.com", "Blind Copy 2 <bcc2@example.com>"],
+            from_email='"Test From, with comma" <from@test-sb.anymail.info>',
+            to=["anymail-test-to1@mailinator.com", '"Recipient 2, OK?" <anymail-test-to2@mailinator.com>'],
+            cc=["anymail-test-cc1@mailinator.com", "Copy 2 <anymail-test-cc2@mailinator.com>"],
+            bcc=["anymail-test-bcc1@mailinator.com", "Blind Copy 2 <anymail-test-bcc2@mailinator.com>"],
             reply_to=['"Reply, with comma" <reply@example.com>'],  # SendinBlue API v3 only supports single reply-to
             headers={"X-Anymail-Test": "value", "X-Anymail-Count": 3},
 
@@ -78,7 +78,7 @@ class SendinBlueBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     def test_template(self):
         message = AnymailMessage(
             template_id=1,  # There is a template with this id in the Anymail test account
-            to=["to1@example.com"],  # SendinBlue doesn't allow recipient display names with templates
+            to=["anymail-test-to1@mailinator.com"],  # SendinBlue doesn't allow recipient display names with templates
             reply_to=["reply@example.com"],
             tags=["using-template"],
             headers={"X-Anymail-Test": "group: A, variation: C"},

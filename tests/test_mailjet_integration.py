@@ -39,7 +39,7 @@ class MailjetBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     def setUp(self):
         super(MailjetBackendIntegrationTests, self).setUp()
         self.message = AnymailMessage('Anymail Mailjet integration test', 'Text content',
-                                      'test@test-mj.anymail.info', ['to@example.com'])
+                                      'test@test-mj.anymail.info', ['anymail-test-to1@mailinator.com'])
         self.message.attach_alternative('<p>HTML content</p>', "text/html")
 
     def test_simple_send(self):
@@ -48,8 +48,8 @@ class MailjetBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         self.assertEqual(sent_count, 1)
 
         anymail_status = self.message.anymail_status
-        sent_status = anymail_status.recipients['to@example.com'].status
-        message_id = anymail_status.recipients['to@example.com'].message_id
+        sent_status = anymail_status.recipients['anymail-test-to1@mailinator.com'].status
+        message_id = anymail_status.recipients['anymail-test-to1@mailinator.com'].message_id
 
         self.assertEqual(sent_status, 'sent')
         self.assertRegex(message_id, r'.+')
@@ -58,12 +58,12 @@ class MailjetBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
 
     def test_all_options(self):
         message = AnymailMessage(
-            subject="Anymail all-options integration test",
+            subject="Anymail Mailjet all-options integration test",
             body="This is the text body",
             from_email='"Test Sender, Inc." <test@test-mj.anymail.info>',
-            to=['to1@example.com', '"Recipient, 2nd" <to2@example.com>'],
-            cc=['cc1@example.com', 'Copy 2 <cc2@example.com>'],
-            bcc=['bcc1@example.com', 'Blind Copy 2 <bcc2@example.com>'],
+            to=['anymail-test-to1@mailinator.com', '"Recipient, 2nd" <anymail-test-to2@mailinator.com>'],
+            cc=['anymail-test-cc1@mailinator.com', 'Copy 2 <anymail-test-cc1@mailinator.com>'],
+            bcc=['anymail-test-bcc1@mailinator.com', 'Blind Copy 2 <anymail-test-bcc2@mailinator.com>'],
             reply_to=['reply1@example.com', '"Reply, 2nd" <reply2@example.com>'],
             headers={"X-Anymail-Test": "value"},
 
@@ -85,14 +85,14 @@ class MailjetBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
 
     def test_merge_data(self):
         message = AnymailMessage(
-            subject="Anymail merge_data test",  # Mailjet doesn't support merge fields in the subject
+            subject="Anymail Mailjet merge_data test",  # Mailjet doesn't support merge fields in the subject
             body="This body includes merge data: [[var:value]]\n"
                  "And global merge data: [[var:global]]",
             from_email="Test From <test@test-mj.anymail.info>",
-            to=["to1@example.com", "Recipient 2 <to2@example.com>"],
+            to=["anymail-test-to1@mailinator.com", "Recipient 2 <anymail-test-to2@mailinator.com>"],
             merge_data={
-                'to1@example.com': {'value': 'one'},
-                'to2@example.com': {'value': 'two'},
+                'anymail-test-to1@mailinator.com': {'value': 'one'},
+                'anymail-test-to2@mailinator.com': {'value': 'two'},
             },
             merge_global_data={
                 'global': 'global_value'
@@ -100,15 +100,15 @@ class MailjetBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         )
         message.send()
         recipient_status = message.anymail_status.recipients
-        self.assertEqual(recipient_status['to1@example.com'].status, 'sent')
-        self.assertEqual(recipient_status['to2@example.com'].status, 'sent')
+        self.assertEqual(recipient_status['anymail-test-to1@mailinator.com'].status, 'sent')
+        self.assertEqual(recipient_status['anymail-test-to2@mailinator.com'].status, 'sent')
 
     def test_stored_template(self):
         message = AnymailMessage(
             template_id='176375',  # ID of the real template named 'test-template' in our Mailjet test account
-            to=["to1@example.com"],
+            to=["anymail-test-to1@mailinator.com"],
             merge_data={
-                'to1@example.com': {
+                'anymail-test-to1@mailinator.com': {
                     'name': "Test Recipient",
                 }
             },
@@ -119,7 +119,7 @@ class MailjetBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         message.from_email = None  # use the template's sender email/name
         message.send()
         recipient_status = message.anymail_status.recipients
-        self.assertEqual(recipient_status['to1@example.com'].status, 'sent')
+        self.assertEqual(recipient_status['anymail-test-to1@mailinator.com'].status, 'sent')
 
     @override_settings(ANYMAIL_MAILJET_API_KEY="Hey, that's not an API key!")
     def test_invalid_api_key(self):

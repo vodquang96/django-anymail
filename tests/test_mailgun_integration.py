@@ -37,8 +37,8 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
 
     def setUp(self):
         super(MailgunBackendIntegrationTests, self).setUp()
-        self.message = AnymailMessage('Anymail integration test', 'Text content',
-                                      'from@example.com', ['to@example.com'])
+        self.message = AnymailMessage('Anymail Mailgun integration test', 'Text content',
+                                      'from@example.com', ['anymail-test-to1@mailinator.com'])
         self.message.attach_alternative('<p>HTML content</p>', "text/html")
 
     def fetch_mailgun_events(self, message_id, event=None,
@@ -87,8 +87,8 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         self.assertEqual(sent_count, 1)
 
         anymail_status = self.message.anymail_status
-        sent_status = anymail_status.recipients['to@example.com'].status
-        message_id = anymail_status.recipients['to@example.com'].message_id
+        sent_status = anymail_status.recipients['anymail-test-to1@mailinator.com'].status
+        message_id = anymail_status.recipients['anymail-test-to1@mailinator.com'].message_id
 
         self.assertEqual(sent_status, 'queued')  # Mailgun always queues
         self.assertGreater(len(message_id), 0)  # don't know what it'll be, but it should exist
@@ -100,12 +100,12 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         send_at = datetime.now().replace(microsecond=0) + timedelta(minutes=2)
         send_at_timestamp = mktime(send_at.timetuple())  # python3: send_at.timestamp()
         message = AnymailMessage(
-            subject="Anymail all-options integration test",
+            subject="Anymail Mailgun all-options integration test",
             body="This is the text body",
             from_email="Test From <from@example.com>, also-from@example.com",
-            to=["to1@example.com", "Recipient 2 <to2@example.com>"],
-            cc=["cc1@example.com", "Copy 2 <cc2@example.com>"],
-            bcc=["bcc1@example.com", "Blind Copy 2 <bcc2@example.com>"],
+            to=["anymail-test-to1@mailinator.com", "Recipient 2 <anymail-test-to2@mailinator.com>"],
+            cc=["anymail-test-cc1@mailinator.com", "Copy 2 <anymail-test-cc2@mailinator.com>"],
+            bcc=["anymail-test-bcc1@mailinator.com", "Blind Copy 2 <anymail-test-bcc2@mailinator.com>"],
             reply_to=["reply1@example.com", "Reply 2 <reply2@example.com>"],
             headers={"X-Anymail-Test": "value"},
 
@@ -137,13 +137,15 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
                          {"meta1": "simple string", "meta2": "2"})  # all metadata values become strings
 
         self.assertEqual(event["message"]["scheduled-for"], send_at_timestamp)
-        self.assertIn(event["recipient"], ['to1@example.com', 'to2@example.com', 'cc1@example.com',
-                                           'cc2@example.com', 'bcc1@example.com', 'bcc2@example.com'])
+        self.assertIn(event["recipient"], ['anymail-test-to1@mailinator.com', 'anymail-test-to2@mailinator.com',
+                                           'anymail-test-cc1@mailinator.com', 'anymail-test-cc1@mailinator.com',
+                                           'anymail-test-bcc1@mailinator.com', 'anymail-test-bcc2@mailinator.com'])
 
         headers = event["message"]["headers"]
         self.assertEqual(headers["from"], "Test From <from@example.com>, also-from@example.com")
-        self.assertEqual(headers["to"], "to1@example.com, Recipient 2 <to2@example.com>")
-        self.assertEqual(headers["subject"], "Anymail all-options integration test")
+        self.assertEqual(headers["to"],
+                         "anymail-test-to1@mailinator.com, Recipient 2 <anymail-test-to2@mailinator.com>")
+        self.assertEqual(headers["subject"], "Anymail Mailgun all-options integration test")
 
         attachments = event["message"]["attachments"]
         self.assertEqual(len(attachments), 2)  # because inline image shouldn't be an attachment
