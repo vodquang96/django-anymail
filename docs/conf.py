@@ -145,6 +145,11 @@ html_static_path = ['_static']
 # typographically correct entities.
 # html_use_smartypants = True
 
+# If true, a list all whose items consist of a single paragraph and/or a
+# sub-list all whose items etc… (recursive definition) will not use the <p>
+# element for any of its items. This is standard docutils behavior.
+# html_compact_lists = True
+
 # Custom sidebar templates, maps document names to template names.
 # html_sidebars = {}
 
@@ -272,6 +277,9 @@ intersphinx_mapping = {
 
 
 def setup(app):
+    app.add_stylesheet("anymail-theme.css")
+    app.add_javascript("version-alert.js")
+
     # Django-specific roles, from https://github.com/django/django/blob/master/docs/_ext/djangodocs.py:
     app.add_crossref_type(
         directivename="setting",

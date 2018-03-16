@@ -118,23 +118,21 @@ To use batch sending with Anymail (for ESPs that support it):
   or with some ESPs you can use merge fields directly in your
   :class:`~django.core.mail.EmailMessage` (meaning the message itself
   is treated as an on-the-fly template).
-
 * Set the message's :attr:`~AnymailMessage.merge_data` attribute to define merge field
   substitutions for each recipient, and optionally set :attr:`~AnymailMessage.merge_global_data`
   to defaults or values to use for all recipients.
-
 * Specify all of the recipients for the batch in the message's `to` list.
 
-  .. caution::
+.. caution::
 
-      It's critical to set the :attr:`~AnymailMessage.merge_data` attribute:
-      this is how Anymail recognizes the message as a batch send.
+    It's critical to set the :attr:`~AnymailMessage.merge_data` attribute:
+    this is how Anymail recognizes the message as a batch send.
 
-      When you provide merge_data, Anymail will tell the ESP to send an individual customized
-      message to each "to" address. Without it, you may get a single message to everyone,
-      exposing all of the email addresses to all recipients.
-      (If you don't have any per-recipient customizations, but still want individual messages,
-      just set merge_data to an empty dict.)
+    When you provide merge_data, Anymail will tell the ESP to send an individual customized
+    message to each "to" address. Without it, you may get a single message to everyone,
+    exposing all of the email addresses to all recipients.
+    (If you don't have any per-recipient customizations, but still want individual messages,
+    just set merge_data to an empty dict.)
 
 The exact syntax for merge fields varies by ESP. It might be something like
 `*|NAME|*` or `-name-` or `<%name%>`. (Check the notes for
