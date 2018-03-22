@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime
 
 import six
@@ -6,7 +7,9 @@ from django.core.mail.backends.base import BaseEmailBackend
 from django.utils.timezone import is_naive, get_current_timezone, make_aware, utc
 from requests.structures import CaseInsensitiveDict
 
-from ..exceptions import AnymailCancelSend, AnymailError, AnymailUnsupportedFeature, AnymailRecipientsRefused
+from ..exceptions import (
+    AnymailCancelSend, AnymailError, AnymailUnsupportedFeature, AnymailRecipientsRefused,
+    AnymailSerializationError)
 from ..message import AnymailStatus
 from ..signals import pre_send, post_send
 from ..utils import (
@@ -489,3 +492,29 @@ class BasePayload(object):
     # ESP-specific payload construction
     def set_esp_extra(self, extra):
         self.unsupported_feature("esp_extra")
+
+    #
+    # Helpers for concrete implementations
+    #
+
+    def serialize_json(self, data):
+        """Returns data serialized to json, raising appropriate errors.
+
+        Essentially json.dumps with added context in any errors.
+
+        Useful for implementing, e.g., serialize_data in a subclass,
+        """
+        try:
+            return json.dumps(data, default=self._json_default)
+        except TypeError as err:
+            # Add some context to the "not JSON serializable" message
+            raise AnymailSerializationError(orig_err=err, email_message=self.message,
+                                            backend=self.backend, payload=self)
+
+    @staticmethod
+    def _json_default(o):
+        """json.dump default function that handles some common Payload data types"""
+        if isinstance(o, CaseInsensitiveDict):  # used for headers
+            return dict(o)
+        raise TypeError("Object of type '%s' is not JSON serializable" %
+                        o.__class__.__name__)

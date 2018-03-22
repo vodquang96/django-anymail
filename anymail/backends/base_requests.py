@@ -1,12 +1,9 @@
-import json
-
 import requests
-from requests.structures import CaseInsensitiveDict
 from six.moves.urllib.parse import urljoin
 
 from anymail.utils import get_anymail_setting
 from .base import AnymailBaseBackend, BasePayload
-from ..exceptions import AnymailRequestsAPIError, AnymailSerializationError
+from ..exceptions import AnymailRequestsAPIError
 from .._version import __version__
 
 
@@ -149,23 +146,3 @@ class RequestsPayload(BasePayload):
     def serialize_data(self):
         """Performs any necessary serialization on self.data, and returns the result."""
         return self.data
-
-    def serialize_json(self, data):
-        """Returns data serialized to json, raising appropriate errors.
-
-        Useful for implementing serialize_data in a subclass,
-        """
-        try:
-            return json.dumps(data, default=self._json_default)
-        except TypeError as err:
-            # Add some context to the "not JSON serializable" message
-            raise AnymailSerializationError(orig_err=err, email_message=self.message,
-                                            backend=self.backend, payload=self)
-
-    @staticmethod
-    def _json_default(o):
-        """json.dump default function that handles some common Payload data types"""
-        if isinstance(o, CaseInsensitiveDict):  # used for headers
-            return dict(o)
-        raise TypeError("Object of type '%s' is not JSON serializable" %
-                        o.__class__.__name__)
