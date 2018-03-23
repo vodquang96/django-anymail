@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
 from base64 import b64encode
@@ -387,3 +388,28 @@ class AnymailInboundMessageAttachedMessageTests(SimpleTestCase):
         self.assertIsInstance(orig_msg, AnymailInboundMessage)
         self.assertEqual(orig_msg['Subject'], "Original message")
         self.assertEqual(orig_msg.get_content_type(), "multipart/related")
+
+
+class EmailParserWorkaroundTests(SimpleTestCase):
+    # Anymail includes workarounds for (some of) the more problematic bugs
+    # in the Python 2 email.parser.Parser.
+
+    def test_parse_folded_headers(self):
+        raw = dedent("""\
+            Content-Type: text/plain
+            Subject: This subject uses
+             header folding
+            X-Json: {"problematic":
+             ["encoded newline\\n",
+             "comma,semi;no space"]}
+
+            Not-A-Header: This is the body.
+             It is not folded.
+            """)
+        msg = AnymailInboundMessage.parse_raw_mime(raw)
+        self.assertEqual(msg['Subject'], "This subject uses header folding")
+        self.assertEqual(msg["X-Json"],
+                         '{"problematic": ["encoded newline\\n", "comma,semi;no space"]}')
+        self.assertEqual(msg.get_content_text(),
+                         "Not-A-Header: This is the body.\n It is not folded.\n")
+        self.assertEqual(msg.defects, [])

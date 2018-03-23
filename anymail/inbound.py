@@ -1,6 +1,6 @@
 from base64 import b64decode
-from email import message_from_string
 from email.message import Message
+from email.parser import Parser
 from email.utils import unquote
 
 import six
@@ -8,36 +8,54 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 
 from .utils import angle_wrap, get_content_disposition, parse_address_list, parse_rfc2822date
 
-# Python 2/3.*-compatible email.parser.HeaderParser(policy=email.policy.default)
+# Work around bugs in older versions of email.parser.Parser
 try:
-    # With Python 3.3+ (email6) package, can use HeaderParser with default policy
-    from email.parser import HeaderParser
-    from email.policy import default as accurate_header_unfolding_policy  # vs. compat32
+    # With Python 3.3+ (email6) package, using `policy=email.policy.default`
+    # avoids earlier bugs. (Note that Parser defaults to policy=compat32,
+    # which *preserves* earlier bugs.)
+    from email.policy import default
+
+    class EmailParser(Parser):
+        def __init__(self, _class=None, policy=default):  # don't default to compat32 policy
+            super(EmailParser, self).__init__(_class, policy=policy)
 
 except ImportError:
-    # Earlier Pythons don't have HeaderParser, and/or try preserve earlier compatibility bugs
-    # by failing to properly unfold headers (see RFC 5322 section 2.2.3)
-    from email.parser import Parser
+    # Pre-Python 3.3 email package: try to work around some bugs
     import re
-    accurate_header_unfolding_policy = object()
 
-    class HeaderParser(Parser, object):
-        def __init__(self, _class, policy=None):
-            # This "backport" doesn't actually support policies, but we want to ensure
-            # that callers aren't trying to use HeaderParser's default compat32 policy
-            # (which doesn't properly unfold headers)
-            assert policy is accurate_header_unfolding_policy
-            super(HeaderParser, self).__init__(_class)
+    class EmailParser(Parser):
+        def parsestr(self, text, headersonly=False):
+            # Older Parser doesn't correctly unfold headers (RFC5322 section 2.2.3).
+            # Help it out by pre-unfolding the headers for it.
+            # This only works for root headers, not ones within a MIME subpart.
+            # (Finding subpart headers requires actually parsing the message.)
+            headers, body = _split_headers_and_body(text)
+            unfolded = "".join([_unfold_headers(headers), body])
+            return Parser.parsestr(self, unfolded, headersonly=headersonly)
 
-        def parsestr(self, text, headersonly=True):
-            unfolded = self._unfold_headers(text)
-            return super(HeaderParser, self).parsestr(unfolded, headersonly=True)
+    # Note: email.feedparser.headerRE is a more-complicated RE for recognizing headers.
+    # It tries to support defective messages missing a blank line between headers and body
+    # (but introduces other problems, e.g., https://bugs.python.org/issue26686).
+    # Since those messages are already out of spec, this code doesn't worry about them.
+    _body_sep_re = re.compile(r'(\r\n|\r|\n)(\1)')  # "an empty line" allowing CRLF, CR, or LF endings (but not mixed)
+    _header_fold_re = re.compile(r'(\r\n|\r|\n)(?=[ \t])')  # "any CRLF that is immediately followed by WSP"
 
-        @staticmethod
-        def _unfold_headers(text):
-            # "Unfolding is accomplished by simply removing any CRLF that is immediately followed by WSP"
-            # (WSP is space or tab, and per email.parser semantics, we allow CRLF, CR, or LF endings)
-            return re.sub(r'(\r\n|\r|\n)(?=[ \t])', "", text)
+    def _split_headers_and_body(text):
+        # RFC5322 section 2.1:
+        # "The body ... is separated from the header section by an empty line (i.e., a line with nothing
+        # preceding the CRLF)."  (And per email.parser semantics, this allows CRLF, CR, or LF endings)
+        parts = _body_sep_re.split(text, maxsplit=1)  # [headers, sep, sep, body] or just [headers]
+        try:
+            return "".join(parts[0:2]), "".join(parts[2:])
+        except IndexError:
+            assert len(parts) == 1
+            return parts[0], ""
+
+    def _unfold_headers(text):
+        # RFC5322 section 2.2.3:
+        # "Unfolding is accomplished by simply removing any CRLF that is immediately followed by WSP"
+        # (WSP is space or tab, and per email.parser semantics, this allows CRLF, CR, or LF endings)
+        return _header_fold_re.sub("", text)
 
 
 class AnymailInboundMessage(Message, object):  # `object` ensures new-style class in Python 2)
@@ -226,7 +244,7 @@ class AnymailInboundMessage(Message, object):  # `object` ensures new-style clas
     @classmethod
     def parse_raw_mime(cls, s):
         """Returns a new AnymailInboundMessage parsed from str s"""
-        return message_from_string(s, cls)
+        return EmailParser(cls).parsestr(s)
 
     @classmethod
     def construct(cls, raw_headers=None, from_email=None, to=None, cc=None, subject=None, headers=None,
@@ -252,7 +270,7 @@ class AnymailInboundMessage(Message, object):  # `object` ensures new-style clas
         :return: {AnymailInboundMessage}
         """
         if raw_headers is not None:
-            msg = HeaderParser(cls, policy=accurate_header_unfolding_policy).parsestr(raw_headers)
+            msg = EmailParser(cls).parsestr(raw_headers, headersonly=True)
             msg.set_payload(None)  # headersonly forces an empty string payload, which breaks things later
         else:
             msg = cls()
