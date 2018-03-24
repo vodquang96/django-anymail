@@ -413,3 +413,48 @@ class EmailParserWorkaroundTests(SimpleTestCase):
         self.assertEqual(msg.get_content_text(),
                          "Not-A-Header: This is the body.\n It is not folded.\n")
         self.assertEqual(msg.defects, [])
+
+    def test_parse_encoded_headers(self):
+        # RFC2047 header encoding
+        raw = dedent("""\
+            Content-Type: text/plain
+            From: =?US-ASCII?Q?Keith_Moore?= <moore@example.com>
+            To: =?ISO-8859-1?Q?Keld_J=F8rn_Simonsen?= <keld@example.com>,
+             =?ISO-8859-1?Q?Andr=E9?= "Pirard, Jr." <PIRARD@example.com>
+            Cc: =?utf-8?b?TmfGsOG7nWkgbmjhuq1u?= <cc@xn--th-e0a.example.com>
+            Subject: =?ISO-8859-1?B?SWYgeW91IGNhbiByZWFkIHRoaXMgeW8=?=
+             =?utf-8?q?u_understand_the_example=E2=9C=93?=
+            X-Broken: =?utf-8?q?Not_a_char:_=88.?=
+
+            Some examples adapted from http://dogmamix.com/MimeHeadersDecoder/
+            """)
+        msg = AnymailInboundMessage.parse_raw_mime(raw)
+
+        self.assertEqual(msg["From"], "Keith Moore <moore@example.com>")
+        self.assertEqual(msg.from_email.display_name, "Keith Moore")
+        self.assertEqual(msg.from_email.addr_spec, "moore@example.com")
+
+        # When an RFC2047 encoded-word abuts an RFC5322 quoted-word in a *structured* header,
+        # Python 3's parser nicely recombines them into a single quoted word. That's way too
+        # complicated for our Python 2 workaround ...
+        self.assertIn(msg["To"], [  # `To` header will decode to one of these:
+            'Keld Jørn Simonsen <keld@example.com>, "André Pirard, Jr." <PIRARD@example.com>',  # Python 3
+            'Keld Jørn Simonsen <keld@example.com>, André "Pirard, Jr." <PIRARD@example.com>',  # workaround version
+        ])
+        # ... but the two forms are equivalent, and de-structure the same:
+        self.assertEqual(msg.to[0].display_name, "Keld Jørn Simonsen")
+        self.assertEqual(msg.to[1].display_name, "André Pirard, Jr.")  # correct in Python 3 *and* workaround!
+
+        # Note: Like email.headerregistry.Address, Anymail decodes an RFC2047-encoded display_name,
+        # but does not decode a punycode domain. (Use `idna.decode(domain)` if you need that.)
+        self.assertEqual(msg["Cc"], "Người nhận <cc@xn--th-e0a.example.com>")
+        self.assertEqual(msg.cc[0].display_name, "Người nhận")
+        self.assertEqual(msg.cc[0].addr_spec, "cc@xn--th-e0a.example.com")
+        self.assertEqual(msg.cc[0].domain, "xn--th-e0a.example.com")
+
+        # Subject breaks between 'o' and 'u' in the word "you", must be re-joined without space.
+        # Also tests joining encoded words with different charsets:
+        self.assertEqual(msg["Subject"], "If you can read this you understand the example\N{CHECK MARK}")
+
+        # Replace illegal encodings (rather than causing error):
+        self.assertEqual(msg["X-Broken"], "Not a char: \N{REPLACEMENT CHARACTER}.")

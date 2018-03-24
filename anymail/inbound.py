@@ -22,6 +22,7 @@ try:
 except ImportError:
     # Pre-Python 3.3 email package: try to work around some bugs
     import re
+    from email.header import decode_header
 
     class EmailParser(Parser):
         def parsestr(self, text, headersonly=False):
@@ -31,7 +32,15 @@ except ImportError:
             # (Finding subpart headers requires actually parsing the message.)
             headers, body = _split_headers_and_body(text)
             unfolded = "".join([_unfold_headers(headers), body])
-            return Parser.parsestr(self, unfolded, headersonly=headersonly)
+            message = Parser.parsestr(self, unfolded, headersonly=headersonly)
+
+            # Older Parser doesn't decode RFC2047 headers, so fix them up here.
+            # (Since messsage is fully parsed, can decode headers in all MIME subparts.)
+            for part in message.walk():
+                part._headers = [  # doesn't seem to be a public API to easily replace all headers
+                    (name, _decode_rfc2047(value))
+                    for name, value in part._headers]
+            return message
 
     # Note: email.feedparser.headerRE is a more-complicated RE for recognizing headers.
     # It tries to support defective messages missing a blank line between headers and body
@@ -56,6 +65,25 @@ except ImportError:
         # "Unfolding is accomplished by simply removing any CRLF that is immediately followed by WSP"
         # (WSP is space or tab, and per email.parser semantics, this allows CRLF, CR, or LF endings)
         return _header_fold_re.sub("", text)
+
+    def _decode_rfc2047(value):
+        result = value
+        decoded_segments = decode_header(value)
+        if any(charset is not None for raw, charset in decoded_segments):
+            # At least one segment is an RFC2047 encoded-word.
+            # Reassemble the segments into a single decoded string.
+            unicode_segments = []
+            prev_charset = None
+            for raw, charset in decoded_segments:
+                if (charset is None or prev_charset is None) and unicode_segments:
+                    # Transitioning to, from, or between *non*-encoded segments:
+                    # add back inter-segment whitespace that decode_header consumed
+                    unicode_segments.append(u" ")
+                decoded = raw.decode(charset, 'replace') if charset is not None else raw
+                unicode_segments.append(decoded)
+                prev_charset = charset
+            result = u"".join(unicode_segments)
+        return result
 
 
 class AnymailInboundMessage(Message, object):  # `object` ensures new-style class in Python 2)
