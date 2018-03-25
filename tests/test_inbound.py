@@ -2,12 +2,15 @@
 from __future__ import unicode_literals
 
 from base64 import b64encode
+from email.utils import collapse_rfc2231_value
 from textwrap import dedent
+from unittest import skipIf
 
 from django.test import SimpleTestCase
 
 from anymail.inbound import AnymailInboundMessage
-from .utils import SAMPLE_IMAGE_FILENAME, sample_image_content
+
+from .utils import SAMPLE_IMAGE_FILENAME, python_has_broken_mime_param_handling, sample_image_content
 
 SAMPLE_IMAGE_CONTENT = sample_image_content()
 
@@ -458,3 +461,31 @@ class EmailParserWorkaroundTests(SimpleTestCase):
 
         # Replace illegal encodings (rather than causing error):
         self.assertEqual(msg["X-Broken"], "Not a char: \N{REPLACEMENT CHARACTER}.")
+
+    @skipIf(python_has_broken_mime_param_handling(),
+            "This Python has a buggy email package that crashes on non-ASCII "
+            "characters in RFC2231-encoded MIME header parameters")
+    def test_parse_encoded_params(self):
+        raw = dedent("""\
+            MIME-Version: 1.0
+            Content-Type: multipart/mixed; boundary="this_is_a_boundary"
+
+            --this_is_a_boundary
+            Content-Type: text/plain; charset="UTF-8"
+
+            This is the body
+
+            --this_is_a_boundary
+            Content-Type: text/plain; name*=us-ascii''TPS%20Report
+            Content-Disposition: attachment;
+             filename*=iso-8859-1''Une%20pi%E8ce%20jointe%2Etxt
+
+            This is an attachment
+            --this_is_a_boundary--
+            """)
+        msg = AnymailInboundMessage.parse_raw_mime(raw)
+        att = msg.attachments[0]
+        self.assertTrue(att.is_attachment())
+        self.assertEqual(att.get_content_disposition(), "attachment")
+        self.assertEqual(collapse_rfc2231_value(att.get_param("Name", header="Content-Type")), "TPS Report")
+        self.assertEqual(att.get_filename(), "Une pièce jointe.txt")
