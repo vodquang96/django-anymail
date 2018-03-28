@@ -1,12 +1,13 @@
 # Anymail test utils
-import sys
-from distutils.util import strtobool
-
+import collections
+import logging
 import os
 import re
+import sys
 import warnings
 from base64 import b64decode
 from contextlib import contextmanager
+from distutils.util import strtobool
 
 import six
 from django.test import Client
@@ -92,6 +93,17 @@ def sample_email_content(filename=SAMPLE_EMAIL_FILENAME):
 class AnymailTestMixin:
     """Helpful additional methods for Anymail tests"""
 
+    def assertLogs(self, logger=None, level=None):
+        # Note: Django 1.8's django.utils.log.DEFAULT_LOGGING config is set to *not* propagate
+        # certain logging records. That means you *can't* capture those logs at the root (None) logger.
+        # (If you really need that, you could override LOGGING in tests.settings.settings_1_8.)
+        assert logger is not None  # `None` root logger won't reliably capture on Django 1.8
+        try:
+            return super(AnymailTestMixin, self).assertLogs(logger, level)
+        except (AttributeError, TypeError):
+            # Python <3.4: use our backported assertLogs
+            return _AssertLogsContext(self, logger, level)
+
     def assertWarns(self, expected_warning, msg=None):
         # We only support the context-manager version
         try:
@@ -152,6 +164,72 @@ class AnymailTestMixin:
         first = rfc822_unfold(first)
         second = rfc822_unfold(second)
         self.assertEqual(first, second, msg)
+
+
+# Backported from Python 3.4
+class _AssertLogsContext(object):
+    """A context manager used to implement TestCase.assertLogs()."""
+
+    LOGGING_FORMAT = "%(levelname)s:%(name)s:%(message)s"
+
+    def __init__(self, test_case, logger_name, level):
+        self.test_case = test_case
+        self.logger_name = logger_name
+        if level:
+            self.level = logging._nameToLevel.get(level, level)
+        else:
+            self.level = logging.INFO
+        self.msg = None
+
+    def _raiseFailure(self, standardMsg):
+        msg = self.test_case._formatMessage(self.msg, standardMsg)
+        raise self.test_case.failureException(msg)
+
+    class _CapturingHandler(logging.Handler):
+        """A logging handler capturing all (raw and formatted) logging output."""
+
+        _LoggingWatcher = collections.namedtuple("_LoggingWatcher", ["records", "output"])
+
+        def __init__(self):
+            logging.Handler.__init__(self)
+            self.watcher = self._LoggingWatcher([], [])
+
+        def flush(self):
+            pass
+
+        def emit(self, record):
+            self.watcher.records.append(record)
+            msg = self.format(record)
+            self.watcher.output.append(msg)
+
+    def __enter__(self):
+        if isinstance(self.logger_name, logging.Logger):
+            logger = self.logger = self.logger_name
+        else:
+            logger = self.logger = logging.getLogger(self.logger_name)
+        formatter = logging.Formatter(self.LOGGING_FORMAT)
+        handler = self._CapturingHandler()
+        handler.setFormatter(formatter)
+        self.watcher = handler.watcher
+        self.old_handlers = logger.handlers[:]
+        self.old_level = logger.level
+        self.old_propagate = logger.propagate
+        logger.handlers = [handler]
+        logger.setLevel(self.level)
+        logger.propagate = False
+        return handler.watcher
+
+    def __exit__(self, exc_type, exc_value, tb):
+        self.logger.handlers = self.old_handlers
+        self.logger.propagate = self.old_propagate
+        self.logger.setLevel(self.old_level)
+        if exc_type is not None:
+            # let unexpected exceptions pass through
+            return False
+        if len(self.watcher.records) == 0:
+            self._raiseFailure(
+                "no logs of level {} or higher triggered on {}"
+                .format(logging.getLevelName(self.level), self.logger.name))
 
 
 # Backported from python 3.5
