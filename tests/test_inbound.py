@@ -11,7 +11,7 @@ from django.test import SimpleTestCase
 
 from anymail.inbound import AnymailInboundMessage
 
-from .utils import SAMPLE_IMAGE_FILENAME, python_has_broken_mime_param_handling, sample_image_content
+from .utils import SAMPLE_IMAGE_FILENAME, python_has_broken_mime_param_handling, sample_email_path, sample_image_content
 
 SAMPLE_IMAGE_CONTENT = sample_image_content()
 
@@ -152,6 +152,35 @@ class AnymailInboundMessageConstructionTests(SimpleTestCase):
         self.assertEqual(msg.defects, [])
 
     # (see test_attachment_as_uploaded_file below for parsing basic attachment from raw mime)
+
+    def test_parse_raw_mime_bytes(self):
+        raw = (
+            b'Content-Type: text/plain; charset=ISO-8859-3\r\n'
+            b'Content-Transfer-Encoding: 8bit\r\n'
+            b'Subject: Test bytes\r\n'
+            b'\r\n'
+            b'\xD8i estas retpo\xFEto.\r\n')
+        msg = AnymailInboundMessage.parse_raw_mime_bytes(raw)
+        self.assertEqual(msg['Subject'], "Test bytes")
+        self.assertEqual(msg.get_content_text(), "Ĝi estas retpoŝto.\r\n")
+        self.assertEqual(msg.get_content_bytes(), b'\xD8i estas retpo\xFEto.\r\n')
+        self.assertEqual(msg.defects, [])
+
+    def test_parse_raw_mime_file_text(self):
+        with open(sample_email_path(), mode="r") as fp:
+            msg = AnymailInboundMessage.parse_raw_mime_file(fp)
+        self.assertEqual(msg["Subject"], "Test email")
+        self.assertEqual(msg.text, "Hi Bob, This is a message. Thanks!\n")
+        self.assertEqual(msg.get_all("Received"), [  # this is the first line in the sample email file
+            "by luna.mailgun.net with SMTP mgrt 8734663311733; Fri, 03 May 2013 18:26:27 +0000"])
+
+    def test_parse_raw_mime_file_bytes(self):
+        with open(sample_email_path(), mode="rb") as fp:
+            msg = AnymailInboundMessage.parse_raw_mime_file(fp)
+        self.assertEqual(msg["Subject"], "Test email")
+        self.assertEqual(msg.text, "Hi Bob, This is a message. Thanks!\n")
+        self.assertEqual(msg.get_all("Received"), [  # this is the first line in the sample email file
+            "by luna.mailgun.net with SMTP mgrt 8734663311733; Fri, 03 May 2013 18:26:27 +0000"])
 
 
 class AnymailInboundMessageConveniencePropTests(SimpleTestCase):
@@ -470,13 +499,14 @@ class EmailParserWorkaroundTests(SimpleTestCase):
             Not-A-Header: This is the body.
              It is not folded.
             """)
-        msg = AnymailInboundMessage.parse_raw_mime(raw)
-        self.assertEqual(msg['Subject'], "This subject uses header folding")
-        self.assertEqual(msg["X-Json"],
-                         '{"problematic": ["encoded newline\\n", "comma,semi;no space"]}')
-        self.assertEqual(msg.get_content_text(),
-                         "Not-A-Header: This is the body.\n It is not folded.\n")
-        self.assertEqual(msg.defects, [])
+        for end in ('\n', '\r', '\r\n'):  # check NL, CR, and CRNL line-endings
+            msg = AnymailInboundMessage.parse_raw_mime(raw.replace('\n', end))
+            self.assertEqual(msg['Subject'], "This subject uses header folding")
+            self.assertEqual(msg["X-Json"],
+                             '{"problematic": ["encoded newline\\n", "comma,semi;no space"]}')
+            self.assertEqual(msg.get_content_text(),
+                             "Not-A-Header: This is the body.{end} It is not folded.{end}".format(end=end))
+            self.assertEqual(msg.defects, [])
 
     def test_parse_encoded_headers(self):
         # RFC2047 header encoding

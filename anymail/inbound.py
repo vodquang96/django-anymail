@@ -14,25 +14,27 @@ try:
     # avoids earlier bugs. (Note that Parser defaults to policy=compat32,
     # which *preserves* earlier bugs.)
     from email.policy import default
+    from email.parser import BytesParser
 
     class EmailParser(Parser):
         def __init__(self, _class=None, policy=default):  # don't default to compat32 policy
             super(EmailParser, self).__init__(_class, policy=policy)
 
+    class EmailBytesParser(BytesParser):
+        def __init__(self, _class=None, policy=default):  # don't default to compat32 policy
+            super(EmailBytesParser, self).__init__(_class, policy=policy)
+
 except ImportError:
     # Pre-Python 3.3 email package: try to work around some bugs
-    import re
     from email.header import decode_header
+    from collections import deque
 
     class EmailParser(Parser):
-        def parsestr(self, text, headersonly=False):
+        def parse(self, fp, headersonly=False):
             # Older Parser doesn't correctly unfold headers (RFC5322 section 2.2.3).
             # Help it out by pre-unfolding the headers for it.
-            # This only works for root headers, not ones within a MIME subpart.
-            # (Finding subpart headers requires actually parsing the message.)
-            headers, body = _split_headers_and_body(text)
-            unfolded = "".join([_unfold_headers(headers), body])
-            message = Parser.parsestr(self, unfolded, headersonly=headersonly)
+            fp = HeaderUnfoldingWrapper(fp)
+            message = Parser.parse(self, fp, headersonly=headersonly)
 
             # Older Parser doesn't decode RFC2047 headers, so fix them up here.
             # (Since messsage is fully parsed, can decode headers in all MIME subparts.)
@@ -42,29 +44,74 @@ except ImportError:
                     for name, value in part._headers]
             return message
 
-    # Note: email.feedparser.headerRE is a more-complicated RE for recognizing headers.
-    # It tries to support defective messages missing a blank line between headers and body
-    # (but introduces other problems, e.g., https://bugs.python.org/issue26686).
-    # Since those messages are already out of spec, this code doesn't worry about them.
-    _body_sep_re = re.compile(r'(\r\n|\r|\n)(\1)')  # "an empty line" allowing CRLF, CR, or LF endings (but not mixed)
-    _header_fold_re = re.compile(r'(\r\n|\r|\n)(?=[ \t])')  # "any CRLF that is immediately followed by WSP"
+    class EmailBytesParser(EmailParser):
+        def parsebytes(self, text, headersonly=False):
+            # In Python 2, bytes is str, and Parser.parsestr uses bytes-friendly cStringIO.StringIO.
+            return self.parsestr(text, headersonly)
 
-    def _split_headers_and_body(text):
-        # RFC5322 section 2.1:
-        # "The body ... is separated from the header section by an empty line (i.e., a line with nothing
-        # preceding the CRLF)."  (And per email.parser semantics, this allows CRLF, CR, or LF endings)
-        parts = _body_sep_re.split(text, maxsplit=1)  # [headers, sep, sep, body] or just [headers]
-        try:
-            return "".join(parts[0:2]), "".join(parts[2:])
-        except IndexError:
-            assert len(parts) == 1
-            return parts[0], ""
+    class HeaderUnfoldingWrapper:
+        """
+        A wrapper for file-like objects passed to email.parser.Parser.parse which works
+        around older Parser bugs with folded email headers by pre-unfolding them.
 
-    def _unfold_headers(text):
-        # RFC5322 section 2.2.3:
-        # "Unfolding is accomplished by simply removing any CRLF that is immediately followed by WSP"
-        # (WSP is space or tab, and per email.parser semantics, this allows CRLF, CR, or LF endings)
-        return _header_fold_re.sub("", text)
+        This only works for headers at the message root, not ones within a MIME subpart.
+        (Accurately recognizing subpart headers would require parsing mixed-content boundaries.)
+        """
+
+        def __init__(self, fp):
+            self.fp = fp
+            self._in_headers = True
+            self._pushback = deque()
+
+        def _readline(self, limit=-1):
+            try:
+                line = self._pushback.popleft()
+            except IndexError:
+                line = self.fp.readline(limit)
+                # cStringIO.readline doesn't recognize universal newlines; splitlines does
+                lines = line.splitlines(True)
+                if len(lines) > 1:
+                    line = lines[0]
+                    self._pushback.extend(lines[1:])
+            return line
+
+        def _peekline(self, limit=-1):
+            try:
+                line = self._pushback[0]
+            except IndexError:
+                line = self._readline(limit)
+                self._pushback.appendleft(line)
+            return line
+
+        def readline(self, limit=-1):
+            line = self._readline(limit)
+            if self._in_headers:
+                line_without_end = line.rstrip("\r\n")  # CRLF, CR, or LF -- "universal newlines"
+                if len(line_without_end) == 0:
+                    # RFC5322 section 2.1: "The body ... is separated from the header section
+                    # by an empty line (i.e., a line with nothing preceding the CRLF)."
+                    self._in_headers = False
+                else:
+                    # Is this header line folded? Need to check next line...
+                    # RFC5322 section 2.2.3: "Unfolding is accomplished by simply removing any CRLF
+                    # that is immediately followed by WSP." (WSP is space or tab)
+                    next_line = self._peekline(limit)
+                    if next_line.startswith((' ', '\t')):
+                        line = line_without_end
+            return line
+
+        def read(self, size):
+            if self._in_headers:
+                # For simplicity, just read a line at a time while in the header section.
+                # (This works because we know email.parser.Parser doesn't really care if it reads
+                # more or less data than it asked for -- it just pushes it into FeedParser either way.)
+                return self.readline(size)
+            elif len(self._pushback):
+                buf = ''.join(self._pushback)
+                self._pushback.clear()
+                return buf
+            else:
+                return self.fp.read(size)
 
     def _decode_rfc2047(value):
         result = value
@@ -277,6 +324,19 @@ class AnymailInboundMessage(Message, object):  # `object` ensures new-style clas
     def parse_raw_mime(cls, s):
         """Returns a new AnymailInboundMessage parsed from str s"""
         return EmailParser(cls).parsestr(s)
+
+    @classmethod
+    def parse_raw_mime_bytes(cls, b):
+        """Returns a new AnymailInboundMessage parsed from bytes b"""
+        return EmailBytesParser(cls).parsebytes(b)
+
+    @classmethod
+    def parse_raw_mime_file(cls, fp):
+        """Returns a new AnymailInboundMessage parsed from file-like object fp"""
+        if isinstance(fp.read(0), six.binary_type):
+            return EmailBytesParser(cls).parse(fp)
+        else:
+            return EmailParser(cls).parse(fp)
 
     @classmethod
     def construct(cls, raw_headers=None, from_email=None, to=None, cc=None, subject=None, headers=None,
