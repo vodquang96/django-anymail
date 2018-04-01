@@ -363,10 +363,21 @@ have these methods:
         (Anymail back-ports Python 3.5's :meth:`~email.message.Message.get_content_disposition`
         method to all supported versions.)
 
-    .. method:: get_content_text(charset='utf-8')
+    .. method:: get_content_text(charset=None, errors='replace')
 
-        Returns the content of the attachment decoded to a `str` in the given charset.
+        Returns the content of the attachment decoded to Unicode text.
         (This is generally only appropriate for text or message-type attachments.)
+
+        If provided, charset will override the attachment's declared charset. (This can be useful
+        if you know the attachment's :mailheader:`Content-Type` has a missing or incorrect charset.)
+
+        The errors param is as in :meth:`~bytes.decode`. The default "replace" substitutes the
+        Unicode "replacement character" for any illegal characters in the text.
+
+        .. versionchanged:: 2.1
+
+            Changed to use attachment's declared charset by default,
+            and added errors option defaulting to replace.
 
     .. method:: get_content_bytes()
 

@@ -199,9 +199,7 @@ class AnymailInboundMessage(Message, object):  # `object` ensures new-style clas
         # should themselves be AnymailInboundMessage.
         for part in self.walk():
             if part.get_content_type() == content_type and not part.is_attachment():
-                payload = part.get_payload(decode=True)
-                if payload is not None:
-                    return payload.decode('utf-8')
+                return part.get_content_text()
         return None
 
     # Backport from Python 3.5 email.message.Message
@@ -238,7 +236,7 @@ class AnymailInboundMessage(Message, object):  # `object` ensures new-style clas
                              "(perhaps you want as_bytes()?)")
         return self.get_payload(decode=True)
 
-    def get_content_text(self, charset='utf-8'):
+    def get_content_text(self, charset=None, errors=None):
         """Return the payload decoded to text"""
         maintype = self.get_content_maintype()
         if maintype == 'message':
@@ -252,7 +250,13 @@ class AnymailInboundMessage(Message, object):  # `object` ensures new-style clas
             # and it's not clear which one is the "content".
             raise ValueError("get_content_text() is not valid on multipart messages "
                              "(perhaps you want as_string()?)")
-        return self.get_payload(decode=True).decode(charset)
+        else:
+            payload = self.get_payload(decode=True)
+            if payload is None:
+                return payload
+            charset = charset or self.get_content_charset('US-ASCII')
+            errors = errors or 'replace'
+            return payload.decode(charset, errors=errors)
 
     def as_uploaded_file(self):
         """Return the attachment converted to a Django UploadedFile"""

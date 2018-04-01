@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+import quopri
 from base64 import b64encode
 from email.utils import collapse_rfc2231_value
 from textwrap import dedent
@@ -132,7 +133,6 @@ class AnymailInboundMessageConstructionTests(SimpleTestCase):
 
     def test_construct_attachments_from_base64_data(self):
         # This is a fairly common way for ESPs to provide attachment content to webhooks
-        from base64 import b64encode
         content = b64encode(SAMPLE_IMAGE_CONTENT)
         att = AnymailInboundMessage.construct_attachment(content_type="image/png", content=content, base64=True)
         self.assertEqual(att.get_content_bytes(), SAMPLE_IMAGE_CONTENT)
@@ -207,6 +207,67 @@ class AnymailInboundMessageConveniencePropTests(SimpleTestCase):
         msg = AnymailInboundMessage()
         self.assertIsNone(msg.text)
         self.assertIsNone(msg.html)
+
+    def test_body_props_charsets(self):
+        text_8859_10 = "Detta är det vanliga innehållet".encode("ISO-8859-10")
+        html_8859_8 = "<p>HTML זהו תוכן</p>".encode("ISO-8859-8")
+        raw = dedent("""\
+            MIME-Version: 1.0
+            Subject: Charset test
+            Content-Type: multipart/alternative; boundary="this_is_a_boundary"
+
+            --this_is_a_boundary
+            Content-Type: text/plain; charset=ISO-8859-10
+            Content-Transfer-Encoding: QUOTED-PRINTABLE
+
+            {text}
+            --this_is_a_boundary
+            Content-Type: text/html; charset=ISO-8859-8
+            Content-Transfer-Encoding: QUOTED-PRINTABLE
+
+            {html}
+            --this_is_a_boundary--
+            """).format(
+                text=quopri.encodestring(text_8859_10).decode("ASCII"),
+                html=quopri.encodestring(html_8859_8).decode("ASCII"),
+            )
+
+        msg = AnymailInboundMessage.parse_raw_mime(raw)
+        self.assertEqual(msg.defects, [])
+        self.assertEqual(msg.text, "Detta är det vanliga innehållet")
+        self.assertEqual(msg.html, "<p>HTML זהו תוכן</p>")
+
+        self.assertEqual(msg.get_payload(0).get_content_bytes(), text_8859_10)
+        self.assertEqual(msg.get_payload(0).get_content_text(), "Detta är det vanliga innehållet")
+        self.assertEqual(msg.get_payload(1).get_content_bytes(), html_8859_8)
+        self.assertEqual(msg.get_payload(1).get_content_text(), "<p>HTML זהו תוכן</p>")
+
+    def test_missing_or_invalid_charsets(self):
+        """get_content_text has options for handling missing/invalid charset declarations"""
+        raw = dedent("""\
+            Subject: Oops, missing charset declaration
+            Content-Type: text/plain
+            Content-Transfer-Encoding: quoted-printable
+
+            Algunos programas de correo electr=f3nico est=e1n rotos
+            """)
+        msg = AnymailInboundMessage.parse_raw_mime(raw)
+        self.assertEqual(msg.defects, [])
+
+        # default is charset from Content-Type (or 'utf-8' if missing), errors='replace'; .text uses defaults
+        self.assertEqual(msg.get_content_text(),
+                         "Algunos programas de correo electr�nico est�n rotos\n")
+        self.assertEqual(msg.text, "Algunos programas de correo electr�nico est�n rotos\n")
+
+        # can give specific charset if you know headers are wrong/missing
+        self.assertEqual(msg.get_content_text(charset='ISO-8859-1'),
+                         "Algunos programas de correo electrónico están rotos\n")
+
+        # can change error handling
+        with self.assertRaises(UnicodeDecodeError):
+            msg.get_content_text(errors='strict')
+        self.assertEqual(msg.get_content_text(errors='ignore'),
+                         "Algunos programas de correo electrnico estn rotos\n")
 
     def test_date_props(self):
         msg = AnymailInboundMessage.construct(headers={
