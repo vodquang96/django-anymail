@@ -199,6 +199,10 @@ class AnymailInboundMessage(Message, object):  # `object` ensures new-style clas
     @classmethod
     def parse_raw_mime(cls, s):
         """Returns a new AnymailInboundMessage parsed from str s"""
+        if isinstance(s, six.text_type):
+            # Avoid Python 3.x issue https://bugs.python.org/issue18271
+            # (See test_inbound: test_parse_raw_mime_8bit_utf8)
+            return cls.parse_raw_mime_bytes(s.encode('utf-8'))
         return EmailParser(cls).parsestr(s)
 
     @classmethod

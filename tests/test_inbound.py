@@ -7,6 +7,7 @@ from email.utils import collapse_rfc2231_value
 from textwrap import dedent
 from unittest import skipIf
 
+from django.core.mail import SafeMIMEText
 from django.test import SimpleTestCase
 
 from anymail.inbound import AnymailInboundMessage
@@ -165,6 +166,18 @@ class AnymailInboundMessageConstructionTests(SimpleTestCase):
         self.assertEqual(msg.get_content_text(), "Ĝi estas retpoŝto.\r\n")
         self.assertEqual(msg.get_content_bytes(), b'\xD8i estas retpo\xFEto.\r\n')
         self.assertEqual(msg.defects, [])
+
+    def test_parse_raw_mime_8bit_utf8(self):
+        # In come cases, the message below ends up with 'Content-Transfer-Encoding: 8bit',
+        # so needs to be parsed as bytes, not text (see https://bugs.python.org/issue18271).
+        # Message.as_string() returns str, which is is bytes on Python 2 and text on Python 3.
+        # (This might be a Django bug; plain old MIMEText avoids the problem by using
+        # 'Content-Transfer-Encoding: base64', which parses fine as text or bytes.
+        # Django <1.11 on Python 3 also used base64.)
+        # Either way, AnymailInboundMessage should try to sidestep the whole issue.
+        raw = SafeMIMEText("Unicode ✓", "plain", "utf-8").as_string()
+        msg = AnymailInboundMessage.parse_raw_mime(raw)
+        self.assertEqual(msg.text, "Unicode ✓")  # *not* "Unicode \\u2713"
 
     def test_parse_raw_mime_file_text(self):
         with open(sample_email_path(), mode="r") as fp:
