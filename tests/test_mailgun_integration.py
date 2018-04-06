@@ -38,7 +38,7 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     def setUp(self):
         super(MailgunBackendIntegrationTests, self).setUp()
         self.message = AnymailMessage('Anymail Mailgun integration test', 'Text content',
-                                      'from@example.com', ['anymail-test-to1@mailinator.com'])
+                                      'from@example.com', ['test+to1@anymail.info'])
         self.message.attach_alternative('<p>HTML content</p>', "text/html")
 
     def fetch_mailgun_events(self, message_id, event=None,
@@ -87,8 +87,8 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         self.assertEqual(sent_count, 1)
 
         anymail_status = self.message.anymail_status
-        sent_status = anymail_status.recipients['anymail-test-to1@mailinator.com'].status
-        message_id = anymail_status.recipients['anymail-test-to1@mailinator.com'].message_id
+        sent_status = anymail_status.recipients['test+to1@anymail.info'].status
+        message_id = anymail_status.recipients['test+to1@anymail.info'].message_id
 
         self.assertEqual(sent_status, 'queued')  # Mailgun always queues
         self.assertGreater(len(message_id), 0)  # don't know what it'll be, but it should exist
@@ -103,9 +103,9 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
             subject="Anymail Mailgun all-options integration test",
             body="This is the text body",
             from_email="Test From <from@example.com>, also-from@example.com",
-            to=["anymail-test-to1@mailinator.com", "Recipient 2 <anymail-test-to2@mailinator.com>"],
-            cc=["anymail-test-cc1@mailinator.com", "Copy 2 <anymail-test-cc2@mailinator.com>"],
-            bcc=["anymail-test-bcc1@mailinator.com", "Blind Copy 2 <anymail-test-bcc2@mailinator.com>"],
+            to=["test+to1@anymail.info", "Recipient 2 <test+to2@anymail.info>"],
+            cc=["test+cc1@anymail.info", "Copy 2 <test+cc2@anymail.info>"],
+            bcc=["test+bcc1@anymail.info", "Blind Copy 2 <test+bcc2@anymail.info>"],
             reply_to=["reply1@example.com", "Reply 2 <reply2@example.com>"],
             headers={"X-Anymail-Test": "value"},
 
@@ -137,14 +137,14 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
                          {"meta1": "simple string", "meta2": "2"})  # all metadata values become strings
 
         self.assertEqual(event["message"]["scheduled-for"], send_at_timestamp)
-        self.assertIn(event["recipient"], ['anymail-test-to1@mailinator.com', 'anymail-test-to2@mailinator.com',
-                                           'anymail-test-cc1@mailinator.com', 'anymail-test-cc1@mailinator.com',
-                                           'anymail-test-bcc1@mailinator.com', 'anymail-test-bcc2@mailinator.com'])
+        self.assertIn(event["recipient"], ['test+to1@anymail.info', 'test+to2@anymail.info',
+                                           'test+cc1@anymail.info', 'test+cc1@anymail.info',
+                                           'test+bcc1@anymail.info', 'test+bcc2@anymail.info'])
 
         headers = event["message"]["headers"]
         self.assertEqual(headers["from"], "Test From <from@example.com>, also-from@example.com")
         self.assertEqual(headers["to"],
-                         "anymail-test-to1@mailinator.com, Recipient 2 <anymail-test-to2@mailinator.com>")
+                         "test+to1@anymail.info, Recipient 2 <test+to2@anymail.info>")
         self.assertEqual(headers["subject"], "Anymail Mailgun all-options integration test")
 
         attachments = event["message"]["attachments"]

@@ -22,7 +22,7 @@ class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     def setUp(self):
         super(PostmarkBackendIntegrationTests, self).setUp()
         self.message = AnymailMessage('Anymail Postmark integration test', 'Text content',
-                                      'from@example.com', ['anymail-test-to1@mailinator.com'])
+                                      'from@example.com', ['test+to1@anymail.info'])
         self.message.attach_alternative('<p>HTML content</p>', "text/html")
 
     def test_simple_send(self):
@@ -31,8 +31,8 @@ class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         self.assertEqual(sent_count, 1)
 
         anymail_status = self.message.anymail_status
-        sent_status = anymail_status.recipients['anymail-test-to1@mailinator.com'].status
-        message_id = anymail_status.recipients['anymail-test-to1@mailinator.com'].message_id
+        sent_status = anymail_status.recipients['test+to1@anymail.info'].status
+        message_id = anymail_status.recipients['test+to1@anymail.info'].message_id
 
         self.assertEqual(sent_status, 'sent')
         self.assertGreater(len(message_id), 0)  # non-empty string
@@ -45,9 +45,9 @@ class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
             body="This is the text body",
             # Postmark accepts multiple from_email addresses, but truncates to the first on their end
             from_email="Test From <from@example.com>, also-from@example.com",
-            to=["anymail-test-to1@mailinator.com", "Recipient 2 <anymail-test-to2@mailinator.com>"],
-            cc=["anymail-test-cc1@mailinator.com", "Copy 2 <anymail-test-cc2@mailinator.com>"],
-            bcc=["anymail-test-bcc1@mailinator.com", "Blind Copy 2 <anymail-test-bcc2@mailinator.com>"],
+            to=["test+to1@anymail.info", "Recipient 2 <test+to2@anymail.info>"],
+            cc=["test+cc1@anymail.info", "Copy 2 <test+cc2@anymail.info>"],
+            bcc=["test+bcc1@anymail.info", "Blind Copy 2 <test+bcc2@anymail.info>"],
             reply_to=["reply1@example.com", "Reply 2 <reply2@example.com>"],
             headers={"X-Anymail-Test": "value"},
 
