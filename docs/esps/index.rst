@@ -28,6 +28,8 @@ The table below summarizes the Anymail features supported for each ESP.
 
 .. currentmodule:: anymail.message
 
+.. rst-class:: sticky-left
+
 ============================================  ===========  ==========  ===========  ==========  ==========  ============  ===========
 Email Service Provider                        |Mailgun|    |Mailjet|   |Mandrill|   |Postmark|  |SendGrid|  |SendinBlue|  |SparkPost|
 ============================================  ===========  ==========  ===========  ==========  ==========  ============  ===========

@@ -19,3 +19,23 @@
     -webkit-user-select: none;
     -ms-user-select: none;
 }
+
+
+/* Sticky table first column (used for ESP feature matrix) */
+table.sticky-left td:first-of-type,
+table.sticky-left th:first-of-type {
+    position: -webkit-sticky; /* Safari */
+    position: sticky;
+    left: 0;
+    background-color: #fcfcfc; /* override transparent from .wy-table td */
+}
+table.sticky-left td:first-of-type[colspan] > p,
+table.sticky-left th:first-of-type[colspan] > p {
+    /* Hack: the full-width <td colspan=N> section headers can't stick left;
+       since those always wrap a rubric <p> (in the specific table that uses this),
+       just make the <p> sticky within the <td>. */
+    display: inline-block;
+    position: -webkit-sticky; /* Safari */
+    position: sticky;
+    left: 17px; /* (.wy-table $table-padding-size) + (docutils border="1" in html) */
+}
