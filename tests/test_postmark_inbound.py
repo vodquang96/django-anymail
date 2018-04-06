@@ -3,6 +3,7 @@ from base64 import b64encode
 
 from mock import ANY
 
+from anymail.exceptions import AnymailConfigurationError
 from anymail.inbound import AnymailInboundMessage
 from anymail.signals import AnymailInboundEvent
 from anymail.webhooks.postmark import PostmarkInboundWebhookView
@@ -222,3 +223,9 @@ class PostmarkInboundTestCase(WebhookTestCase):
                 "Value": "Pass (malicious sender added this) identity=mailfrom; envelope-from=spoofed@example.org"
             }]}))
         self.assertIsNone(self.get_kwargs(self.inbound_handler)['event'].message.envelope_sender)
+
+    def test_misconfigured_tracking(self):
+        errmsg = "You seem to have set Postmark's *Delivery* webhook to Anymail's Postmark *inbound* webhook URL."
+        with self.assertRaisesMessage(AnymailConfigurationError, errmsg):
+            self.client.post('/anymail/postmark/inbound/', content_type='application/json',
+                             data=json.dumps({"RecordType": "Delivery"}))

@@ -4,6 +4,7 @@ from datetime import datetime
 from django.utils.timezone import get_fixed_timezone, utc
 from mock import ANY
 
+from anymail.exceptions import AnymailConfigurationError
 from anymail.signals import AnymailTrackingEvent
 from anymail.webhooks.postmark import PostmarkTrackingWebhookView
 from .webhook_cases import WebhookBasicAuthTestsMixin, WebhookTestCase
@@ -202,3 +203,13 @@ class PostmarkDeliveryTestCase(WebhookTestCase):
         self.assertEqual(event.reject_reason, "spam")
         self.assertEqual(event.description, "")
         self.assertEqual(event.mta_response, "Test spam complaint details")
+
+    def test_misconfigured_inbound(self):
+        errmsg = "You seem to have set Postmark's *inbound* webhook to Anymail's Postmark *tracking* webhook URL."
+        with self.assertRaisesMessage(AnymailConfigurationError, errmsg):
+            self.client.post('/anymail/postmark/tracking/', content_type='application/json',
+                             data=json.dumps({"FromFull": {"Email": "from@example.org"}}))
+
+        with self.assertRaisesMessage(AnymailConfigurationError, errmsg):
+            self.client.post('/anymail/postmark/tracking/', content_type='application/json',
+                             data=json.dumps({"RecordType": "Inbound"}))

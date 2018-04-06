@@ -27,8 +27,18 @@ class PostmarkTrackingWebhookView(PostmarkBaseWebhookView):
 
     signal = tracking
 
+    event_record_types = {
+        # Map Postmark event RecordType --> Anymail normalized event type
+        'Bounce': EventType.BOUNCED,  # but check Type field for further info (below)
+        'Click': EventType.CLICKED,
+        'Delivery': EventType.DELIVERED,
+        'Open': EventType.OPENED,
+        'SpamComplaint': EventType.COMPLAINED,
+        'Inbound': EventType.INBOUND,  # future, probably
+    }
+
     event_types = {
-        # Map Postmark event type: Anymail normalized (event type, reject reason)
+        # Map Postmark bounce/spam event Type --> Anymail normalized (event type, reject reason)
         'HardBounce': (EventType.BOUNCED, RejectReason.BOUNCED),
         'Transient': (EventType.DEFERRED, None),
         'Unsubscribe': (EventType.UNSUBSCRIBED, RejectReason.UNSUBSCRIBED),
@@ -51,31 +61,32 @@ class PostmarkTrackingWebhookView(PostmarkBaseWebhookView):
         'InboundError': (EventType.INBOUND_FAILED, None),
         'DMARCPolicy': (EventType.REJECTED, RejectReason.BLOCKED),
         'TemplateRenderingFailed': (EventType.FAILED, None),
-        # DELIVERED doesn't have a Type field; detected separately below
-        # CLICKED doesn't have a Type field; detected separately below
-        # OPENED doesn't have a Type field; detected separately below
-        # INBOUND doesn't have a Type field; should come in through different webhook
     }
 
     def esp_to_anymail_event(self, esp_event):
         reject_reason = None
         try:
-            esp_type = esp_event['Type']
-            event_type, reject_reason = self.event_types.get(esp_type, (EventType.UNKNOWN, None))
+            esp_record_type = esp_event["RecordType"]
         except KeyError:
-            if 'FirstOpen' in esp_event:
-                event_type = EventType.OPENED
-            elif 'OriginalLink' in esp_event:
-                event_type = EventType.CLICKED
-            elif 'DeliveredAt' in esp_event:
-                event_type = EventType.DELIVERED
-            elif 'From' in esp_event:
+            if 'FromFull' in esp_event:
                 # This is an inbound event
-                raise AnymailConfigurationError(
-                    "You seem to have set Postmark's *inbound* webhook URL "
-                    "to Anymail's Postmark *tracking* webhook URL.")
+                event_type = EventType.INBOUND
             else:
                 event_type = EventType.UNKNOWN
+        else:
+            event_type = self.event_record_types.get(esp_record_type, EventType.UNKNOWN)
+
+        if event_type == EventType.INBOUND:
+            raise AnymailConfigurationError(
+                "You seem to have set Postmark's *inbound* webhook "
+                "to Anymail's Postmark *tracking* webhook URL.")
+
+        if event_type in (EventType.BOUNCED, EventType.COMPLAINED):
+            # additional info is in the Type field
+            try:
+                event_type, reject_reason = self.event_types[esp_event['Type']]
+            except KeyError:
+                pass
 
         recipient = getfirst(esp_event, ['Email', 'Recipient'], None)  # Email for bounce; Recipient for open
 
@@ -118,6 +129,11 @@ class PostmarkInboundWebhookView(PostmarkBaseWebhookView):
     signal = inbound
 
     def esp_to_anymail_event(self, esp_event):
+        if esp_event.get("RecordType", "Inbound") != "Inbound":
+            raise AnymailConfigurationError(
+                "You seem to have set Postmark's *%s* webhook "
+                "to Anymail's Postmark *inbound* webhook URL." % esp_event["RecordType"])
+
         attachments = [
             AnymailInboundMessage.construct_attachment(
                 content_type=attachment["ContentType"],
