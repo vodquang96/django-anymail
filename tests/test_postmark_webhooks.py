@@ -20,14 +20,17 @@ class PostmarkWebhookSecurityTestCase(WebhookTestCase, WebhookBasicAuthTestsMixi
 class PostmarkDeliveryTestCase(WebhookTestCase):
     def test_bounce_event(self):
         raw_event = {
+            "RecordType": "Bounce",
             "ID": 901542550,
             "Type": "HardBounce",
             "TypeCode": 1,
+            "ServerID": 23,
             "Name": "Hard bounce",
             "MessageID": "2706ee8a-737c-4285-b032-ccd317af53ed",
             "Description": "The server was unable to deliver your message (ex: unknown user, mailbox not found).",
             "Details": "smtp;550 5.1.1 The email account that you tried to reach does not exist.",
             "Email": "bounce@example.com",
+            "From": "sender@example.com",
             "BouncedAt": "2016-04-27T16:28:50.3963933-04:00",
             "DumpAvailable": True,
             "Inactive": True,
@@ -57,6 +60,7 @@ class PostmarkDeliveryTestCase(WebhookTestCase):
 
     def test_delivered_event(self):
         raw_event = {
+            "RecordType": "Delivery",
             "ServerId": 23,
             "MessageID": "883953f4-6105-42a2-a16a-77a8eac79483",
             "Recipient": "recipient@example.com",
@@ -82,6 +86,7 @@ class PostmarkDeliveryTestCase(WebhookTestCase):
 
     def test_open_event(self):
         raw_event = {
+            "RecordType": "Open",
             "FirstOpen": True,
             "Client": {"Name": "Gmail", "Company": "Google", "Family": "Gmail"},
             "OS": {"Name": "unknown", "Company": "unknown", "Family": "unknown"},
@@ -112,6 +117,7 @@ class PostmarkDeliveryTestCase(WebhookTestCase):
 
     def test_click_event(self):
         raw_event = {
+            "RecordType": "Click",
             "ClickLocation": "HTML",
             "Client": {
                 "Name": "Chrome 35.0.1916.153",
@@ -158,3 +164,41 @@ class PostmarkDeliveryTestCase(WebhookTestCase):
         self.assertEqual(event.click_url, "https://example.com/click/me")
         self.assertEqual(event.tags, ["welcome-email"])
         self.assertEqual(event.metadata, {})
+
+    def test_spam_event(self):
+        raw_event = {
+            "RecordType": "SpamComplaint",
+            "ID": 901542550,
+            "Type": "SpamComplaint",
+            "TypeCode": 512,
+            "Name": "Spam complaint",
+            "Tag": "Test",
+            "MessageID": "2706ee8a-737c-4285-b032-ccd317af53ed",
+            "ServerID": 1234,
+            "Description": "",
+            "Details": "Test spam complaint details",
+            "Email": "spam@example.com",
+            "From": "sender@example.com",
+            "BouncedAt": "2016-04-27T16:28:50.3963933-04:00",
+            "DumpAvailable": True,
+            "Inactive": True,
+            "CanActivate": False,
+            "Subject": "Postmark event test"
+        }
+        response = self.client.post('/anymail/postmark/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_event))
+        self.assertEqual(response.status_code, 200)
+        kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=PostmarkTrackingWebhookView,
+                                                      event=ANY, esp_name='Postmark')
+        event = kwargs['event']
+        self.assertIsInstance(event, AnymailTrackingEvent)
+        self.assertEqual(event.event_type, "complained")
+        self.assertEqual(event.esp_event, raw_event)
+        self.assertEqual(event.timestamp, datetime(2016, 4, 27, 16, 28, 50, microsecond=396393,
+                                                   tzinfo=get_fixed_timezone(-4*60)))
+        self.assertEqual(event.message_id, "2706ee8a-737c-4285-b032-ccd317af53ed")
+        self.assertEqual(event.event_id, "901542550")
+        self.assertEqual(event.recipient, "spam@example.com")
+        self.assertEqual(event.reject_reason, "spam")
+        self.assertEqual(event.description, "")
+        self.assertEqual(event.mta_response, "Test spam complaint details")

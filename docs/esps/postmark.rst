@@ -7,7 +7,7 @@ Anymail integrates with the `Postmark`_ transactional email service,
 using their `HTTP email API`_.
 
 .. _Postmark: https://postmarkapp.com/
-.. _HTTP email API: http://developer.postmarkapp.com/developer-api-email.html
+.. _HTTP email API: https://postmarkapp.com/developer/api/email-api
 
 
 Settings
@@ -80,7 +80,7 @@ Example:
 messages.)
 
 
-.. _email API: http://developer.postmarkapp.com/developer-api-email.html
+.. _email API: https://postmarkapp.com/developer/api/email-api
 
 
 Limitations and quirks
@@ -118,7 +118,7 @@ see :ref:`unsupported-features`.
   `message.esp_extra = {'TrackLinks': "HtmlOnly"}` to specify a particular option.
 
 .. _several link-tracking options:
-   http://developer.postmarkapp.com/developer-link-tracking.html
+   https://postmarkapp.com/developer/user-guide/tracking-links#enabling-link-tracking
 
 **No envelope sender overrides**
   Postmark does not support overriding :attr:`~anymail.message.AnymailMessage.envelope_sender`
@@ -178,19 +178,17 @@ See this `Postmark blog post on templates`_ for more information.
 Status tracking webhooks
 ------------------------
 
-If you are using Anymail's normalized :ref:`status tracking <event-tracking>`, enter
-the url in your `Postmark account settings`_, under Servers > *your server name* >
-Settings > Outbound > Webhooks. You should enter this same Anymail tracking URL
-for all of the "Delivery webhook," "Bounce webhook," and "Opens webhook" (if you
-want to receive all these types of events):
+If you are using Anymail's normalized :ref:`status tracking <event-tracking>`, set up
+a webhook in your `Postmark account settings`_, under Servers > *your server name* >
+Settings > Webhooks. The webhook URL is:
 
    :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/postmark/tracking/`
 
      * *random:random* is an :setting:`ANYMAIL_WEBHOOK_SECRET` shared secret
      * *yoursite.example.com* is your Django site
 
-Anymail doesn't care about the "include bounce content" and "post only on first open"
-Postmark webhook settings: whether to use them is your choice.
+Choose all the event types you want to receive. Anymail doesn't care about the "include
+messsage content" and "post only on first open" options; whether to use them is your choice.
 
 If you use multiple Postmark servers, you'll need to repeat entering the webhook
 settings for each of them.
@@ -201,9 +199,11 @@ unsubscribed, subscribed. (Postmark does not support sent--what it calls "proces
 through webhooks.)
 
 The event's :attr:`~anymail.signals.AnymailTrackingEvent.esp_event` field will be
-a `dict` of Postmark `delivery <http://developer.postmarkapp.com/developer-delivery-webhook.html>`_,
-`bounce <http://developer.postmarkapp.com/developer-bounce-webhook.html>`_,
-or `open <http://developer.postmarkapp.com/developer-open-webhook.html>`_ webhook data.
+a `dict` of Postmark `delivery <https://postmarkapp.com/developer/webhooks/delivery-webhook>`_,
+`bounce <https://postmarkapp.com/developer/webhooks/bounce-webhook>`_,
+`spam-complaint <https://postmarkapp.com/developer/webhooks/spam-complaint-webhook>`_,
+`open-tracking <https://postmarkapp.com/developer/webhooks/open-tracking-webhook>`_, or
+`click <https://postmarkapp.com/developer/webhooks/click-webhook>`_ data.
 
 .. _Postmark account settings: https://account.postmarkapp.com/servers
 
