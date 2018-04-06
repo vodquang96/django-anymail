@@ -586,8 +586,8 @@ class SparkPostBackendRecipientsRefusedTests(SparkPostBackendMockAPITestCase):
 
 
 @override_settings(EMAIL_BACKEND="anymail.backends.sparkpost.EmailBackend")
-class SparkPostBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin):
-    """Test ESP backend without required settings in place"""
+class SparkPostBackendConfigurationTests(SimpleTestCase, AnymailTestMixin):
+    """Test various SparkPost client options"""
 
     def test_missing_api_key(self):
         with self.assertRaises(AnymailConfigurationError) as cm:
@@ -606,3 +606,20 @@ class SparkPostBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin
             # Poke into implementation details to verify:
             self.assertIsNone(conn.api_key)  # Anymail prop
             self.assertEqual(conn.sp.api_key, 'key_from_environment')  # SparkPost prop
+
+    @override_settings(ANYMAIL={
+        "SPARKPOST_API_URL": "https://api.eu.sparkpost.com/api/v1",
+        "SPARKPOST_API_KEY": "example-key",
+    })
+    def test_sparkpost_api_url(self):
+        conn = mail.get_connection()  # this init's the backend without sending anything
+        # Poke into implementation details to verify:
+        self.assertEqual(conn.sp.base_uri, "https://api.eu.sparkpost.com/api/v1")
+
+        # can also override on individual connection (and even use non-versioned labs endpoint)
+        conn2 = mail.get_connection(api_url="https://api.sparkpost.com/api/labs")
+        self.assertEqual(conn2.sp.base_uri, "https://api.sparkpost.com/api/labs")
+
+        # double-check _FullSparkPostEndpoint won't interfere with additional str ops
+        self.assertEqual(conn.sp.base_uri + "/transmissions/send",
+                         "https://api.eu.sparkpost.com/api/v1/transmissions/send")

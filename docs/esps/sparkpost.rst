@@ -61,6 +61,30 @@ nor ``ANYMAIL_SPARKPOST_API_KEY`` is set.
 .. _SparkPost account API keys: https://app.sparkpost.com/account/credentials
 
 
+.. setting:: ANYMAIL_SPARKPOST_API_URL
+
+.. rubric:: SPARKPOST_API_URL
+
+The `SparkPost API Endpoint`_ to use. This setting is optional; if not provided, Anymail will
+use the :pypi:`python-sparkpost` client default endpoint (``"https://api.sparkpost.com/api/v1"``).
+
+Set this to use a SparkPost EU account, or to work with any other API endpoint including
+SparkPost Enterprise API and SparkPost Labs.
+
+  .. code-block:: python
+
+      ANYMAIL = {
+          ...
+          "SPARKPOST_API_URL": "https://api.eu.sparkpost.com/api/v1",  # use SparkPost EU
+      }
+
+You must specify the full, versioned API endpoint as shown above (not just the base_uri).
+This setting only affects Anymail's calls to SparkPost, and will not apply to other code
+using :pypi:`python-sparkpost`.
+
+.. _SparkPost API Endpoint: https://developers.sparkpost.com/api/index.html#header-api-endpoints
+
+
 .. _sparkpost-esp-extra:
 
 esp_extra support

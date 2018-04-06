@@ -24,8 +24,18 @@ class EmailBackend(AnymailBaseBackend):
         # SPARKPOST_API_KEY is optional - library reads from env by default
         self.api_key = get_anymail_setting('api_key', esp_name=self.esp_name,
                                            kwargs=kwargs, allow_bare=True, default=None)
+
+        # SPARKPOST_API_URL is optional - default is set by library;
+        # if provided, must be a full SparkPost API endpoint, including "/v1" if appropriate
+        api_url = get_anymail_setting('api_url', esp_name=self.esp_name, kwargs=kwargs, default=None)
+        extra_sparkpost_params = {}
+        if api_url is not None:
+            if api_url.endswith("/"):
+                api_url = api_url[:-1]
+            extra_sparkpost_params['base_uri'] = _FullSparkPostEndpoint(api_url)
+
         try:
-            self.sp = SparkPost(self.api_key)  # SparkPost API instance
+            self.sp = SparkPost(self.api_key, **extra_sparkpost_params)  # SparkPost API instance
         except SparkPostException as err:
             # This is almost certainly a missing API key
             raise AnymailConfigurationError(
@@ -209,3 +219,33 @@ class SparkPostPayload(BasePayload):
     # ESP-specific payload construction
     def set_esp_extra(self, extra):
         self.params.update(extra)
+
+
+class _FullSparkPostEndpoint(str):
+    """A string-like object that allows using a complete SparkPost API endpoint url as base_uri:
+
+        sp = SparkPost(api_key, base_uri=_FullSparkPostEndpoint('https://api.sparkpost.com/api/labs'))
+
+    Works around SparkPost.__init__ code `self.base_uri = base_uri + '/api/v' + version`,
+    which makes it difficult to simply copy and paste full API endpoints from SparkPost's docs
+    (https://developers.sparkpost.com/api/index.html#header-api-endpoints) -- and completely
+    prevents using the labs API endpoint (which has no "v" in it).
+
+    Should work with all python-sparkpost releases through at least v1.3.6.
+    """
+    _expect = ['/api/v', '1']  # ignore attempts to concatenate these with me (in order)
+
+    def __add__(self, other):
+        expected = self._expect[0]
+        self._expect = self._expect[1:]  # (makes a copy for this instance)
+        if other == expected:
+            # ignore this operation
+            if self._expect:
+                return self
+            else:
+                return str(self)  # my work is done; just be a normal str now
+        else:
+            # something changed in python-sparkpost; please open an Anymail issue to fix
+            raise ValueError(
+                "This version of Anymail is not compatible with this version of python-sparkpost.\n"
+                "(_FullSparkPostEndpoint(%r) expected %r but got %r)" % (self, expected, other))
