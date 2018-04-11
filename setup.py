@@ -36,7 +36,7 @@ setup(
     description='Django email integration for Mailgun, Mailjet, Postmark, SendGrid, SendinBlue, SparkPost '
                 'and other transactional ESPs',
     keywords="Django, email, email backend, ESP, transactional mail, "
-             "Mailgun, Mailjet, Mandrill, Postmark, SendinBlue, SendGrid, SparkPost",
+             "Amazon SES, Mailgun, Mailjet, Mandrill, Postmark, SendinBlue, SendGrid, SparkPost",
     author="Mike Edmunds and Anymail contributors",
     author_email="medmunds@gmail.com",
     url="https://github.com/anymail/django-anymail",
@@ -45,9 +45,9 @@ setup(
     zip_safe=False,
     install_requires=["django>=1.8", "requests>=2.4.3", "six"],
     extras_require={
-        # This can be used if particular backends have unique dependencies
-        # (e.g., AWS-SES would want boto).
+        # This can be used if particular backends have unique dependencies.
         # For simplicity, requests is included in the base requirements.
+        "amazon_ses": ["boto3"],
         "mailgun": [],
         "mailjet": [],
         "mandrill": [],
@@ -58,7 +58,7 @@ setup(
     },
     include_package_data=True,
     test_suite="runtests.runtests",
-    tests_require=["mock", "sparkpost"],
+    tests_require=["mock", "boto3", "sparkpost"],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python",
