@@ -138,7 +138,7 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
 
         self.assertEqual(event["message"]["scheduled-for"], send_at_timestamp)
         self.assertIn(event["recipient"], ['test+to1@anymail.info', 'test+to2@anymail.info',
-                                           'test+cc1@anymail.info', 'test+cc1@anymail.info',
+                                           'test+cc1@anymail.info', 'test+cc2@anymail.info',
                                            'test+bcc1@anymail.info', 'test+bcc2@anymail.info'])
 
         headers = event["message"]["headers"]
