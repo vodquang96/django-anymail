@@ -116,7 +116,7 @@ def update_deep(dct, other):
     # (like dict.update(), no return value)
 
 
-def parse_address_list(address_list):
+def parse_address_list(address_list, field=None):
     """Returns a list of EmailAddress objects from strings in address_list.
 
     Essentially wraps :func:`email.utils.getaddresses` with better error
@@ -127,6 +127,8 @@ def parse_address_list(address_list):
 
     :param list[str]|str|None|list[None] address_list:
         the address or addresses to parse
+    :param str|None field:
+        optional description of the source of these addresses, for error message
     :return list[:class:`EmailAddress`]:
     :raises :exc:`AnymailInvalidAddress`:
     """
@@ -151,8 +153,11 @@ def parse_address_list(address_list):
     for address in parsed:
         if address.username == '' or address.domain == '':
             # Django SMTP allows username-only emails, but they're not meaningful with an ESP
-            errmsg = "Invalid email address '%s' parsed from '%s'." % (
-                address.addr_spec, ", ".join(address_list_strings))
+            errmsg = "Invalid email address '{problem}' parsed from '{source}'{where}.".format(
+                problem=address.addr_spec,
+                source=", ".join(address_list_strings),
+                where=" in `%s`" % field if field else "",
+            )
             if len(parsed) > len(address_list):
                 errmsg += " (Maybe missing quotes around a display-name?)"
             raise AnymailInvalidAddress(errmsg)
@@ -160,17 +165,20 @@ def parse_address_list(address_list):
     return parsed
 
 
-def parse_single_address(address):
+def parse_single_address(address, field=None):
     """Parses a single EmailAddress from str address, or raises AnymailInvalidAddress
 
     :param str address: the fully-formatted email str to parse
+    :param str|None field: optional description of the source of this address, for error message
     :return :class:`EmailAddress`: if address contains a single email
     :raises :exc:`AnymailInvalidAddress`: if address contains no or multiple emails
     """
-    parsed = parse_address_list([address])
+    parsed = parse_address_list([address], field=field)
     count = len(parsed)
     if count > 1:
-        raise AnymailInvalidAddress("Only one email address is allowed; found %d in %r" % (count, address))
+        raise AnymailInvalidAddress(
+            "Only one email address is allowed; found {count} in '{address}'{where}.".format(
+                count=count, address=address, where=" in `%s`" % field if field else ""))
     else:
         return parsed[0]
 

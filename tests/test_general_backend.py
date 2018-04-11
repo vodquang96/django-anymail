@@ -11,7 +11,7 @@ from django.utils.functional import Promise
 from django.utils.timezone import utc
 from django.utils.translation import ugettext_lazy
 
-from anymail.exceptions import AnymailConfigurationError, AnymailUnsupportedFeature
+from anymail.exceptions import AnymailConfigurationError, AnymailInvalidAddress, AnymailUnsupportedFeature
 from anymail.message import AnymailMessage
 
 from .utils import AnymailTestMixin
@@ -317,6 +317,38 @@ class CatchCommonErrorsTests(TestBackendTestCase):
         # Lazy strings can fool string/iterable detection
         self.message.reply_to = ugettext_lazy("single-reply-to@example.com")
         with self.assertRaisesMessage(TypeError, '"reply_to" attribute must be a list or other iterable'):
+            self.message.send()
+
+    def test_identifies_source_of_parsing_errors(self):
+        """Errors parsing email addresses should say which field had the problem"""
+        # Note: General email address parsing tests are in test_utils.ParseAddressListTests.
+        # This just checks the error includes the field name when parsing for sending a message.
+        self.message.from_email = ''
+        with self.assertRaisesMessage(AnymailInvalidAddress,
+                                      "Invalid email address '' parsed from '' in `from_email`."):
+            self.message.send()
+        self.message.from_email = 'from@example.com'
+
+        # parse_address_list
+        self.message.to = ['ok@example.com', 'oops']
+        with self.assertRaisesMessage(AnymailInvalidAddress,
+                                      "Invalid email address 'oops' parsed from 'ok@example.com, oops' in `to`."):
+            self.message.send()
+        self.message.to = ['test@example.com']
+
+        # parse_single_address
+        self.message.envelope_sender = 'one@example.com, two@example.com'
+        with self.assertRaisesMessage(AnymailInvalidAddress,
+                                      "Only one email address is allowed; found 2"
+                                      " in 'one@example.com, two@example.com' in `envelope_sender`."):
+            self.message.send()
+        delattr(self.message, 'envelope_sender')
+
+        # process_extra_headers
+        self.message.extra_headers['From'] = 'Mail, Inc. <mail@example.com>'
+        with self.assertRaisesMessage(AnymailInvalidAddress,
+                                      "Invalid email address 'Mail' parsed from 'Mail, Inc. <mail@example.com>'"
+                                      " in `extra_headers['From']`. (Maybe missing quotes around a display-name?)"):
             self.message.send()
 
 

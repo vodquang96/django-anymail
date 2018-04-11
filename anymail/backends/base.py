@@ -268,7 +268,11 @@ class BasePayload(object):
                 if converter is not None:
                     if not callable(converter):
                         converter = getattr(self, converter)
-                    value = converter(value)
+                    if converter in (parse_address_list, parse_single_address):
+                        # hack to include field name in error message
+                        value = converter(value, field=attr)
+                    else:
+                        value = converter(value)
             if value is not UNSET:
                 if attr == 'body':
                     setter = self.set_html_body if message.content_subtype == 'html' else self.set_text_body
@@ -296,7 +300,7 @@ class BasePayload(object):
             # message.extra_headers['Reply-To'] will override message.reply_to
             # (because the extra_headers attr is processed after reply_to).
             # This matches the behavior of Django's EmailMessage.message().
-            self.set_reply_to(parse_address_list([reply_to]))
+            self.set_reply_to(parse_address_list([reply_to], field="extra_headers['Reply-To']"))
 
         if 'From' in headers:
             # If message.extra_headers['From'] is supplied, it should override message.from_email,
@@ -304,8 +308,8 @@ class BasePayload(object):
             #   - https://code.djangoproject.com/ticket/9214
             #   - https://github.com/django/django/blob/1.8/django/core/mail/message.py#L269
             #   - https://github.com/django/django/blob/1.8/django/core/mail/backends/smtp.py#L118
-            header_from = parse_address_list(headers.pop('From'))
-            envelope_sender = parse_single_address(self.message.from_email)  # must be single address
+            header_from = parse_address_list(headers.pop('From'), field="extra_headers['From']")
+            envelope_sender = parse_single_address(self.message.from_email, field="from_email")  # must be single
             self.set_from_email_list(header_from)
             self.set_envelope_sender(envelope_sender)
 
