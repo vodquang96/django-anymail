@@ -6,18 +6,23 @@ from django.http import HttpResponse
 from django.utils.dateparse import parse_datetime
 
 from .base import AnymailBaseWebhookView
-from ..backends.amazon_ses import _get_anymail_boto3_params
 from ..exceptions import (
-    AnymailAPIError, AnymailConfigurationError, AnymailImproperlyInstalled, AnymailWebhookValidationFailure)
+    AnymailAPIError, AnymailConfigurationError, AnymailImproperlyInstalled, AnymailWebhookValidationFailure,
+    _LazyError)
 from ..inbound import AnymailInboundMessage
 from ..signals import AnymailInboundEvent, AnymailTrackingEvent, EventType, RejectReason, inbound, tracking
 from ..utils import combine, get_anymail_setting, getfirst
 
 try:
     import boto3
-    import botocore.exceptions
+    from botocore.exceptions import ClientError
+    from ..backends.amazon_ses import _get_anymail_boto3_params
 except ImportError:
-    raise AnymailImproperlyInstalled(missing_package='boto3', backend='amazon_ses')
+    # This module gets imported by anymail.urls, so don't complain about boto3 missing
+    # unless one of the Amazon SES webhook views is actually used and needs it
+    boto3 = _LazyError(AnymailImproperlyInstalled(missing_package='boto3', backend='amazon_ses'))
+    ClientError = object
+    _get_anymail_boto3_params = _LazyError(AnymailImproperlyInstalled(missing_package='boto3', backend='amazon_ses'))
 
 
 class AmazonSESBaseWebhookView(AnymailBaseWebhookView):
@@ -296,7 +301,7 @@ class AmazonSESInboundWebhookView(AmazonSESBaseWebhookView):
                 s3.download_fileobj(bucket_name, object_key, content)
                 content.seek(0)
                 message = AnymailInboundMessage.parse_raw_mime_file(content)
-            except botocore.exceptions.ClientError as err:
+            except ClientError as err:
                 # improve the botocore error message
                 raise AnymailBotoClientAPIError(
                     "Anymail AmazonSESInboundWebhookView couldn't download S3 object '{bucket_name}:{object_key}'"
@@ -334,11 +339,11 @@ class AmazonSESInboundWebhookView(AmazonSESBaseWebhookView):
         )]
 
 
-class AnymailBotoClientAPIError(AnymailAPIError, botocore.exceptions.ClientError):
+class AnymailBotoClientAPIError(AnymailAPIError, ClientError):
     """An AnymailAPIError that is also a Boto ClientError"""
     def __init__(self, *args, **kwargs):
         raised_from = kwargs.pop('raised_from')
-        assert isinstance(raised_from, botocore.exceptions.ClientError)
+        assert isinstance(raised_from, ClientError)
         assert len(kwargs) == 0  # can't support other kwargs
         # init self as boto ClientError (which doesn't cooperatively subclass):
         super(AnymailBotoClientAPIError, self).__init__(

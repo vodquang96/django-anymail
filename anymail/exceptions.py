@@ -177,9 +177,9 @@ class AnymailImproperlyInstalled(AnymailConfigurationError, ImportError):
     """Exception for Anymail missing package dependencies"""
 
     def __init__(self, missing_package, backend="<backend>"):
-        message = "The %s package is required to use this backend, but isn't installed.\n" \
+        message = "The %s package is required to use this ESP, but isn't installed.\n" \
                   "(Be sure to use `pip install django-anymail[%s]` " \
-                  "with your desired backends)" % (missing_package, backend)
+                  "with your desired ESPs.)" % (missing_package, backend)
         super(AnymailImproperlyInstalled, self).__init__(message)
 
 
@@ -195,3 +195,17 @@ class AnymailInsecureWebhookWarning(AnymailWarning):
 
 class AnymailDeprecationWarning(AnymailWarning, DeprecationWarning):
     """Warning for deprecated Anymail features"""
+
+
+# Helpers
+
+class _LazyError(object):
+    """An object that sits inert unless/until used, then raises an error"""
+    def __init__(self, error):
+        self._error = error
+
+    def __call__(self, *args, **kwargs):
+        raise self._error
+
+    def __getattr__(self, item):
+        raise self._error

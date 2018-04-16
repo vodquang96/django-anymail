@@ -18,7 +18,7 @@ try:
 except ImportError:
     string_concat = None
 
-from anymail.exceptions import AnymailInvalidAddress
+from anymail.exceptions import AnymailInvalidAddress, _LazyError
 from anymail.utils import (
     parse_address_list, parse_single_address, EmailAddress,
     is_lazy, force_non_lazy, force_non_lazy_dict, force_non_lazy_list,
@@ -355,3 +355,16 @@ class ParseRFC2822DateTests(SimpleTestCase):
         self.assertIsNone(parse_rfc2822date("Tue, 24 Oct"))
         self.assertIsNone(parse_rfc2822date("Lug, 24 Nod 2017 10:11:35 +0000"))
         self.assertIsNone(parse_rfc2822date("Tue, 99 Oct 9999 99:99:99 +9999"))
+
+
+class LazyErrorTests(SimpleTestCase):
+    def test_attr(self):
+        lazy = _LazyError(ValueError("lazy failure"))  # creating doesn't cause error
+        lazy.some_prop = "foo"  # setattr doesn't cause error
+        with self.assertRaisesMessage(ValueError, "lazy failure"):
+            self.unused = lazy.anything  # getattr *does* cause error
+
+    def test_call(self):
+        lazy = _LazyError(ValueError("lazy failure"))  # creating doesn't cause error
+        with self.assertRaisesMessage(ValueError, "lazy failure"):
+            self.unused = lazy()  # call *does* cause error
