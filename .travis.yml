@@ -13,30 +13,14 @@ matrix:
   include:
     - { env: LINT_AND_DOCS=true, python: 3.6 }
 
-    # Anymail supports the same python versions as Django, excluding Python 3.2, but adding pypy.
+    # Anymail supports the same Python versions as Django, plus PyPy.
     # https://docs.djangoproject.com/en/dev/faq/install/#what-python-version-can-i-use-with-django
 
     # Live API integration tests are only run on a few, representative Python/Django version
     # combinations, to avoid rapidly consuming the testing accounts' entire send allotments.
 
-    # Django 1.8: Python 2.7, 3.3, 3.4, 3.5
-    - { env: DJANGO=1.8 RUN_LIVE_TESTS=true, python: 2.7 }
-    - { env: DJANGO=1.8, python: 3.3 }
-    - { env: DJANGO=1.8, python: 3.4 }
-    - { env: DJANGO=1.8, python: 3.5 }
-    - { env: DJANGO=1.8, python: pypy }
-    # Django 1.9: Python 2.7, 3.4, 3.5
-    - { env: DJANGO=1.9, python: 2.7 }
-    - { env: DJANGO=1.9, python: 3.4 }
-    - { env: DJANGO=1.9, python: 3.5 }
-    - { env: DJANGO=1.9, python: pypy }
-    # Django 1.10: Python 2.7, 3.4, 3.5
-    - { env: DJANGO=1.10, python: 2.7 }
-    - { env: DJANGO=1.10, python: 3.4 }
-    - { env: DJANGO=1.10, python: 3.5 }
-    - { env: DJANGO=1.10, python: pypy }
     # Django 1.11: Python 2.7, 3.4, 3.5, or 3.6
-    - { env: DJANGO=1.11, python: 2.7 }
+    - { env: DJANGO=1.11 RUN_LIVE_TESTS=true, python: 2.7 }
     - { env: DJANGO=1.11, python: 3.4 }
     - { env: DJANGO=1.11, python: 3.5 }
     - { env: DJANGO=1.11, python: 3.6 }
@@ -51,6 +35,20 @@ matrix:
     # Django development master (direct from GitHub source):
     - { env: DJANGO=master, python: 3.6 }
     - { env: DJANGO=master, python: 3.7-dev }
+
+    # Obsolete Django versions (no longer supported by Django)
+    # Anymail tries to support these, but doesn't test every possible combination...
+    # Django 1.8: Python 2.7, 3.3, 3.4, 3.5
+    - { env: DJANGO=1.8, python: 2.7 }
+    - { env: DJANGO=1.8, python: 3.4 }
+    - { env: DJANGO=1.8, python: 3.5 }
+    - { env: DJANGO=1.8, python: pypy }
+    # Django 1.9: Python 2.7, 3.4, 3.5
+    - { env: DJANGO=1.9, python: 2.7 }
+    - { env: DJANGO=1.9, python: 3.5 }
+    # Django 1.10: Python 2.7, 3.4, 3.5
+    - { env: DJANGO=1.10, python: 2.7 }
+    - { env: DJANGO=1.10, python: 3.5 }
 
   allow_failures:
     - env: DJANGO=2.1
