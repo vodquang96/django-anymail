@@ -16,6 +16,14 @@ class MailjetTrackingWebhookView(AnymailBaseWebhookView):
 
     def parse_events(self, request):
         esp_events = json.loads(request.body.decode('utf-8'))
+        # Mailjet webhook docs say the payload is "a JSON array of event objects,"
+        # but that's not true if "group events" isn't enabled in webhook config...
+        try:
+            esp_events[0]  # is this really an array of events?
+        except IndexError:
+            pass  # yep (and it's empty?!)
+        except KeyError:
+            esp_events = [esp_events]  # nope, it's a single, bare event
         return [self.esp_to_anymail_event(esp_event) for esp_event in esp_events]
 
     # https://dev.mailjet.com/guides/#events

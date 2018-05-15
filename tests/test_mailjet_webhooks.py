@@ -224,3 +224,32 @@ class MailjetDeliveryTestCase(WebhookTestCase):
         self.assertEqual(event.message_id, "12345678901234567")
         self.assertEqual(event.recipient, "protected@example.com")
         self.assertEqual(event.reject_reason, "other")
+
+    def test_non_grouped_event(self):
+        # If you don't enable "group events" on a webhook, Mailjet sends a single bare event
+        # (not a list of one event, despite what the docs say).
+        raw_event = {
+            "event": "sent",
+            "time": 1498093527,
+            "MessageID": 12345678901234567,
+            "email": "recipient@example.com",
+            "mj_campaign_id": 1234567890,
+            "mj_contact_id": 9876543210,
+            "customcampaign": "",
+            "mj_message_id": "12345678901234567",
+            "smtp_reply": "sent (250 2.0.0 OK 1498093527 a67bc12345def.22 - gsmtp)",
+            "Payload": "",
+        }
+        response = self.client.post('/anymail/mailjet/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_event))
+        self.assertEqual(response.status_code, 200)
+        kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=MailjetTrackingWebhookView,
+                                                      event=ANY, esp_name='Mailjet')
+        event = kwargs['event']
+        self.assertIsInstance(event, AnymailTrackingEvent)
+        self.assertEqual(event.event_type, "delivered")
+        self.assertEqual(event.timestamp, datetime(2017, 6, 22, 1, 5, 27, tzinfo=utc))
+        self.assertEqual(event.esp_event, raw_event)
+        self.assertEqual(event.mta_response, "sent (250 2.0.0 OK 1498093527 a67bc12345def.22 - gsmtp)")
+        self.assertEqual(event.message_id, "12345678901234567")  # converted to str (matching backend status)
+        self.assertEqual(event.recipient, "recipient@example.com")
