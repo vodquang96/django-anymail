@@ -5,14 +5,13 @@ import quopri
 from base64 import b64encode
 from email.utils import collapse_rfc2231_value
 from textwrap import dedent
-from unittest import skipIf
 
 from django.core.mail import SafeMIMEText
 from django.test import SimpleTestCase
 
 from anymail.inbound import AnymailInboundMessage
 
-from .utils import SAMPLE_IMAGE_FILENAME, python_has_broken_mime_param_handling, sample_email_path, sample_image_content
+from .utils import SAMPLE_IMAGE_FILENAME, sample_email_path, sample_image_content
 
 SAMPLE_IMAGE_CONTENT = sample_image_content()
 
@@ -566,9 +565,6 @@ class EmailParserWorkaroundTests(SimpleTestCase):
         # Replace illegal encodings (rather than causing error):
         self.assertEqual(msg["X-Broken"], "Not a char: \N{REPLACEMENT CHARACTER}.")
 
-    @skipIf(python_has_broken_mime_param_handling(),
-            "This Python has a buggy email package that crashes on non-ASCII "
-            "characters in RFC2231-encoded MIME header parameters")
     def test_parse_encoded_params(self):
         raw = dedent("""\
             MIME-Version: 1.0

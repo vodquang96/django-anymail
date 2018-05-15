@@ -300,20 +300,3 @@ class ClientWithCsrfChecks(Client):
     def __init__(self, **defaults):
         super(ClientWithCsrfChecks, self).__init__(
             enforce_csrf_checks=True, **defaults)
-
-
-def python_has_broken_mime_param_handling():
-    # In Python 3.3 (only), trying to access any parsed MIME header will crash if the header
-    # has parameters with non-ASCII characters. (Common in, e.g., attachment filenames.)
-    # The bug is somewhere within email._header_value_parser.parse_mime_parameters, and is too
-    # complicated to work around for an uncommon version combination (Django 1.8 on Python 3.3).
-    # If you run into it, please upgrade to (at least) Python 3.4.
-    try:
-        from email.policy import default
-        default.header_fetch_parse("Content-Type", "plain; name*=iso-8859-1''Une%20pi%E8ce")
-    except ImportError:
-        return False  # Python 2 (or pre Python 3.3) -- bug doesn't apply
-    except UnicodeEncodeError:
-        return True  # this is the bug
-    else:
-        return False  # worked fine

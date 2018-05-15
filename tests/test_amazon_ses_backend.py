@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 import json
 from datetime import datetime
 from email.mime.application import MIMEApplication
-from unittest import skipIf
 
 import botocore.config
 import botocore.exceptions
@@ -18,9 +17,7 @@ from mock import ANY, patch
 from anymail.exceptions import AnymailAPIError, AnymailUnsupportedFeature
 from anymail.inbound import AnymailInboundMessage
 from anymail.message import attach_inline_image_file, AnymailMessage
-from .utils import (
-    AnymailTestMixin, SAMPLE_IMAGE_FILENAME, python_has_broken_mime_param_handling,
-    sample_image_content, sample_image_path)
+from .utils import AnymailTestMixin, SAMPLE_IMAGE_FILENAME, sample_image_content, sample_image_path
 
 
 @override_settings(EMAIL_BACKEND='anymail.backends.amazon_ses.EmailBackend')
@@ -152,9 +149,6 @@ class AmazonSESBackendStandardEmailTests(AmazonSESBackendMockAPITestCase):
         self.assertIn(b"\nCc: cc@xn--th-e0a.example.com\n", raw_mime)
         # SES doesn't support non-ASCII in the username@ part (RFC 6531 "SMTPUTF8" extension)
 
-    @skipIf(python_has_broken_mime_param_handling(),
-            "This Python has a buggy email package that crashes on non-ASCII "
-            "characters in RFC2231-encoded MIME header parameters")
     def test_attachments(self):
         text_content = "• Item one\n• Item two\n• Item three"  # those are \u2022 bullets ("\N{BULLET}")
         self.message.attach(filename="Une pièce jointe.txt",  # utf-8 chars in filename
