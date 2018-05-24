@@ -17,6 +17,7 @@ Documentation
 
 .. toctree::
    :maxdepth: 2
+   :caption: Using Anymail
 
    quickstart
    installation
@@ -25,5 +26,12 @@ Documentation
    esps/index
    tips/index
    troubleshooting
+
+.. toctree::
+   :maxdepth: 2
+   :caption: About Anymail
+
    contributing
    release_notes
+   Docs privacy <docs_privacy>
+
