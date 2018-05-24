@@ -40,8 +40,8 @@ built-in `django.core.mail` package. It includes:
 * Inbound message support, to receive email through your ESP's webhooks,
   with simplified, portable access to attachments and other inbound content
 
-Anymail is released under the BSD license. It is extensively tested against Django 1.8--2.0
-(including Python 2.7, Python 3 and PyPy).
+Anymail is released under the BSD license. It is extensively tested against
+Django 1.8--2.1 (including Python 2.7, Python 3 and PyPy).
 Anymail releases follow `semantic versioning <http://semver.org/>`_.
 
 .. END shared-intro
