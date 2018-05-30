@@ -26,8 +26,7 @@ class EmailBackend(AnymailRequestsBackend):
         password = get_anymail_setting('password', esp_name=esp_name, kwargs=kwargs, default=None, allow_bare=True)
         if username or password:
             raise AnymailConfigurationError(
-                "SendGrid v3 API doesn't support username/password auth; Please change to API key.\n"
-                "(For legacy v2 API, use anymail.backends.sendgrid_v2.EmailBackend.)")
+                "SendGrid v3 API doesn't support username/password auth; Please change to API key.")
 
         self.api_key = get_anymail_setting('api_key', esp_name=esp_name, kwargs=kwargs, allow_bare=True)
 
@@ -307,7 +306,6 @@ class SendGridPayload(RequestsPayload):
         if "x-smtpapi" in extra:
             raise AnymailConfigurationError(
                 "You are attempting to use SendGrid v2 API-style x-smtpapi params "
-                "with the SendGrid v3 API. Please update your `esp_extra` to the new API, "
-                "or use 'anymail.backends.sendgrid_v2.EmailBackend' for the old API."
+                "with the SendGrid v3 API. Please update your `esp_extra` to the new API."
             )
         update_deep(self.data, extra)

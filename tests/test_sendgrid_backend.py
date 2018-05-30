@@ -650,7 +650,10 @@ class SendGridBackendDisallowsV2Tests(SimpleTestCase, AnymailTestMixin):
     @override_settings(ANYMAIL={'SENDGRID_USERNAME': 'sg_username', 'SENDGRID_PASSWORD': 'sg_password'})
     def test_user_pass_auth(self):
         """Make sure v2-only USERNAME/PASSWORD auth raises error"""
-        with self.assertRaisesRegex(AnymailConfigurationError, r'\bsendgrid_v2\.EmailBackend\b'):
+        with self.assertRaisesMessage(
+            AnymailConfigurationError,
+            "SendGrid v3 API doesn't support username/password auth; Please change to API key."
+        ):
             mail.send_mail('Subject', 'Message', 'from@example.com', ['to@example.com'])
 
     @override_settings(ANYMAIL={'SENDGRID_API_KEY': 'test_api_key'})
@@ -658,5 +661,9 @@ class SendGridBackendDisallowsV2Tests(SimpleTestCase, AnymailTestMixin):
         """x-smtpapi in the esp_extra indicates a desire to use the v2 api"""
         message = mail.EmailMessage('Subject', 'Body', 'from@example.com', ['to@example.com'])
         message.esp_extra = {'x-smtpapi': {'asm_group_id': 1}}
-        with self.assertRaisesRegex(AnymailConfigurationError, r'\bsendgrid_v2\.EmailBackend\b'):
+        with self.assertRaisesMessage(
+            AnymailConfigurationError,
+            "You are attempting to use SendGrid v2 API-style x-smtpapi params with the SendGrid v3 API."
+            " Please update your `esp_extra` to the new API."
+        ):
             message.send()
