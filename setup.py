@@ -43,7 +43,7 @@ setup(
     license="BSD License",
     packages=["anymail"],
     zip_safe=False,
-    install_requires=["django>=1.8", "requests>=2.4.3", "six"],
+    install_requires=["django>=1.11", "requests>=2.4.3", "six"],
     extras_require={
         # This can be used if particular backends have unique dependencies.
         # For simplicity, requests is included in the base requirements.
@@ -76,9 +76,6 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Intended Audience :: Developers",
         "Framework :: Django",
-        "Framework :: Django :: 1.8",
-        "Framework :: Django :: 1.9",
-        "Framework :: Django :: 1.10",
         "Framework :: Django :: 1.11",
         "Framework :: Django :: 2.0",
         # "Framework :: Django :: 2.1",

@@ -95,10 +95,9 @@ class AnymailTestMixin:
     """Helpful additional methods for Anymail tests"""
 
     def assertLogs(self, logger=None, level=None):
-        # Note: Django 1.8's django.utils.log.DEFAULT_LOGGING config is set to *not* propagate
-        # certain logging records. That means you *can't* capture those logs at the root (None) logger.
-        # (If you really need that, you could override LOGGING in tests.settings.settings_1_8.)
-        assert logger is not None  # `None` root logger won't reliably capture on Django 1.8
+        # Note: django.utils.log.DEFAULT_LOGGING config is set to *not* propagate certain
+        # logging records. That means you *can't* capture those logs at the root (None) logger.
+        assert logger is not None  # `None` root logger won't reliably capture
         try:
             return super(AnymailTestMixin, self).assertLogs(logger, level)
         except (AttributeError, TypeError):
@@ -303,7 +302,7 @@ class _AssertWarnsContext(object):
 class ClientWithCsrfChecks(Client):
     """Django test Client that enforces CSRF checks
 
-    https://docs.djangoproject.com/en/1.9/ref/csrf/#testing
+    https://docs.djangoproject.com/en/stable/ref/csrf/#testing
     """
 
     def __init__(self, **defaults):

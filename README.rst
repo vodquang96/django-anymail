@@ -41,7 +41,7 @@ built-in `django.core.mail` package. It includes:
   with simplified, portable access to attachments and other inbound content
 
 Anymail is released under the BSD license. It is extensively tested against
-Django 1.8--2.1 (including Python 2.7, Python 3 and PyPy).
+Django 1.11--2.1 (including Python 2.7, Python 3 and PyPy).
 Anymail releases follow `semantic versioning <http://semver.org/>`_.
 
 .. END shared-intro

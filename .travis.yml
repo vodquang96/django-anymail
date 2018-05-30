@@ -37,20 +37,6 @@ matrix:
     # Django development master (direct from GitHub source):
     - { env: DJANGO=master, python: 3.7-dev }
 
-    # Obsolete Django versions (no longer supported by Django)
-    # Anymail tries to support these, but doesn't test every possible combination...
-    # Django 1.8: Python 2.7, 3.3, 3.4, 3.5
-    - { env: DJANGO=1.8, python: 2.7 }
-    - { env: DJANGO=1.8, python: 3.4 }
-    - { env: DJANGO=1.8, python: 3.5 }
-    - { env: DJANGO=1.8, python: pypy }
-    # Django 1.9: Python 2.7, 3.4, 3.5
-    - { env: DJANGO=1.9, python: 2.7 }
-    - { env: DJANGO=1.9, python: 3.5 }
-    # Django 1.10: Python 2.7, 3.4, 3.5
-    - { env: DJANGO=1.10, python: 2.7 }
-    - { env: DJANGO=1.10, python: 3.5 }
-
   allow_failures:
     - env: DJANGO=master
       python: 3.7-dev
