@@ -349,7 +349,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         self.message.metadata = {'user_id': "12345", 'items': 6}
         self.message.send()
         smtpapi = self.get_smtpapi()
-        smtpapi['unique_args'].pop('anymail_id', None)  # remove Message-ID we added as tracking workaround
+        smtpapi['unique_args'].pop('anymail_id', None)  # remove anymail_id we added for tracking
         self.assertEqual(smtpapi['unique_args'], {'user_id': "12345", 'items': 6})
 
     def test_send_at(self):

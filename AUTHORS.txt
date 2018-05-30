@@ -7,6 +7,7 @@ Peter Wu
 Charlie DeTar
 Jonathan Baugh
 Noel Rignon
+Josh Kersey
 
 
 Anymail was forked from Djrill, which included contributions from:

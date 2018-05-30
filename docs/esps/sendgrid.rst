@@ -65,10 +65,14 @@ nor ``ANYMAIL_SENDGRID_API_KEY`` is set.
 
 .. rubric:: SENDGRID_GENERATE_MESSAGE_ID
 
-Whether Anymail should generate a Message-ID for messages sent
-through SendGrid, to facilitate event tracking.
+Whether Anymail should generate a UUID for each message sent through SendGrid,
+to facilitate status tracking. The UUID is attached to the message as a
+SendGrid custom arg named "anymail_id" and made available as
+:attr:`anymail_status.message_id <anymail.message.AnymailMessage.anymail_status>`
+on the sent message.
 
-Default ``True``. You can set to ``False`` to disable this behavior.
+Default ``True``. You can set to ``False`` to disable this behavior, in which
+case sent messages will have a `message_id` of ``None``.
 See :ref:`Message-ID quirks <sendgrid-message-id>` below.
 
 
@@ -162,22 +166,26 @@ Limitations and quirks
   Knowing a sent message's ID can be important for later queries about
   the message's status.
 
-  To work around this, Anymail by default generates a new Message-ID for each
-  outgoing message, provides it to SendGrid, and includes it in the
-  :attr:`~anymail.message.AnymailMessage.anymail_status`
-  attribute after you send the message.
+  To work around this, Anymail generates a UUID for each outgoing message,
+  provides it to SendGrid as a custom arg named "anymail_id" and makes it
+  available as the message's
+  :attr:`anymail_status.message_id <anymail.message.AnymailMessage.anymail_status>`
+  attribute after sending. The same UUID will be passed to Anymail's
+  :ref:`tracking webhooks <sendgrid-webhooks>` as
+  :attr:`event.message_id <anymail.signals.AnymailTrackingEvent.message_id>`.
 
-  In later SendGrid API calls, you can match that Message-ID
-  to SendGrid's ``smtp-id`` event field. (Anymail uses an additional
-  workaround to ensure smtp-id is included in all SendGrid events,
-  even those that aren't documented to include it.)
+  To disable attaching tracking UUIDs to sent messages, set
+  :setting:`SENDGRID_GENERATE_MESSAGE_ID <ANYMAIL_SENDGRID_GENERATE_MESSAGE_ID>`
+  to False in your Anymail settings.
 
-  Anymail will use the domain of the message's :attr:`from_email`
-  to generate the Message-ID. (If this isn't desired, you can supply
-  your own Message-ID in the message's :attr:`extra_headers`.)
+  .. versionchanged:: 3.0
 
-  To disable all of these Message-ID workarounds, set
-  :setting:`ANYMAIL_SENDGRID_GENERATE_MESSAGE_ID` to False in your settings.
+      Previously, Anymail generated a custom :mailheader:`Message-ID`
+      header for each sent message. But SendGrid's "smtp-id" event field does
+      not reliably reflect this header, which complicates status tracking.
+      (For compatibility with messages sent in earlier versions, Anymail's
+      webhook :attr:`message_id` will fall back to "smtp-id" when "anymail_id"
+      isn't present.)
 
 **Single Reply-To**
   SendGrid's v3 API only supports a single Reply-To address (and blocks

@@ -24,6 +24,7 @@ class SendGridDeliveryTestCase(WebhookTestCase):
             "email": "recipient@example.com",
             "timestamp": 1461095246,
             "anymail_id": "3c2f4df8-c6dd-4cd2-9b91-6582b81a0349",
+            "smtp-id": "<wrfRRvF7Q0GgwUo2CvDmEA@ismtpd0006p1sjc2.sendgrid.net>",
             "sg_event_id": "ZyjAM5rnQmuI1KFInHQ3Nw",
             "sg_message_id": "wrfRRvF7Q0GgwUo2CvDmEA.filter0425p1mdw1.13037.57168B4A1D.0",
             "event": "processed",
@@ -51,6 +52,7 @@ class SendGridDeliveryTestCase(WebhookTestCase):
         raw_events = [{
             "ip": "167.89.17.173",
             "response": "250 2.0.0 OK 1461095248 m143si2210036ioe.159 - gsmtp ",
+            "smtp-id": "<wrfRRvF7Q0GgwUo2CvDmEA@ismtpd0006p1sjc2.sendgrid.net>",
             "sg_event_id": "nOSv8m0eTQ-vxvwNwt3fZQ",
             "sg_message_id": "wrfRRvF7Q0GgwUo2CvDmEA.filter0425p1mdw1.13037.57168B4A1D.0",
             "tls": 1,
@@ -81,6 +83,7 @@ class SendGridDeliveryTestCase(WebhookTestCase):
             "email": "invalid@invalid",
             "anymail_id": "c74002d9-7ccb-4f67-8b8c-766cec03c9a6",
             "timestamp": 1461095250,
+            "smtp-id": "<wrfRRvF7Q0GgwUo2CvDmEA@ismtpd0006p1sjc2.sendgrid.net>",
             "sg_event_id": "3NPOePGOTkeM_U3fgWApfg",
             "sg_message_id": "filter0093p1las1.9128.5717FB8127.0",
             "reason": "Invalid",
@@ -106,6 +109,7 @@ class SendGridDeliveryTestCase(WebhookTestCase):
             "email": "unsubscribe@example.com",
             "anymail_id": "a36ec0f9-aabe-45c7-9a84-3e17afb5cb65",
             "timestamp": 1461095250,
+            "smtp-id": "<wrfRRvF7Q0GgwUo2CvDmEA@ismtpd0006p1sjc2.sendgrid.net>",
             "sg_event_id": "oxy9OLwMTAy5EsuZn1qhIg",
             "sg_message_id": "filter0199p1las1.4745.5717FB6F5.0",
             "reason": "Unsubscribed Address",
@@ -130,6 +134,7 @@ class SendGridDeliveryTestCase(WebhookTestCase):
         raw_events = [{
             "ip": "167.89.17.173",
             "status": "5.1.1",
+            "smtp-id": "<wrfRRvF7Q0GgwUo2CvDmEA@ismtpd0006p1sjc2.sendgrid.net>",
             "sg_event_id": "lC0Rc-FuQmKbnxCWxX1jRQ",
             "reason": "550 5.1.1 The email account that you tried to reach does not exist.",
             "sg_message_id": "Lli-03HcQ5-JLybO9fXsJg.filter0077p1las1.21536.5717FC482.0",
@@ -157,6 +162,7 @@ class SendGridDeliveryTestCase(WebhookTestCase):
     def test_deferred_event(self):
         raw_events = [{
             "response": "Email was deferred due to the following reason(s): [IPs were throttled by recipient server]",
+            "smtp-id": "<wrfRRvF7Q0GgwUo2CvDmEA@ismtpd0006p1sjc2.sendgrid.net>",
             "sg_event_id": "b_syL5UiTvWC_Ky5L6Bs5Q",
             "sg_message_id": "u9Gvi3mzT6iC2poAb58_qQ.filter0465p1mdw1.8054.5718271B40.0",
             "event": "deferred",
@@ -232,3 +238,29 @@ class SendGridDeliveryTestCase(WebhookTestCase):
         self.assertEqual(event.recipient, "recipient@example.com")
         self.assertEqual(event.user_agent, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_4) AppleWebKit/537.36")
         self.assertEqual(event.click_url, "http://www.example.com")
+
+    def test_compatibility_message_id_from_smtp_id(self):
+        # Prior to v3.0, Anymail tried to use a custom Message-ID header as
+        # the `message_id`, and relied on SendGrid passing that to webhooks as
+        # 'smtp-id'. Make sure webhooks extract message_id for messages sent
+        # with earlier Anymail versions. (See issue #108.)
+        raw_events = [{
+            "ip": "167.89.17.173",
+            "response": "250 2.0.0 OK 1461095248 m143si2210036ioe.159 - gsmtp ",
+            "smtp-id": "<152712433591.85282.8340115595767222398@example.com>",
+            "sg_event_id": "nOSv8m0eTQ-vxvwNwt3fZQ",
+            "sg_message_id": "wrfRRvF7Q0GgwUo2CvDmEA.filter0425p1mdw1.13037.57168B4A1D.0",
+            "tls": 1,
+            "event": "delivered",
+            "email": "recipient@example.com",
+            "timestamp": 1461095250,
+        }]
+        response = self.client.post('/anymail/sendgrid/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_events))
+        self.assertEqual(response.status_code, 200)
+        kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=SendGridTrackingWebhookView,
+                                                      event=ANY, esp_name='SendGrid')
+        event = kwargs['event']
+        self.assertIsInstance(event, AnymailTrackingEvent)
+        self.assertEqual(event.message_id, "<152712433591.85282.8340115595767222398@example.com>")
+        self.assertEqual(event.metadata, {})  # smtp-id not left in metadata

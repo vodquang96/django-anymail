@@ -166,13 +166,13 @@ class AnymailTestMixin:
         second = rfc822_unfold(second)
         self.assertEqual(first, second, msg)
 
-    def assertUUIDIsValid(self, uuid_str, version=4):
+    def assertUUIDIsValid(self, uuid_str, msg=None, version=4):
         """Assert the uuid_str evaluates to a valid UUID"""
         try:
             uuid.UUID(uuid_str, version=version)
         except (ValueError, AttributeError, TypeError):
-            return False
-        return True
+            raise self.failureException(
+                msg or "%r is not a valid UUID" % uuid_str)
 
 
 # Backported from Python 3.4

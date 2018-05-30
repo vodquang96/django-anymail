@@ -341,7 +341,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         self.message.metadata = {'user_id': "12345", 'items': 6, 'float': 98.6, 'long': longtype(123)}
         self.message.send()
         data = self.get_api_call_json()
-        data['custom_args'].pop('anymail_id', None)  # remove Message-ID we added as tracking workaround
+        data['custom_args'].pop('anymail_id', None)  # remove anymail_id we added for tracking
         self.assertEqual(data['custom_args'], {'user_id': "12345",
                                                'items': "6",  # int converted to a string,
                                                'float': "98.6",  # float converted to a string (watch binary rounding!)
@@ -580,6 +580,13 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         self.assertEqual(msg.anymail_status.recipients['to1@example.com'].message_id,
                          msg.anymail_status.message_id)
         self.assertEqual(msg.anymail_status.esp_response.content, self.DEFAULT_RAW_RESPONSE)
+
+    @override_settings(ANYMAIL_SENDGRID_GENERATE_MESSAGE_ID=False)
+    def test_disable_generate_message_id(self):
+        msg = mail.EmailMessage('Subject', 'Message', 'from@example.com', ['to1@example.com'],)
+        msg.send()
+        self.assertIsNone(msg.anymail_status.message_id)
+        self.assertIsNone(msg.anymail_status.recipients['to1@example.com'].message_id)
 
     # noinspection PyUnresolvedReferences
     def test_send_failed_anymail_status(self):
