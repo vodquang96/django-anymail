@@ -11,10 +11,25 @@ from django.utils.functional import Promise
 from django.utils.timezone import utc
 from django.utils.translation import ugettext_lazy
 
+from anymail.backends.test import EmailBackend as TestBackend
 from anymail.exceptions import AnymailConfigurationError, AnymailInvalidAddress, AnymailUnsupportedFeature
 from anymail.message import AnymailMessage
+from anymail.utils import get_anymail_setting
 
 from .utils import AnymailTestMixin
+
+
+class SettingsTestBackend(TestBackend):
+    """(useful only for these tests)"""
+    def __init__(self, *args, **kwargs):
+        esp_name = self.esp_name
+        self.sample_setting = get_anymail_setting('sample_setting', esp_name=esp_name,
+                                                  kwargs=kwargs, allow_bare=True)
+        self.username = get_anymail_setting('username', esp_name=esp_name, kwargs=kwargs,
+                                            default=None, allow_bare=True)
+        self.password = get_anymail_setting('password', esp_name=esp_name, kwargs=kwargs,
+                                            default=None, allow_bare=True)
+        super(SettingsTestBackend, self).__init__(*args, **kwargs)
 
 
 @override_settings(EMAIL_BACKEND='anymail.backends.test.EmailBackend')
@@ -45,7 +60,7 @@ class TestBackendTestCase(SimpleTestCase, AnymailTestMixin):
             raise AttributeError("The last message sent was not processed through the Anymail test backend")
 
 
-@override_settings(EMAIL_BACKEND='anymail.backends.test._EmailBackendWithRequiredSetting')
+@override_settings(EMAIL_BACKEND='tests.test_general_backend.SettingsTestBackend')
 class BackendSettingsTests(TestBackendTestCase):
     """Test settings initializations for Anymail EmailBackends"""
 
@@ -79,18 +94,17 @@ class BackendSettingsTests(TestBackendTestCase):
         self.assertRegex(errmsg, r'\bTEST_SAMPLE_SETTING\b')
         self.assertRegex(errmsg, r'\bANYMAIL_TEST_SAMPLE_SETTING\b')
 
-    @override_settings(ANYMAIL={'SENDGRID_USERNAME': 'username_from_settings',
-                                'SENDGRID_PASSWORD': 'password_from_settings'})
+    @override_settings(ANYMAIL={'TEST_USERNAME': 'username_from_settings',
+                                'TEST_PASSWORD': 'password_from_settings',
+                                'TEST_SAMPLE_SETTING': 'required'})
     def test_username_password_kwargs_overrides(self):
         """Overrides for 'username' and 'password' should work like other overrides"""
         # These are special-cased because of default args in Django core mail functions.
-        # (Use the SendGrid v2 backend, which has settings named 'username' and 'password'.)
-        backend = get_connection('anymail.backends.sendgrid_v2.EmailBackend')
+        backend = get_connection()
         self.assertEqual(backend.username, 'username_from_settings')
         self.assertEqual(backend.password, 'password_from_settings')
 
-        backend = get_connection('anymail.backends.sendgrid_v2.EmailBackend',
-                                 username='username_from_kwargs', password='password_from_kwargs')
+        backend = get_connection(username='username_from_kwargs', password='password_from_kwargs')
         self.assertEqual(backend.username, 'username_from_kwargs')
         self.assertEqual(backend.password, 'password_from_kwargs')
 

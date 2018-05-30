@@ -3,7 +3,6 @@ from django.core import mail
 from .base import AnymailBaseBackend, BasePayload
 from ..exceptions import AnymailAPIError
 from ..message import AnymailRecipientStatus
-from ..utils import get_anymail_setting
 
 
 class EmailBackend(AnymailBaseBackend):
@@ -137,16 +136,3 @@ class TestPayload(BasePayload):
     def set_esp_extra(self, extra):
         # Merge extra into params
         self.params.update(extra)
-
-
-class _EmailBackendWithRequiredSetting(EmailBackend):
-    """Test backend with a required setting `sample_setting`.
-
-    Intended only for internal use by Anymail settings tests.
-    """
-
-    def __init__(self, *args, **kwargs):
-        esp_name = self.esp_name
-        self.sample_setting = get_anymail_setting('sample_setting', esp_name=esp_name,
-                                                  kwargs=kwargs, allow_bare=True)
-        super(_EmailBackendWithRequiredSetting, self).__init__(*args, **kwargs)
