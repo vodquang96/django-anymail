@@ -32,6 +32,6 @@ Documentation
    :caption: About Anymail
 
    contributing
-   release_notes
+   changelog
    Docs privacy <docs_privacy>
 
