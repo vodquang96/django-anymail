@@ -21,8 +21,15 @@ always increment the major version number (1.x to 2.0).
 
 .. default-role:: literal
 
-Current development version
----------------------------
+Release history
+^^^^^^^^^^^^^^^
+    ..  This extra heading level keeps the ToC from becoming unmanageably long
+
+
+v4.0
+----
+
+*In development*
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
