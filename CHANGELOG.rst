@@ -33,6 +33,16 @@ Breaking changes
 *  **SendGrid:** Remove the legacy SendGrid *v2* EmailBackend
    (Anymail has defaulted to SendGrid's newer v3 API since Anymail v0.8.)
 
+Fixes
+~~~~~
+
+* Change `attach_inline_image()` default domain for *Content-ID* to "inline" (rather
+  than Python's `make_msgid()` default local hostname). This avoids problems with ESPs
+  that don't distinguish *Content-ID* from attachment filename, where a local hostname
+  ending in ".com" could cause Gmail to block messages sent with inline attachments.
+  (Mailgun, Mailjet, Mandrill and SparkPost have APIs affected by this.
+  See `#112`_ for more details.)
+
 Other
 ~~~~~
 
@@ -745,6 +755,7 @@ Features
 .. _#108: https://github.com/anymail/issues/108
 .. _#110: https://github.com/anymail/issues/110
 .. _#111: https://github.com/anymail/issues/111
+.. _#112: https://github.com/anymail/issues/112
 
 .. _@calvin: https://github.com/calvin
 .. _@joshkersey: https://github.com/joshkersey
