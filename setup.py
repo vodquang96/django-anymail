@@ -85,7 +85,7 @@ setup(
     project_urls=OrderedDict([
         ("Documentation", "https://anymail.readthedocs.io/en/%s/" % release_tag),
         ("Source", "https://github.com/anymail/django-anymail"),
-        ("Changelog", "https://github.com/anymail/django-anymail/releases"),
+        ("Changelog", "https://anymail.readthedocs.io/en/%s/changelog/" % release_tag),
         ("Tracker", "https://github.com/anymail/django-anymail/issues"),
     ]),
 )
