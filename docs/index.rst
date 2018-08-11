@@ -25,7 +25,7 @@ Documentation
    inbound
    esps/index
    tips/index
-   troubleshooting
+   help
 
 .. toctree::
    :maxdepth: 2
