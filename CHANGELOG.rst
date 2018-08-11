@@ -43,6 +43,8 @@ Breaking changes
 Features
 ~~~~~~~~
 
+* **Mailgun:** Document how to use new European region. (This works in earlier
+  Anymail versions, too.)
 * **Postmark:** Add support for Anymail's normalized `metadata` in sending
   and webhooks.
 

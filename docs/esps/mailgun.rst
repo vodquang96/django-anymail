@@ -62,8 +62,17 @@ The base url for calling the Mailgun API. It does not include
 the sender domain. (Anymail :ref:`figures this out <mailgun-sender-domain>`
 for you.)
 
-The default is ``MAILGUN_API_URL = "https://api.mailgun.net/v3"``
-(It's unlikely you would need to change this.)
+The default is ``MAILGUN_API_URL = "https://api.mailgun.net/v3"``, which connects
+to Mailgun's US service. You must override this if you are using Mailgun's European
+region:
+
+  .. code-block:: python
+
+      ANYMAIL = {
+        "MAILGUN_API_KEY": "...",
+        "MAILGUN_API_URL": "https://api.eu.mailgun.net/v3",
+        # ...
+      }
 
 
 .. _mailgun-sender-domain:
