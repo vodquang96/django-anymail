@@ -57,7 +57,7 @@ Anymail releases follow `semantic versioning <http://semver.org/>`_.
 **Resources**
 
 * Full documentation: https://anymail.readthedocs.io/en/stable/
-* Package on PyPI: https://pypi.python.org/pypi/django-anymail
+* Package on PyPI: https://pypi.org/project/django-anymail/
 * Project on Github: https://github.com/anymail/django-anymail
 * Changelog: https://anymail.readthedocs.io/en/stable/changelog/
 

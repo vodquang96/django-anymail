@@ -264,7 +264,7 @@ texinfo_documents = [
 # -- Options for extlinks ---------------------------------------------------
 
 extlinks = {
-    'pypi': ('https://pypi.python.org/pypi/%s', ''),
+    'pypi': ('https://pypi.org/project/%s/', ''),
 }
 
 # -- Options for Intersphinx ------------------------------------------------
