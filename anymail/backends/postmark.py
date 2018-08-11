@@ -178,8 +178,8 @@ class PostmarkPayload(RequestsPayload):
                 self.make_attachment(attachment) for attachment in attachments
             ]
 
-    # Postmark doesn't support metadata
-    # def set_metadata(self, metadata):
+    def set_metadata(self, metadata):
+        self.data["Metadata"] = metadata
 
     # Postmark doesn't support delayed sending
     # def set_send_at(self, send_at):

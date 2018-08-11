@@ -66,6 +66,10 @@ class PostmarkDeliveryTestCase(WebhookTestCase):
             "MessageID": "883953f4-6105-42a2-a16a-77a8eac79483",
             "Recipient": "recipient@example.com",
             "Tag": "welcome-email",
+            "Metadata": {
+                "cohort": "2014-08-A",
+                "userid": "12345",  # Postmark metadata is always converted to string
+            },
             "DeliveredAt": "2014-08-01T13:28:10.2735393-04:00",
             "Details": "Test delivery webhook details"
         }
@@ -83,7 +87,7 @@ class PostmarkDeliveryTestCase(WebhookTestCase):
         self.assertEqual(event.message_id, "883953f4-6105-42a2-a16a-77a8eac79483")
         self.assertEqual(event.recipient, "recipient@example.com")
         self.assertEqual(event.tags, ["welcome-email"])
-        self.assertEqual(event.metadata, {})
+        self.assertEqual(event.metadata, {"cohort": "2014-08-A", "userid": "12345"})
 
     def test_open_event(self):
         raw_event = {

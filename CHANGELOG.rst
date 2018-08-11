@@ -40,6 +40,12 @@ Breaking changes
 *  **SendGrid:** Remove the legacy SendGrid *v2* EmailBackend
    (Anymail has defaulted to SendGrid's newer v3 API since Anymail v0.8.)
 
+Features
+~~~~~~~~
+
+* **Postmark:** Add support for Anymail's normalized `metadata` in sending
+  and webhooks.
+
 Fixes
 ~~~~~
 

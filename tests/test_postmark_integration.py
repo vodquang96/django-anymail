@@ -51,7 +51,8 @@ class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
             reply_to=["reply1@example.com", "Reply 2 <reply2@example.com>"],
             headers={"X-Anymail-Test": "value"},
 
-            # no metadata, send_at, track_clicks support
+            # no send_at, track_clicks support
+            metadata={"meta1": "simple string", "meta2": 2},
             tags=["tag 1"],  # max one tag
             track_opens=True,
             track_clicks=True,

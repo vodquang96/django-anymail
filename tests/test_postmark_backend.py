@@ -330,8 +330,9 @@ class PostmarkBackendAnymailFeatureTests(PostmarkBackendMockAPITestCase):
 
     def test_metadata(self):
         self.message.metadata = {'user_id': "12345", 'items': 6}
-        with self.assertRaisesMessage(AnymailUnsupportedFeature, 'metadata'):
-            self.message.send()
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertEqual(data['Metadata'], {'user_id': "12345", 'items': 6})
 
     def test_send_at(self):
         self.message.send_at = 1651820889  # 2022-05-06 07:08:09 UTC
@@ -403,6 +404,7 @@ class PostmarkBackendAnymailFeatureTests(PostmarkBackendMockAPITestCase):
         """
         self.message.send()
         data = self.get_api_call_json()
+        self.assertNotIn('Metadata', data)
         self.assertNotIn('Tag', data)
         self.assertNotIn('TemplateId', data)
         self.assertNotIn('TemplateModel', data)

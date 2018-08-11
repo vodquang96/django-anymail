@@ -100,10 +100,6 @@ see :ref:`unsupported-features`.
   if you've enabled :setting:`ANYMAIL_IGNORE_UNSUPPORTED_FEATURES`,
   Anymail will use only the first tag.
 
-**No metadata**
-  Postmark does not support attaching :attr:`~anymail.message.AnymailMessage.metadata`
-  to messages.
-
 **No delayed sending**
   Postmark does not support :attr:`~anymail.message.AnymailMessage.send_at`.
 

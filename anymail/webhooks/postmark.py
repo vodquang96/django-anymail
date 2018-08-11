@@ -102,6 +102,7 @@ class PostmarkTrackingWebhookView(PostmarkBaseWebhookView):
         except KeyError:
             event_id = None
 
+        metadata = esp_event.get('Metadata', {})
         try:
             tags = [esp_event['Tag']]
         except KeyError:
@@ -113,6 +114,7 @@ class PostmarkTrackingWebhookView(PostmarkBaseWebhookView):
             event_id=event_id,
             event_type=event_type,
             message_id=esp_event.get('MessageID', None),
+            metadata=metadata,
             mta_response=esp_event.get('Details', None),
             recipient=recipient,
             reject_reason=reject_reason,
