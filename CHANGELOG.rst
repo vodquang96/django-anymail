@@ -43,6 +43,9 @@ Breaking changes
 Features
 ~~~~~~~~
 
+* **Mailgun:** Add support for new Mailgun webhooks. (Mailgun's original "legacy
+  webhook" format is also still supported. See
+  `docs <https://anymail.readthedocs.io/en/stable/esps/mailgun/#mailgun-webhooks>`__.)
 * **Mailgun:** Document how to use new European region. (This works in earlier
   Anymail versions, too.)
 * **Postmark:** Add support for Anymail's normalized `metadata` in sending

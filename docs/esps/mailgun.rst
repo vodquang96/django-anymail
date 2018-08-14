@@ -147,14 +147,6 @@ values directly to Mailgun. You can use any of the (non-file) parameters listed 
 Limitations and quirks
 ----------------------
 
-**Metadata keys and tracking webhooks**
-  Because of the way Mailgun supplies custom data (user-variables) to webhooks,
-  there are a few metadata keys that Anymail cannot reliably retrieve in some
-  tracking events. You should avoid using "body-plain", "h", "message-headers",
-  "message-id" or "tag" as :attr:`~anymail.message.AnymailMessage.metadata` keys
-  if you need to access that metadata from an opened, clicked, or unsubscribed
-  :ref:`tracking event <event-tracking>` handler.
-
 **Envelope sender uses only domain**
   Anymail's :attr:`~anymail.message.AnymailMessage.envelope_sender` is used to
   select your Mailgun :ref:`sender domain <mailgun-sender-domain>`. For
@@ -212,31 +204,73 @@ See the `Mailgun batch sending`_ docs for more information.
 Status tracking webhooks
 ------------------------
 
+.. versionchanged:: 4.0
+
+    Added support for Mailgun's June, 2018 (non-"legacy") webhook format.
+
 If you are using Anymail's normalized :ref:`status tracking <event-tracking>`, enter
-the url in your `Mailgun dashboard`_ on the "Webhooks" tab. Mailgun allows you to enter
-a different URL for each event type: just enter this same Anymail tracking URL
-for all events you want to receive:
+the url in the `Mailgun webhooks dashboard`_. (Be sure to select the correct sending
+domain---Mailgun's sandbox and production domains have separate webhook settings.)
+
+Mailgun allows you to enter a different URL for each event type: just enter this same
+Anymail tracking URL for all events you want to receive:
 
    :samp:`https://{random}:{random}@{yoursite.example.com}/anymail/mailgun/tracking/`
 
      * *random:random* is an :setting:`ANYMAIL_WEBHOOK_SECRET` shared secret
      * *yoursite.example.com* is your Django site
 
-If you use multiple Mailgun sending domains, you'll need to enter the webhook
-URLs for each of them, using the selector on the left side of Mailgun's dashboard.
-
 Mailgun implements a limited form of webhook signing, and Anymail will verify
 these signatures (based on your :setting:`MAILGUN_API_KEY <ANYMAIL_MAILGUN_API_KEY>`
-Anymail setting).
+Anymail setting). By default, Mailgun's webhook signature provides similar security
+to Anymail's shared webhook secret, so it's acceptable to omit the
+:setting:`ANYMAIL_WEBHOOK_SECRET` setting (and "{random}:{random}@" portion of the
+webhook url) with Mailgun webhooks.
 
 Mailgun will report these Anymail :attr:`~anymail.signals.AnymailTrackingEvent.event_type`\s:
 delivered, rejected, bounced, complained, unsubscribed, opened, clicked.
 
 The event's :attr:`~anymail.signals.AnymailTrackingEvent.esp_event` field will be
-a Django :class:`~django.http.QueryDict` object of `Mailgun event fields`_.
+the parsed `Mailgun webhook payload`_ as a Python `dict` with ``"signature"`` and
+``"event-data"`` keys.
 
-.. _Mailgun dashboard: https://mailgun.com/app/dashboard
-.. _Mailgun event fields: https://documentation.mailgun.com/user_manual.html#webhooks
+Anymail uses Mailgun's webhook `token` as its normalized
+:attr:`~anymail.signals.AnymailTrackingEvent.event_id`, rather than Mailgun's
+event-data `id` (which is only guaranteed to be unique during a single day).
+If you need the event-data id, it can be accessed in your webhook handler as
+``event.esp_event["event-data"]["id"]``. (This can be helpful for working with
+Mailgun's other event APIs.)
+
+.. note:: **Mailgun legacy webhooks**
+
+    In late June, 2018, Mailgun introduced a new set of webhooks with an improved
+    payload design, and at the same time renamed their original webhooks to "Legacy
+    Webhooks."
+
+    Anymail v4.0 and later supports both new and legacy Mailgun webhooks, and the same
+    Anymail webhook url works as either. Earlier Anymail versions can only be used
+    as legacy webhook urls.
+
+    The new (non-legacy) webhooks are preferred, particularly with Anymail's
+    :attr:`~anymail.message.AnymailMessage.metadata` and
+    :attr:`~anymail.message.AnymailMessage.tags` features. But if you have already
+    configured the legacy webhooks, there is no need to change.
+
+    If you are using Mailgun's legacy webhooks:
+
+    * The :attr:`event.esp_event <anymail.signals.AnymailTrackingEvent.esp_event>` field
+      will be a Django :class:`~django.http.QueryDict` of Mailgun event fields (the
+      raw POST data provided by legacy webhooks).
+
+    * You should avoid using "body-plain," "h," "message-headers," "message-id" or "tag"
+      as :attr:`~anymail.message.AnymailMessage.metadata` keys. A design limitation in
+      Mailgun's legacy webhooks prevents Anymail from reliably retrieving this metadata
+      from opened, clicked, and unsubscribed events. (This is not an issue with the
+      newer, non-legacy webhooks.)
+
+
+.. _Mailgun webhooks dashboard: https://mailgun.com/app/webhooks
+.. _Mailgun webhook payload: https://documentation.mailgun.com/en/latest/user_manual.html#webhooks
 
 
 .. _mailgun-inbound:
@@ -247,7 +281,7 @@ Inbound webhook
 If you want to receive email from Mailgun through Anymail's normalized :ref:`inbound <inbound>`
 handling, follow Mailgun's `Receiving, Storing and Fowarding Messages`_ guide to set up
 an inbound route that forwards to Anymail's inbound webhook. (You can configure routes
-using Mailgun's API, or simply using the "Routes" tab in your `Mailgun dashboard`_.)
+using Mailgun's API, or simply using the `Mailgun routes dashboard`_.)
 
 The *action* for your route will be either:
 
@@ -266,7 +300,9 @@ received email (including complex forms like multi-message mailing list digests)
 If you want to use Anymail's normalized :attr:`~anymail.inbound.AnymailInboundMessage.spam_detected` and
 :attr:`~anymail.inbound.AnymailInboundMessage.spam_score` attributes, you'll need to set your Mailgun
 domain's inbound spam filter to "Deliver spam, but add X-Mailgun-SFlag and X-Mailgun-SScore headers"
-(in the `Mailgun dashboard`_ on the "Domains" tab).
+(in the `Mailgun domains dashboard`_).
 
 .. _Receiving, Storing and Fowarding Messages:
    https://documentation.mailgun.com/en/latest/user_manual.html#receiving-forwarding-and-storing-messages
+.. _Mailgun routes dashboard: https://app.mailgun.com/app/routes
+.. _Mailgun domains dashboard: https://app.mailgun.com/app/domains

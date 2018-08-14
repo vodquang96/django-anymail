@@ -7,10 +7,10 @@ from django.utils.crypto import constant_time_compare
 from django.utils.timezone import utc
 
 from .base import AnymailBaseWebhookView
-from ..exceptions import AnymailWebhookValidationFailure
+from ..exceptions import AnymailWebhookValidationFailure, AnymailInvalidAddress
 from ..inbound import AnymailInboundMessage
 from ..signals import inbound, tracking, AnymailInboundEvent, AnymailTrackingEvent, EventType, RejectReason
-from ..utils import get_anymail_setting, combine, querydict_getfirst
+from ..utils import get_anymail_setting, combine, querydict_getfirst, parse_single_address
 
 
 class MailgunBaseWebhookView(AnymailBaseWebhookView):
@@ -29,14 +29,29 @@ class MailgunBaseWebhookView(AnymailBaseWebhookView):
 
     def validate_request(self, request):
         super(MailgunBaseWebhookView, self).validate_request(request)  # first check basic auth if enabled
-        try:
-            # Must use the *last* value of these fields if there are conflicting merged user-variables.
-            # (Fortunately, Django QueryDict is specced to return the last value.)
-            token = request.POST['token']
-            timestamp = request.POST['timestamp']
-            signature = str(request.POST['signature'])  # force to same type as hexdigest() (for python2)
-        except KeyError:
-            raise AnymailWebhookValidationFailure("Mailgun webhook called without required security fields")
+        if request.content_type == "application/json":
+            # New-style webhook: json payload with separate signature block
+            try:
+                event = json.loads(request.body.decode('utf-8'))
+                signature_block = event['signature']
+                token = signature_block['token']
+                timestamp = signature_block['timestamp']
+                signature = signature_block['signature']
+            except (KeyError, ValueError, UnicodeDecodeError) as err:
+                raise AnymailWebhookValidationFailure(
+                    "Mailgun webhook called with invalid payload format",
+                    raised_from=err)
+        else:
+            # Legacy webhook: signature fields are interspersed with other POST data
+            try:
+                # Must use the *last* value of these fields if there are conflicting merged user-variables.
+                # (Fortunately, Django QueryDict is specced to return the last value.)
+                token = request.POST['token']
+                timestamp = request.POST['timestamp']
+                signature = str(request.POST['signature'])  # force to same type as hexdigest() (for python2)
+            except KeyError:
+                raise AnymailWebhookValidationFailure("Mailgun webhook called without required security fields")
+
         expected_signature = hmac.new(key=self.api_key, msg='{}{}'.format(timestamp, token).encode('ascii'),
                                       digestmod=hashlib.sha256).hexdigest()
         if not constant_time_compare(signature, expected_signature):
@@ -48,7 +63,109 @@ class MailgunTrackingWebhookView(MailgunBaseWebhookView):
 
     signal = tracking
 
+    def parse_events(self, request):
+        if request.content_type == "application/json":
+            esp_event = json.loads(request.body.decode('utf-8'))
+            return [self.esp_to_anymail_event(esp_event)]
+        else:
+            return [self.mailgun_legacy_to_anymail_event(request.POST)]
+
     event_types = {
+        # Map Mailgun event: Anymail normalized type
+        'accepted': EventType.QUEUED,  # not delivered to webhooks (8/2018)
+        'rejected': EventType.REJECTED,
+        'delivered': EventType.DELIVERED,
+        'failed': EventType.BOUNCED,
+        'opened': EventType.OPENED,
+        'clicked': EventType.CLICKED,
+        'unsubscribed': EventType.UNSUBSCRIBED,
+        'complained': EventType.COMPLAINED,
+    }
+
+    reject_reasons = {
+        # Map Mailgun event_data.reason: Anymail normalized RejectReason
+        # (these appear in webhook doc examples, but aren't actually documented anywhere)
+        "bounce": RejectReason.BOUNCED,
+        "suppress-bounce": RejectReason.BOUNCED,
+        "generic": RejectReason.BOUNCED,  # ??? appears to be used for any temporary failure?
+    }
+
+    def esp_to_anymail_event(self, esp_event):
+        event_data = esp_event.get('event-data', {})
+
+        try:
+            event_type = self.event_types[event_data['event']]
+        except KeyError:
+            event_type = EventType.UNKNOWN
+
+        # Use signature.token for event_id, rather than event_data.id,
+        # because the latter is only "guaranteed to be unique within a day".
+        event_id = esp_event.get('signature', {}).get('token')
+
+        recipient = event_data.get('recipient')
+
+        try:
+            timestamp = datetime.fromtimestamp(float(event_data['timestamp']), tz=utc)
+        except KeyError:
+            timestamp = None
+
+        try:
+            message_id = event_data['message']['headers']['message-id']
+        except KeyError:
+            message_id = None
+        if message_id and not message_id.startswith('<'):
+            message_id = "<{}>".format(message_id)
+
+        metadata = event_data.get('user-variables', {})
+        tags = event_data.get('tags', [])
+
+        try:
+            delivery_status = event_data['delivery-status']
+        except KeyError:
+            description = None
+            mta_response = None
+        else:
+            description = delivery_status.get('description')
+            mta_response = delivery_status.get('message')
+
+        if 'reason' in event_data:
+            reject_reason = self.reject_reasons.get(event_data['reason'], RejectReason.OTHER)
+        else:
+            reject_reason = None
+
+        if event_type == EventType.REJECTED:
+            # This event has a somewhat different structure than the others...
+            description = description or event_data.get("reject", {}).get("reason")
+            reject_reason = reject_reason or RejectReason.OTHER
+            if not recipient:
+                try:
+                    to_email = parse_single_address(
+                        event_data["message"]["headers"]["to"])
+                except (AnymailInvalidAddress, KeyError):
+                    pass
+                else:
+                    recipient = to_email.addr_spec
+
+        return AnymailTrackingEvent(
+            event_type=event_type,
+            timestamp=timestamp,
+            message_id=message_id,
+            event_id=event_id,
+            recipient=recipient,
+            reject_reason=reject_reason,
+            description=description,
+            mta_response=mta_response,
+            tags=tags,
+            metadata=metadata,
+            click_url=event_data.get('url'),
+            user_agent=event_data.get('client-info', {}).get('user-agent'),
+            esp_event=esp_event,
+        )
+
+    # Legacy event handling
+    # (Prior to 2018-06-29, these were the only Mailgun events.)
+
+    legacy_event_types = {
         # Map Mailgun event: Anymail normalized type
         'delivered': EventType.DELIVERED,
         'dropped': EventType.REJECTED,
@@ -60,7 +177,7 @@ class MailgunTrackingWebhookView(MailgunBaseWebhookView):
         # Mailgun does not send events corresponding to QUEUED or DEFERRED
     }
 
-    reject_reasons = {
+    legacy_reject_reasons = {
         # Map Mailgun (SMTP) error codes to Anymail normalized reject_reason.
         # By default, we will treat anything 400-599 as REJECT_BOUNCED
         # so only exceptions are listed here.
@@ -71,10 +188,7 @@ class MailgunTrackingWebhookView(MailgunBaseWebhookView):
         607: RejectReason.SPAM,  # previous spam complaint
     }
 
-    def parse_events(self, request):
-        return [self.esp_to_anymail_event(request.POST)]
-
-    def esp_to_anymail_event(self, esp_event):
+    def mailgun_legacy_to_anymail_event(self, esp_event):
         # esp_event is a Django QueryDict (from request.POST),
         # which has multi-valued fields, but is *not* case-insensitive.
         # Because of the way Mailgun merges user-variables into the event,
@@ -82,7 +196,7 @@ class MailgunTrackingWebhookView(MailgunBaseWebhookView):
         # to avoid potential conflicting user-data.
         esp_event.getfirst = querydict_getfirst.__get__(esp_event)
 
-        event_type = self.event_types.get(esp_event.getfirst('event'), EventType.UNKNOWN)
+        event_type = self.legacy_event_types.get(esp_event.getfirst('event'), EventType.UNKNOWN)
         timestamp = datetime.fromtimestamp(int(esp_event['timestamp']), tz=utc)  # use *last* value of timestamp
         # Message-Id is not documented for every event, but seems to always be included.
         # (It's sometimes spelled as 'message-id', lowercase, and missing the <angle-brackets>.)
@@ -107,12 +221,12 @@ class MailgunTrackingWebhookView(MailgunBaseWebhookView):
             else:
                 reject_reason = RejectReason.BOUNCED if status_class in ("4", "5") else RejectReason.OTHER
         else:
-            reject_reason = self.reject_reasons.get(
+            reject_reason = self.legacy_reject_reasons.get(
                 mta_status,
                 RejectReason.BOUNCED if 400 <= mta_status < 600
                 else RejectReason.OTHER)
 
-        metadata = self._extract_metadata(esp_event)
+        metadata = self._extract_legacy_metadata(esp_event)
 
         # tags are supposed to be in 'tag' fields, but are sometimes in undocumented X-Mailgun-Tag
         tags = esp_event.getlist('tag', None) or esp_event.getlist('X-Mailgun-Tag', [])
@@ -133,7 +247,7 @@ class MailgunTrackingWebhookView(MailgunBaseWebhookView):
             esp_event=esp_event,
         )
 
-    def _extract_metadata(self, esp_event):
+    def _extract_legacy_metadata(self, esp_event):
         # Mailgun merges user-variables into the POST fields. If you know which user variable
         # you want to retrieve--and it doesn't conflict with a Mailgun event field--that's fine.
         # But if you want to extract all user-variables (like we do), it's more complicated...
@@ -149,10 +263,10 @@ class MailgunTrackingWebhookView(MailgunBaseWebhookView):
                 # Each X-Mailgun-Variables value is JSON. Parse and merge them all into single dict:
                 metadata = combine(*[json.loads(value) for value in variables])
 
-        elif event_type in self._known_event_fields:
+        elif event_type in self._known_legacy_event_fields:
             # For other events, we must extract from the POST fields, ignoring known Mailgun
             # event parameters, and treating all other values as user-variables.
-            known_fields = self._known_event_fields[event_type]
+            known_fields = self._known_legacy_event_fields[event_type]
             for field, values in esp_event.lists():
                 if field not in known_fields:
                     # Unknown fields are assumed to be user-variables. (There should really only be
@@ -177,7 +291,7 @@ class MailgunTrackingWebhookView(MailgunBaseWebhookView):
 
         return metadata
 
-    _common_event_fields = {
+    _common_legacy_event_fields = {
         # These fields are documented to appear in all Mailgun opened, clicked and unsubscribed events:
         'event', 'recipient', 'domain', 'ip', 'country', 'region', 'city', 'user-agent', 'device-type',
         'client-type', 'client-name', 'client-os', 'campaign-id', 'campaign-name', 'tag', 'mailing-list',
@@ -185,13 +299,13 @@ class MailgunTrackingWebhookView(MailgunBaseWebhookView):
         # Undocumented, but observed in actual events:
         'body-plain', 'h', 'message-id',
     }
-    _known_event_fields = {
+    _known_legacy_event_fields = {
         # For all Mailgun event types that *don't* include message-headers,
         # map Mailgun (not normalized) event type to set of expected event fields.
         # Used for metadata extraction.
-        'clicked': _common_event_fields | {'url'},
-        'opened': _common_event_fields,
-        'unsubscribed': _common_event_fields,
+        'clicked': _common_legacy_event_fields | {'url'},
+        'opened': _common_legacy_event_fields,
+        'unsubscribed': _common_legacy_event_fields,
     }
 
 

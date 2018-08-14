@@ -11,7 +11,7 @@ from anymail.inbound import AnymailInboundMessage
 from anymail.signals import AnymailInboundEvent
 from anymail.webhooks.mailgun import MailgunInboundWebhookView
 
-from .test_mailgun_webhooks import TEST_API_KEY, mailgun_sign, querydict_to_postdict
+from .test_mailgun_webhooks import TEST_API_KEY, mailgun_sign_legacy_payload, querydict_to_postdict
 from .utils import sample_image_content, sample_email_content
 from .webhook_cases import WebhookTestCase
 
@@ -19,7 +19,7 @@ from .webhook_cases import WebhookTestCase
 @override_settings(ANYMAIL_MAILGUN_API_KEY=TEST_API_KEY)
 class MailgunInboundTestCase(WebhookTestCase):
     def test_inbound_basics(self):
-        raw_event = mailgun_sign({
+        raw_event = mailgun_sign_legacy_payload({
             'token': '06c96bafc3f42a66b9edd546347a2fe18dc23461fe80dc52f0',
             'timestamp': '1461261330',
             'recipient': 'test@inbound.example.com',
@@ -101,7 +101,7 @@ class MailgunInboundTestCase(WebhookTestCase):
         email_content = sample_email_content()
         att3 = six.BytesIO(email_content)
         att3.content_type = 'message/rfc822; charset="us-ascii"'
-        raw_event = mailgun_sign({
+        raw_event = mailgun_sign_legacy_payload({
             'message-headers': '[]',
             'attachment-count': '3',
             'content-id-map': """{"<abc123>": "attachment-2"}""",
@@ -133,7 +133,7 @@ class MailgunInboundTestCase(WebhookTestCase):
 
     def test_inbound_mime(self):
         # Mailgun provides the full, raw MIME message if the webhook url ends in 'mime'
-        raw_event = mailgun_sign({
+        raw_event = mailgun_sign_legacy_payload({
             'token': '06c96bafc3f42a66b9edd546347a2fe18dc23461fe80dc52f0',
             'timestamp': '1461261330',
             'recipient': 'test@inbound.example.com',
