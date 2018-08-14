@@ -37,7 +37,7 @@ Email Service Provider                        |Amazon SES|  |Mailgun|    |Mailje
 .. rubric:: :ref:`Anymail send options <anymail-send-options>`
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 :attr:`~AnymailMessage.envelope_sender`       Yes           Domain only  Yes         Domain only  No          No          No            Yes
-:attr:`~AnymailMessage.metadata`              Yes           Yes          Yes         Yes          No          Yes         Yes           Yes
+:attr:`~AnymailMessage.metadata`              Yes           Yes          Yes         Yes          Yes         Yes         Yes           Yes
 :attr:`~AnymailMessage.send_at`               No            Yes          No          Yes          No          Yes         No            Yes
 :attr:`~AnymailMessage.tags`                  Yes           Yes          Max 1 tag   Yes          Max 1 tag   Yes         Max 1 tag     Max 1 tag
 :attr:`~AnymailMessage.track_clicks`          No            Yes          Yes         Yes          Yes         Yes         No            Yes
