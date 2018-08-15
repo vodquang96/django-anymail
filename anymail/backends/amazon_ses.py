@@ -1,5 +1,7 @@
+from email.charset import Charset, QP
 from email.header import Header
 from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
 
 from django.core.mail import BadHeaderError
 
@@ -129,6 +131,23 @@ class AmazonSESSendRawEmailPayload(AmazonSESBasePayload):
         if HeaderBugWorkaround and "Subject" in self.mime_message:
             # (message.message() will have already checked subject for BadHeaderError)
             self.mime_message.replace_header("Subject", HeaderBugWorkaround(self.message.subject))
+
+        # Work around an Amazon SES bug where, if all of:
+        #   - the message body (text or html) contains non-ASCII characters
+        #   - the body is sent with `Content-Transfer-Encoding: 8bit`
+        #     (which is Django email's default for most non-ASCII bodies)
+        #   - you are using an SES ConfigurationSet with open or click tracking enabled
+        # then SES replaces the non-ASCII characters with question marks as it rewrites
+        # the message to add tracking. Forcing `CTE: quoted-printable` avoids the problem.
+        # (https://forums.aws.amazon.com/thread.jspa?threadID=287048)
+        for part in self.mime_message.walk():
+            if part.get_content_maintype() == "text" and part["Content-Transfer-Encoding"] == "8bit":
+                content = part.get_payload()
+                del part["Content-Transfer-Encoding"]
+                qp_charset = Charset(part.get_content_charset("us-ascii"))
+                qp_charset.body_encoding = QP
+                # (can't use part.set_payload, because SafeMIMEText can undo this workaround)
+                MIMEText.set_payload(part, content, charset=qp_charset)
 
     def call_send_api(self, ses_client):
         self.params["RawMessage"] = {

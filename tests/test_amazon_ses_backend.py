@@ -244,6 +244,26 @@ class AmazonSESBackendStandardEmailTests(AmazonSESBackendMockAPITestCase):
         sent_message = self.get_sent_message()
         self.assertEqual(sent_message["Subject"], self.message.subject)
 
+    def test_body_avoids_cte_8bit(self):
+        """Anymail works around an Amazon SES bug that can corrupt non-ASCII bodies."""
+        # (see detailed comments in the backend code)
+        self.message.body = "Это text body"
+        self.message.attach_alternative("<p>Это html body</p>", "text/html")
+        self.message.send()
+        sent_message = self.get_sent_message()
+
+        # Make sure none of the text parts use `Content-Transfer-Encoding: 8bit`.
+        # (Technically, either quoted-printable or base64 would be OK, but base64 text parts
+        # have a reputation for triggering spam filters, so just require quoted-printable.)
+        text_part_encodings = [
+            (part.get_content_type(), part["Content-Transfer-Encoding"])
+            for part in sent_message.walk()
+            if part.get_content_maintype() == "text"]
+        self.assertEqual(text_part_encodings, [
+            ("text/plain", "quoted-printable"),
+            ("text/html", "quoted-printable"),
+        ])
+
     def test_api_failure(self):
         error_response = {
             'Error': {

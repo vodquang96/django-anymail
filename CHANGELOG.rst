@@ -60,6 +60,11 @@ Fixes
   ending in ".com" could cause Gmail to block messages sent with inline attachments.
   (Mailgun, Mailjet, Mandrill and SparkPost have APIs affected by this.
   See `#112`_ for more details.)
+* **Amazon SES:** Work around an
+  `Amazon SES bug <https://forums.aws.amazon.com/thread.jspa?threadID=287048>`__
+  that can corrupt non-ASCII message bodies if you are using SES's open or click
+  tracking. (See `#115`_ for more details. Thanks to `@varche1`_ for isolating
+  the specific conditions that trigger the bug.)
 
 Other
 ~~~~~
@@ -774,6 +779,7 @@ Features
 .. _#110: https://github.com/anymail/issues/110
 .. _#111: https://github.com/anymail/issues/111
 .. _#112: https://github.com/anymail/issues/112
+.. _#115: https://github.com/anymail/issues/115
 
 .. _@calvin: https://github.com/calvin
 .. _@joshkersey: https://github.com/joshkersey
@@ -781,4 +787,5 @@ Features
 .. _@lewistaylor: https://github.com/lewistaylor
 .. _@RignonNoel: https://github.com/RignonNoel
 .. _@sebbacon: https://github.com/sebbacon
+.. _@varche1: https://github.com/varche1
 .. _@yourcelf: https://github.com/yourcelf
