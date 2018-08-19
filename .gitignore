@@ -9,3 +9,7 @@ build/
 dist/
 docs/_build/
 local.py
+
+# Because pipenv is only used to manage a local development
+# environment, it's not helpful to track its lock file
+Pipfile.lock
