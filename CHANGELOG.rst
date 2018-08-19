@@ -29,7 +29,7 @@ Release history
 v4.0
 ----
 
-*In development*
+*2018-08-19*
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -37,39 +37,42 @@ Breaking changes
 *  Drop support for Django versions older than Django 1.11.
    (For compatibility back to Django 1.8, stay on the Anymail `v3.0`_
    extended support branch.)
-*  **SendGrid:** Remove the legacy SendGrid *v2* EmailBackend
-   (Anymail has defaulted to SendGrid's newer v3 API since Anymail v0.8.)
+*  **SendGrid:** Remove the legacy SendGrid *v2* EmailBackend.
+   (Anymail's default since v0.8 has been SendGrid's newer v3 API.)
+   If your settings.py `EMAIL_BACKEND` still references "sendgrid_v2," you must
+   `upgrade to v3 <https://anymail.readthedocs.io/en/v3.0/esps/sendgrid/#upgrading-to-sendgrid-s-v3-api>`__.
 
 Features
 ~~~~~~~~
 
-* **Mailgun:** Add support for new Mailgun webhooks. (Mailgun's original "legacy
-  webhook" format is also still supported. See
-  `docs <https://anymail.readthedocs.io/en/stable/esps/mailgun/#mailgun-webhooks>`__.)
-* **Mailgun:** Document how to use new European region. (This works in earlier
-  Anymail versions, too.)
-* **Postmark:** Add support for Anymail's normalized `metadata` in sending
-  and webhooks.
+*  **Mailgun:** Add support for new Mailgun webhooks. (Mailgun's original "legacy
+   webhook" format is also still supported. See
+   `docs <https://anymail.readthedocs.io/en/stable/esps/mailgun/#mailgun-webhooks>`__.)
+*  **Mailgun:** Document how to use new European region. (This works in earlier
+   Anymail versions, too.)
+*  **Postmark:** Add support for Anymail's normalized `metadata` in sending
+   and webhooks.
 
 Fixes
 ~~~~~
 
-* Change `attach_inline_image()` default domain for *Content-ID* to "inline" (rather
-  than Python's `make_msgid()` default local hostname). This avoids problems with ESPs
-  that don't distinguish *Content-ID* from attachment filename, where a local hostname
-  ending in ".com" could cause Gmail to block messages sent with inline attachments.
-  (Mailgun, Mailjet, Mandrill and SparkPost have APIs affected by this.
-  See `#112`_ for more details.)
-* **Amazon SES:** Work around an
-  `Amazon SES bug <https://forums.aws.amazon.com/thread.jspa?threadID=287048>`__
-  that can corrupt non-ASCII message bodies if you are using SES's open or click
-  tracking. (See `#115`_ for more details. Thanks to `@varche1`_ for isolating
-  the specific conditions that trigger the bug.)
+*  Avoid problems with Gmail blocking messages that have inline attachments, when sent
+   from a machine whose local hostname ends in *.com*. Change Anymail's
+   `attach_inline_image()` default *Content-ID* domain to the literal text "inline"
+   (rather than Python's default of the local hostname), to work around a limitation
+   of some ESP APIs that don't permit distinct content ID and attachment filenames
+   (Mailgun, Mailjet, Mandrill and SparkPost). See `#112`_ for more details.
+*  **Amazon SES:** Work around an
+   `Amazon SES bug <https://forums.aws.amazon.com/thread.jspa?threadID=287048>`__
+   that can corrupt non-ASCII message bodies if you are using SES's open or click
+   tracking. (See `#115`_ for more details. Thanks to `@varche1`_ for isolating
+   the specific conditions that trigger the bug.)
 
 Other
 ~~~~~
 
 *  Maintain changelog in the repository itself (rather than in GitHub release notes).
+*  Test against released versions of Python 3.7 and Django 2.1.
 
 
 v3.0

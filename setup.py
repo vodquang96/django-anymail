@@ -78,7 +78,7 @@ setup(
         "Framework :: Django",
         "Framework :: Django :: 1.11",
         "Framework :: Django :: 2.0",
-        # "Framework :: Django :: 2.1",
+        "Framework :: Django :: 2.1",
         "Environment :: Web Environment",
     ],
     long_description=long_description,
