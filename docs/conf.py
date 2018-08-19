@@ -278,7 +278,9 @@ intersphinx_mapping = {
 
 def setup(app):
     app.add_stylesheet("anymail-theme.css")
+    app.add_javascript("anymail-config.js")
     app.add_javascript("version-alert.js")
+    app.add_javascript("https://unpkg.com/rate-the-docs")
 
     # Django-specific roles, from https://github.com/django/django/blob/master/docs/_ext/djangodocs.py:
     app.add_crossref_type(
