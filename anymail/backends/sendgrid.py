@@ -72,6 +72,7 @@ class SendGridPayload(RequestsPayload):
         self.all_recipients = []  # used for backend.parse_recipient_status
         self.generate_message_id = backend.generate_message_id
         self.workaround_name_quote_bug = backend.workaround_name_quote_bug
+        self.use_dynamic_template = False  # how to represent merge_data
         self.message_id = None  # Message-ID -- assigned in serialize_data unless provided in headers
         self.merge_field_format = backend.merge_field_format
         self.merge_data = None  # late-bound per-recipient data
@@ -113,6 +114,41 @@ class SendGridPayload(RequestsPayload):
         self.data.setdefault("custom_args", {})["anymail_id"] = self.message_id
 
     def build_merge_data(self):
+        if self.use_dynamic_template:
+            self.build_merge_data_dynamic()
+        else:
+            self.build_merge_data_legacy()
+
+    def build_merge_data_dynamic(self):
+        """Set personalizations[...]['dynamic_template_data']"""
+        if self.merge_global_data is not None:
+            assert len(self.data["personalizations"]) == 1
+            self.data["personalizations"][0].setdefault(
+                "dynamic_template_data", {}).update(self.merge_global_data)
+
+        if self.merge_data is not None:
+            # Burst apart each to-email in personalizations[0] into a separate
+            # personalization, and add merge_data for that recipient
+            assert len(self.data["personalizations"]) == 1
+            base_personalizations = self.data["personalizations"].pop()
+            to_list = base_personalizations.pop("to")  # {email, name?} for each message.to
+            for recipient in to_list:
+                personalization = base_personalizations.copy()  # captures cc, bcc, merge_global_data, esp_extra
+                personalization["to"] = [recipient]
+                try:
+                    recipient_data = self.merge_data[recipient["email"]]
+                except KeyError:
+                    pass  # no merge_data for this recipient
+                else:
+                    if "dynamic_template_data" in personalization:
+                        # merge per-recipient data into (copy of) merge_global_data
+                        personalization["dynamic_template_data"] = personalization["dynamic_template_data"].copy()
+                        personalization["dynamic_template_data"].update(recipient_data)
+                    else:
+                        personalization["dynamic_template_data"] = recipient_data
+                self.data["personalizations"].append(personalization)
+
+    def build_merge_data_legacy(self):
         """Set personalizations[...]['substitutions'] and data['sections']"""
         merge_field_format = self.merge_field_format or '{}'
 
@@ -291,18 +327,26 @@ class SendGridPayload(RequestsPayload):
 
     def set_template_id(self, template_id):
         self.data["template_id"] = template_id
+        try:
+            self.use_dynamic_template = template_id.startswith("d-")
+        except AttributeError:
+            pass
 
     def set_merge_data(self, merge_data):
-        # Becomes personalizations[...]['substitutions'] in build_merge_data,
-        # after we know recipients and merge_field_format.
+        # Becomes personalizations[...]['dynamic_template_data']
+        # or personalizations[...]['substitutions'] in build_merge_data,
+        # after we know recipients, template type, and merge_field_format.
         self.merge_data = merge_data
 
     def set_merge_global_data(self, merge_global_data):
-        # Becomes data['section'] in build_merge_data, after we know merge_field_format.
+        # Becomes personalizations[...]['dynamic_template_data']
+        # or data['section'] in build_merge_data, after we know
+        # template type and merge_field_format.
         self.merge_global_data = merge_global_data
 
     def set_esp_extra(self, extra):
         self.merge_field_format = extra.pop("merge_field_format", self.merge_field_format)
+        self.use_dynamic_template = extra.pop("use_dynamic_template", self.use_dynamic_template)
         if "x-smtpapi" in extra:
             raise AnymailConfigurationError(
                 "You are attempting to use SendGrid v2 API-style x-smtpapi params "

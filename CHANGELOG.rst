@@ -26,6 +26,21 @@ Release history
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
 
+v4.1
+----
+
+*In development*
+
+.. TODO: when releasing, change "latest" to "stable" in docs links
+
+Features
+~~~~~~~~
+
+*  **SendGrid:** Support both new "dynamic" and original "legacy" transactional
+   templates. (See
+   `docs <https://anymail.readthedocs.io/en/latest/esps/sendgrid/#sendgrid-templates>`__.)
+
+
 v4.0
 ----
 

@@ -115,14 +115,15 @@ class SendGridBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         message = AnymailMessage(
             from_email="Test From <from@example.com>",
             to=["to@sink.sendgrid.net"],
+            # Anymail's live test template has merge fields "name", "order_no", and "dept"...
             template_id=SENDGRID_TEST_TEMPLATE_ID,
-            # The test template in the Anymail Test account has a substitution "-field-":
-            merge_global_data={
-                'field': 'value from merge_global_data',
+            merge_data={
+                'to@sink.sendgrid.net': {
+                    'name': "Test Recipient",
+                    'order_no': "12345",
+                },
             },
-            esp_extra={
-                'merge_field_format': '-{}-',
-            },
+            merge_global_data={'dept': "Fulfillment"},
         )
         message.send()
         self.assertEqual(message.anymail_status.status, {'queued'})

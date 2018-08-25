@@ -421,11 +421,71 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         self.assertNotIn('subject', data)
 
     def test_merge_data(self):
+        # A template_id starting with "d-" indicates you are using SendGrid's newer
+        # (non-legacy) "dynamic" transactional templates
+        self.message.template_id = "d-5a963add2ec84305813ff860db277d7a"
+
+        self.message.from_email = 'from@example.com'
+        self.message.to = ['alice@example.com', 'Bob <bob@example.com>', 'celia@example.com']
+        self.message.cc = ['cc@example.com']  # gets applied to *each* recipient in a merge
+
+        self.message.merge_data = {
+            'alice@example.com': {'name': "Alice", 'group': "Developers"},
+            'bob@example.com': {'name': "Bob"},  # and leave group undefined
+            # and no data for celia@example.com
+        }
+        self.message.merge_global_data = {
+            'group': "Users",
+            'site': "ExampleCo",
+        }
+        self.message.send()
+
+        data = self.get_api_call_json()
+        self.assertEqual(data['personalizations'], [
+            {'to': [{'email': 'alice@example.com'}],
+             'cc': [{'email': 'cc@example.com'}],  # all recipients get the cc
+             'dynamic_template_data': {
+                 'name': "Alice", 'group': "Developers", 'site': "ExampleCo"}},
+            {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
+             'cc': [{'email': 'cc@example.com'}],
+             'dynamic_template_data': {
+                 'name': "Bob", 'group': "Users", 'site': "ExampleCo"}},
+            {'to': [{'email': 'celia@example.com'}],
+             'cc': [{'email': 'cc@example.com'}],
+             'dynamic_template_data': {
+                 'group': "Users", 'site': "ExampleCo"}},
+        ])
+        self.assertNotIn('sections', data)  # 'sections' not used with dynamic templates
+
+    def test_explicit_dynamic_template(self):
+        # undocumented esp_extra['use_dynamic_template'] can be used to force dynamic/legacy params
+        self.message.merge_data = {'to@example.com': {"test": "data"}}
+
+        self.message.template_id = "apparently-not-dynamic"  # doesn't start with "d-"
+        self.message.esp_extra = {"use_dynamic_template": True}
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertEqual(data['personalizations'], [
+            {'to': [{'email': 'to@example.com'}],
+             'dynamic_template_data': {"test": "data"}}])
+
+        self.message.template_id = "d-apparently-not-legacy"
+        self.message.esp_extra = {"use_dynamic_template": False,
+                                  "merge_field_format": "<%{}%>"}
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertEqual(data['personalizations'], [
+            {'to': [{'email': 'to@example.com'}],
+             'substitutions': {"<%test%>": "data"}}])
+
+    def test_legacy_merge_data(self):
+        # unless a new "dynamic template" is specified, Anymail assumes the legacy
+        # "substitutions" format for merge data
         self.message.from_email = 'from@example.com'
         self.message.to = ['alice@example.com', 'Bob <bob@example.com>', 'celia@example.com']
         self.message.cc = ['cc@example.com']  # gets applied to *each* recipient in a merge
         # SendGrid template_id is not required to use merge.
-        # You can just supply template content as the message (e.g.):
+        # You can just supply (legacy) template content as the message (e.g.):
         self.message.body = "Hi :name. Welcome to :group at :site."
         self.message.merge_data = {
             # You must either include merge field delimiters in the keys (':name' rather than just 'name')
@@ -459,7 +519,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         })
 
     @override_settings(ANYMAIL_SENDGRID_MERGE_FIELD_FORMAT=":{}")  # :field as shown in SG examples
-    def test_merge_field_format_setting(self):
+    def test_legacy_merge_field_format_setting(self):
         # Provide merge field delimiters in settings.py
         self.message.to = ['alice@example.com', 'Bob <bob@example.com>']
         self.message.merge_data = {
@@ -477,7 +537,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         ])
         self.assertEqual(data['sections'], {':site': "ExampleCo"})
 
-    def test_merge_field_format_esp_extra(self):
+    def test_legacy_merge_field_format_esp_extra(self):
         # Provide merge field delimiters for an individual message
         self.message.to = ['alice@example.com', 'Bob <bob@example.com>']
         self.message.merge_data = {
@@ -498,7 +558,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         # Make sure our esp_extra merge_field_format doesn't get sent to SendGrid API:
         self.assertNotIn('merge_field_format', data)
 
-    def test_warn_if_no_merge_field_delimiters(self):
+    def test_legacy_warn_if_no_merge_field_delimiters(self):
         self.message.to = ['alice@example.com']
         self.message.merge_data = {
             'alice@example.com': {'name': "Alice", 'group': "Developers"},
@@ -506,7 +566,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         with self.assertWarnsRegex(AnymailWarning, r'SENDGRID_MERGE_FIELD_FORMAT'):
             self.message.send()
 
-    def test_warn_if_no_global_merge_field_delimiters(self):
+    def test_legacy_warn_if_no_global_merge_field_delimiters(self):
         self.message.merge_global_data = {'site': "ExampleCo"}
         with self.assertWarnsRegex(AnymailWarning, r'SENDGRID_MERGE_FIELD_FORMAT'):
             self.message.send()
@@ -536,6 +596,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
 
         for personalization in data['personalizations']:
             self.assertNotIn('custom_args', personalization)
+            self.assertNotIn('dynamic_template_data', personalization)
             self.assertNotIn('headers', personalization)
             self.assertNotIn('send_at', personalization)
             self.assertNotIn('substitutions', personalization)

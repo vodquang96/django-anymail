@@ -75,11 +75,10 @@ See :ref:`Message-ID quirks <sendgrid-message-id>` below.
 
 .. rubric:: SENDGRID_MERGE_FIELD_FORMAT
 
-If you use :ref:`merge data <merge-data>`, set this to a :meth:`str.format`
-formatting string that indicates how merge fields are delimited
-in your SendGrid templates.
-For example, if your templates use the ``-field-`` hyphen delimiters
-suggested in some SendGrid docs, you would set:
+If you use :ref:`merge data <merge-data>` with SendGrid's legacy transactional templates,
+set this to a :meth:`str.format` formatting string that indicates how merge fields are
+delimited in your legacy templates. For example, if your templates use the ``-field-``
+hyphen delimiters suggested in some SendGrid docs, you would set:
 
   .. code-block:: python
 
@@ -95,8 +94,11 @@ a literal brace character, double it up. (For example, Handlebars-style
 The default `None` requires you include the delimiters directly in your
 :attr:`~anymail.message.AnymailMessage.merge_data` keys.
 You can also override this setting for individual messages.
-See the notes on SendGrid :ref:`templates and merge <sendgrid-templates>`
+See the notes on SendGrid :ref:`templates and merge <sendgrid-legacy-templates>`
 below.
+
+This setting is not used (or necessary) with SendGrid's newer dynamic transactional
+templates, which always use Handlebars syntax.
 
 
 .. setting:: ANYMAIL_SENDGRID_API_URL
@@ -210,16 +212,29 @@ Batch sending/merge and ESP templates
 SendGrid offers both :ref:`ESP stored templates <esp-stored-templates>`
 and :ref:`batch sending <batch-send>` with per-recipient merge data.
 
-You can use a SendGrid stored template by setting a message's
-:attr:`~anymail.message.AnymailMessage.template_id` to the
-template's unique id. Alternatively, you can refer to merge fields
-directly in an EmailMessage's subject and body---the message itself
-is used as an on-the-fly template.
+SendGrid has two types of stored templates for transactional email:
 
-In either case, supply the merge data values with Anymail's
-normalized :attr:`~anymail.message.AnymailMessage.merge_data`
-and :attr:`~anymail.message.AnymailMessage.merge_global_data`
-message attributes.
+* Dynamic transactional templates, which were introduced in July, 2018,
+  use Handlebars template syntax and allow complex logic to be coded in
+  the template itself.
+
+* Legacy transactional templates, which allow only simple key-value substitution
+  and don't specify a particular template syntax.
+
+[Legacy templates were originally just called "transactional templates," and many older
+references still use this terminology. But confusingly, SendGrid's dashboard and some
+recent articles now use "transactional templates" to mean the newer, dynamic templates.]
+
+.. versionchanged:: 4.1
+
+    Added support for SendGrid dynamic transactional templates. (Earlier Anymail
+    releases work only with SendGrid's legacy transactional templates.)
+
+You can use either type of SendGrid stored template by setting a message's
+:attr:`~anymail.message.AnymailMessage.template_id` to the template's unique id
+(*not* its name). Supply the merge data values with Anymail's normalized
+:attr:`~anymail.message.AnymailMessage.merge_data` and
+:attr:`~anymail.message.AnymailMessage.merge_global_data` message attributes.
 
   .. code-block:: python
 
@@ -228,7 +243,7 @@ message attributes.
           # omit subject and body (or set to None) to use template content
           to=["alice@example.com", "Bob <bob@example.com>"]
       )
-      message.template_id = "5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f"  # SendGrid id
+      message.template_id = "d-5a963add2ec84305813ff860db277d7a"  # SendGrid dynamic id
       message.merge_data = {
           'alice@example.com': {'name': "Alice", 'order_no': "12345"},
           'bob@example.com': {'name': "Bob", 'order_no': "54321"},
@@ -236,28 +251,6 @@ message attributes.
       message.merge_global_data = {
           'ship_date': "May 15",
       }
-      message.esp_extra = {
-          # Tell Anymail this SendGrid template uses "-field-" to refer to merge fields.
-          # (We could also just set SENDGRID_MERGE_FIELD_FORMAT in our ANYMAIL settings.)
-          'merge_field_format': "-{}-"
-      }
-
-SendGrid doesn't have a pre-defined merge field syntax, so you
-must tell Anymail how substitution fields are delimited in your templates.
-There are three ways you can do this:
-
-  * Set `'merge_field_format'` in the message's
-    :attr:`~anymail.message.AnymailMessage.esp_extra` to a python :meth:`str.format`
-    string, as shown in the example above. (This applies only to that
-    particular EmailMessage.)
-  * *Or* set :setting:`SENDGRID_MERGE_FIELD_FORMAT <ANYMAIL_SENDGRID_MERGE_FIELD_FORMAT>`
-    in your Anymail settings. This is usually the best approach, and will apply to all messages
-    sent through SendGrid. (You can still use esp_extra to override for individual messages.)
-  * *Or* include the field delimiters directly in *all* your
-    :attr:`~anymail.message.AnymailMessage.merge_data` and
-    :attr:`~anymail.message.AnymailMessage.merge_global_data` keys.
-    E.g.: ``{'-name-': "Alice", '-order_no-': "12345"}``.
-    (This can be error-prone, and difficult to move to other ESPs.)
 
 When you supply per-recipient :attr:`~anymail.message.AnymailMessage.merge_data`,
 Anymail automatically changes how it communicates the "to" list to SendGrid, so that
@@ -265,19 +258,83 @@ so that each recipient sees only their own email address. (Anymail creates a sep
 "personalization" for each recipient in the "to" list; any cc's or bcc's will be
 duplicated for *every* to-recipient.)
 
-SendGrid templates allow you to mix your EmailMessage's `subject` and `body`
+See the `SendGrid's transactional template overview`_ for more information.
+
+.. _SendGrid's transactional template overview:
+    https://sendgrid.com/docs/ui/sending-email/create-and-edit-transactional-templates/
+
+
+.. _sendgrid-legacy-templates:
+
+Legacy transactional templates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+With *legacy* transactional templates (only), SendGrid doesn't have a pre-defined merge
+field syntax, so you must tell Anymail how substitution fields are delimited in your
+templates. There are three ways you can do this:
+
+  * Set `'merge_field_format'` in the message's
+    :attr:`~anymail.message.AnymailMessage.esp_extra` to a python :meth:`str.format`
+    string, as shown in the example below. (This applies only to that particular
+    EmailMessage.)
+  * *Or* set :setting:`SENDGRID_MERGE_FIELD_FORMAT <ANYMAIL_SENDGRID_MERGE_FIELD_FORMAT>`
+    in your Anymail settings. This is usually the best approach, and will apply to all
+    legacy template messages sent through SendGrid. (You can still use esp_extra to
+    override for individual messages.)
+  * *Or* include the field delimiters directly in *all* your
+    :attr:`~anymail.message.AnymailMessage.merge_data` and
+    :attr:`~anymail.message.AnymailMessage.merge_global_data` keys.
+    E.g.: ``{'-name-': "Alice", '-order_no-': "12345"}``.
+    (This can be error-prone, and makes it difficult to transition to other ESPs or to
+    SendGrid's dynamic templates.)
+
+  .. code-block:: python
+
+      # ...
+      message.template_id = "5997fcf6-2b9f-484d-acd5-7e9a99f0dc1f"  # SendGrid legacy id
+      message.merge_data = {
+          'alice@example.com': {'name': "Alice", 'order_no': "12345"},
+          'bob@example.com': {'name': "Bob", 'order_no': "54321"},
+      }
+      message.esp_extra = {
+          # Tell Anymail this SendGrid legacy template uses "-field-" for merge fields.
+          # (You could instead set SENDGRID_MERGE_FIELD_FORMAT in your ANYMAIL settings.)
+          'merge_field_format': "-{}-"
+      }
+
+SendGrid legacy templates allow you to mix your EmailMessage's `subject` and `body`
 with the template subject and body (by using `<%subject%>` and `<%body%>` in
 your SendGrid template definition where you want the message-specific versions
 to appear). If you don't want to supply any additional subject or body content
 from your Django app, set those EmailMessage attributes to empty strings or `None`.
 
-See the `SendGrid's template overview`_ and `transactional template docs`_
-for more information.
 
-.. _SendGrid's template overview:
-    https://sendgrid.com/docs/User_Guide/Transactional_Templates/index.html
-.. _transactional template docs:
-    https://sendgrid.com/docs/API_Reference/Web_API_v3/Transactional_Templates/smtpapi.html
+On-the-fly templates
+~~~~~~~~~~~~~~~~~~~~
+
+Rather than define a stored ESP template, you can refer to merge fields directly
+in an EmailMessage's subject and body, and SendGrid will treat this as an on-the-fly,
+legacy-style template definition. (The on-the-fly template can't contain any dynamic
+template logic, and like any legacy template you must specify the merge field format
+in either Anymail settings or esp_extra as described above.)
+
+  .. code-block:: python
+
+      # on-the-fly template using merge fields in subject and body:
+      message = EmailMessage(
+          subject="Your order {{order_no}} has shipped",
+          body="Dear {{name}}:\nWe've shipped order {{order_no}}.",
+          to=["alice@example.com", "Bob <bob@example.com>"]
+      )
+      # note: no template_id specified
+      message.merge_data = {
+          'alice@example.com': {'name': "Alice", 'order_no': "12345"},
+          'bob@example.com': {'name': "Bob", 'order_no': "54321"},
+      }
+      message.esp_extra = {
+          # here's how to get Handlebars-style {{merge}} fields with Python's str.format:
+          'merge_field_format': "{{{{{}}}}}"  # "{{ {{ {} }} }}" without the spaces
+      }
 
 
 .. _sendgrid-webhooks:
