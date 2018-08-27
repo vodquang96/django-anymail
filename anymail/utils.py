@@ -1,7 +1,6 @@
 import base64
 import mimetypes
 from base64 import b64encode
-from collections import Mapping, MutableMapping
 from datetime import datetime
 from email.mime.base import MIMEBase
 from email.utils import formatdate, getaddresses, unquote
@@ -14,6 +13,11 @@ from django.utils.encoding import force_text
 from django.utils.functional import Promise
 from django.utils.timezone import utc, get_fixed_timezone
 from six.moves.urllib.parse import urlsplit, urlunsplit
+
+try:
+    from collections.abc import Mapping, MutableMapping  # Python 3.3+
+except ImportError:
+    from collections import Mapping, MutableMapping
 
 from .exceptions import AnymailConfigurationError, AnymailInvalidAddress
 

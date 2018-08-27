@@ -1,14 +1,13 @@
 import uuid
-from collections import Mapping
-from email.utils import quote as rfc822_quote
 import warnings
+from email.utils import quote as rfc822_quote
 
 from requests.structures import CaseInsensitiveDict
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload
 from ..exceptions import AnymailConfigurationError, AnymailRequestsAPIError, AnymailWarning
 from ..message import AnymailRecipientStatus
-from ..utils import BASIC_NUMERIC_TYPES, get_anymail_setting, timestamp, update_deep
+from ..utils import BASIC_NUMERIC_TYPES, Mapping, get_anymail_setting, timestamp, update_deep
 
 
 class EmailBackend(AnymailRequestsBackend):
