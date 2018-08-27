@@ -29,19 +29,17 @@ Release history
 v4.1
 ----
 
-*In development*
-
-.. TODO: when releasing, change "latest" to "stable" in docs links
+*2018-08-27*
 
 Features
 ~~~~~~~~
 
 *  **SendGrid:** Support both new "dynamic" and original "legacy" transactional
    templates. (See
-   `docs <https://anymail.readthedocs.io/en/latest/esps/sendgrid/#sendgrid-templates>`__.)
+   `docs <https://anymail.readthedocs.io/en/stable/esps/sendgrid/#sendgrid-templates>`__.)
 *  **SendGrid:** Allow merging `esp_extra["personalizations"]` dict into other message-derived
    personalizations. (See
-   `docs <https://anymail.readthedocs.io/en/latest/esps/sendgrid/#sendgrid-esp-extra>`__.)
+   `docs <https://anymail.readthedocs.io/en/stable/esps/sendgrid/#sendgrid-esp-extra>`__.)
 
 
 v4.0
