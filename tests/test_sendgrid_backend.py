@@ -627,6 +627,34 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         self.assertEqual(data['categories'], ["tag"])
         self.assertEqual(data['tracking_settings']['click_tracking'], {'enable': True})
 
+    def test_esp_extra_pesonalizations(self):
+        self.message.to = ["First recipient <first@example.com>", "second@example.com"]
+        self.message.merge_data = {}  # force separate messages for each 'to'
+
+        # esp_extra['personalizations'] dict merges with message-derived personalizations
+        self.message.esp_extra = {
+            "personalizations": {"future_feature": "works"}}
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertEqual(data['personalizations'], [
+            {'to': [{'email': 'first@example.com', 'name': '"First recipient"'}],
+             'future_feature': "works"},
+            {'to': [{'email': 'second@example.com'}],
+             'future_feature': "works"},  # merged into *every* recipient
+        ])
+
+        # but esp_extra['personalizations'] list just overrides entire personalizations
+        # (for backwards compatibility)
+        self.message.esp_extra = {
+            "personalizations": [{"to": [{"email": "custom@example.com"}],
+                                  "future_feature": "works"}]}
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertEqual(data['personalizations'], [
+            {'to': [{'email': 'custom@example.com'}],
+             'future_feature': "works"},
+        ])
+
     # noinspection PyUnresolvedReferences
     def test_send_attaches_anymail_status(self):
         """ The anymail_status should be attached to the message when it is sent """

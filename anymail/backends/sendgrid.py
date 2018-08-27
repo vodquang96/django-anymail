@@ -1,4 +1,5 @@
 import uuid
+from collections import Mapping
 from email.utils import quote as rfc822_quote
 import warnings
 
@@ -171,7 +172,7 @@ class SendGridPayload(RequestsPayload):
                     pass  # no merge_data for this recipient
                 self.data["personalizations"].append(personalization)
 
-            if self.merge_field_format is None and all(field.isalnum() for field in all_fields):
+            if self.merge_field_format is None and len(all_fields) and all(field.isalnum() for field in all_fields):
                 warnings.warn(
                     "Your SendGrid merge fields don't seem to have delimiters, "
                     "which can cause unexpected results with Anymail's merge_data. "
@@ -347,6 +348,10 @@ class SendGridPayload(RequestsPayload):
     def set_esp_extra(self, extra):
         self.merge_field_format = extra.pop("merge_field_format", self.merge_field_format)
         self.use_dynamic_template = extra.pop("use_dynamic_template", self.use_dynamic_template)
+        if isinstance(extra.get("personalizations", None), Mapping):
+            # merge personalizations *dict* into other message personalizations
+            assert len(self.data["personalizations"]) == 1
+            self.data["personalizations"][0].update(extra.pop("personalizations"))
         if "x-smtpapi" in extra:
             raise AnymailConfigurationError(
                 "You are attempting to use SendGrid v2 API-style x-smtpapi params "

@@ -123,6 +123,12 @@ Your :attr:`esp_extra` dict will be deeply merged into the
 parameters Anymail has constructed for the send, with `esp_extra`
 having precedence in conflicts.
 
+Anymail has special handling for `esp_extra["personalizations"]`. If that value
+is a `dict`, Anymail will merge that personalizations dict into the personalizations
+for each message recipient. (If you pass a `list`, that will override the
+personalizations Anymail normally constructs from the message, and you will need to
+specify each recipient in the personalizations list yourself.)
+
 Example:
 
     .. code-block:: python
@@ -139,6 +145,11 @@ Example:
                     # based on message.open_tracking.
                     "substitution_tag": "%%OPEN_TRACKING_PIXEL%%",
                 },
+            },
+            # Because "personalizations" is a dict, Anymail will merge "future_feature"
+            # into the SendGrid personalizations array for each message recipient
+            "personalizations": {
+                "future_feature": {"future": "data"},
             },
         }
 
