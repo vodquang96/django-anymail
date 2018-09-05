@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from django.test import SimpleTestCase
@@ -7,6 +8,12 @@ from anymail.exceptions import AnymailAPIError
 from anymail.message import AnymailMessage
 
 from .utils import AnymailTestMixin, sample_image_path, RUN_LIVE_TESTS
+
+
+# For most integration tests, Postmark's sandboxed "POSTMARK_API_TEST" token is used.
+# But to test template sends, a real Postmark server token and template id are needed:
+POSTMARK_TEST_SERVER_TOKEN = os.getenv('POSTMARK_TEST_SERVER_TOKEN')
+POSTMARK_TEST_TEMPLATE_ID = os.getenv('POSTMARK_TEST_TEMPLATE_ID')
 
 
 @unittest.skipUnless(RUN_LIVE_TESTS, "RUN_LIVE_TESTS disabled in this environment")
@@ -75,6 +82,20 @@ class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         err = cm.exception
         self.assertEqual(err.status_code, 422)
         self.assertIn("Invalid 'From' address", str(err))
+
+    @unittest.skipUnless(POSTMARK_TEST_SERVER_TOKEN and POSTMARK_TEST_TEMPLATE_ID,
+                         "Set POSTMARK_TEST_SERVER_TOKEN and POSTMARK_TEST_TEMPLATE_ID "
+                         "environment variables to run Postmark template integration tests")
+    @override_settings(ANYMAIL_POSTMARK_SERVER_TOKEN=POSTMARK_TEST_SERVER_TOKEN)
+    def test_template(self):
+        message = AnymailMessage(
+            from_email="from@test-pm.anymail.info",
+            to=["test+to1@anymail.info"],
+            template_id=POSTMARK_TEST_TEMPLATE_ID,
+            merge_global_data={"name": "Test Recipient", "order_no": "12345"},
+        )
+        message.send()
+        self.assertEqual(message.anymail_status.status, {'sent'})
 
     @override_settings(ANYMAIL_POSTMARK_SERVER_TOKEN="Hey, that's not a server token!")
     def test_invalid_server_token(self):

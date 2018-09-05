@@ -198,6 +198,11 @@ class PostmarkPayload(RequestsPayload):
 
     def set_template_id(self, template_id):
         self.data["TemplateId"] = template_id
+        # Subject, TextBody, and HtmlBody aren't allowed with TemplateId;
+        # delete Django default subject and body empty strings:
+        for field in ("Subject", "TextBody", "HtmlBody"):
+            if field in self.data and not self.data[field]:
+                del self.data[field]
 
     # merge_data: Postmark doesn't support per-recipient substitutions
 

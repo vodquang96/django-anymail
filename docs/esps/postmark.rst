@@ -142,8 +142,8 @@ message attribute:
   .. code-block:: python
 
       message = EmailMessage(
-          ...
-          subject=None,  # use template subject
+          # (subject and body come from the template, so don't include those)
+          from_email="from@example.com",
           to=["alice@example.com"]  # single recipient...
           # ...multiple to emails would all get the same message
           # (and would all see each other's emails in the "to" header)
@@ -159,9 +159,7 @@ message attribute:
           ],
       }
 
-Set the EmailMessage's subject to `None` to use the subject from
-your Postmark template, or supply a subject with the message to override
-the template value.
+Postmark does not allow overriding the message's subject or body with a template.
 
 See this `Postmark blog post on templates`_ for more information.
 

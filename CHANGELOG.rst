@@ -25,6 +25,17 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
+v4.2
+----
+
+*In development*
+
+Fixes
+~~~~~
+
+*  **Postmark:** When using `template_id`, ignore empty subject and body. (Postmark
+   issues an error if Django's default empty strings are used with template sends.)
+
 
 v4.1
 ----

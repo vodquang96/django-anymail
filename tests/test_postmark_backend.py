@@ -13,7 +13,7 @@ from django.test.utils import override_settings
 from anymail.exceptions import (
     AnymailAPIError, AnymailSerializationError,
     AnymailUnsupportedFeature, AnymailRecipientsRefused, AnymailInvalidAddress)
-from anymail.message import attach_inline_image_file
+from anymail.message import attach_inline_image_file, AnymailMessage
 
 from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
 from .utils import sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME, AnymailTestMixin, decode_att
@@ -368,14 +368,22 @@ class PostmarkBackendAnymailFeatureTests(PostmarkBackendMockAPITestCase):
         self.assertEqual(data['TrackLinks'], 'None')
 
     def test_template(self):
-        self.message.template_id = 1234567
-        # Postmark doesn't support per-recipient merge_data
-        self.message.merge_global_data = {'name': "Alice", 'group': "Developers"}
-        self.message.send()
+        message = AnymailMessage(
+            # Omit subject and body (Postmark prohibits them with templates)
+            from_email='from@example.com', to=['to@example.com'],
+            template_id=1234567,
+            # Postmark doesn't support per-recipient merge_data
+            merge_global_data={'name': "Alice", 'group': "Developers"},
+        )
+        message.send()
         self.assert_esp_called('/email/withTemplate/')
         data = self.get_api_call_json()
         self.assertEqual(data['TemplateId'], 1234567)
         self.assertEqual(data['TemplateModel'], {'name': "Alice", 'group': "Developers"})
+        # Make sure Django default subject and body didn't end up in the payload:
+        self.assertNotIn('Subject', data)
+        self.assertNotIn('HtmlBody', data)
+        self.assertNotIn('TextBody', data)
 
     def test_merge_data(self):
         self.message.merge_data = {
@@ -383,17 +391,6 @@ class PostmarkBackendAnymailFeatureTests(PostmarkBackendMockAPITestCase):
         }
         with self.assertRaisesMessage(AnymailUnsupportedFeature, 'merge_data'):
             self.message.send()
-
-    def test_missing_subject(self):
-        """Make sure a missing subject omits Subject from API call.
-
-        (Allows use of template subject)
-        """
-        self.message.template_id = 1234567
-        self.message.subject = None
-        self.message.send()
-        data = self.get_api_call_json()
-        self.assertNotIn('Subject', data)
 
     def test_default_omits_options(self):
         """Make sure by default we don't send any ESP-specific options.
