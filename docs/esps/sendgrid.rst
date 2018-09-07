@@ -265,7 +265,7 @@ You can use either type of SendGrid stored template by setting a message's
 
 When you supply per-recipient :attr:`~anymail.message.AnymailMessage.merge_data`,
 Anymail automatically changes how it communicates the "to" list to SendGrid, so that
-so that each recipient sees only their own email address. (Anymail creates a separate
+each recipient sees only their own email address. (Anymail creates a separate
 "personalization" for each recipient in the "to" list; any cc's or bcc's will be
 duplicated for *every* to-recipient.)
 
