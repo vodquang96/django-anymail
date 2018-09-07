@@ -28,7 +28,7 @@ Release history
 v4.2
 ----
 
-*In development*
+*2018-09-07*
 
 Features
 ~~~~~~~~
