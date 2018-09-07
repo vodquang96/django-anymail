@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+import json
 from base64 import b64encode
 from decimal import Decimal
 from email.mime.base import MIMEBase
@@ -386,11 +386,102 @@ class PostmarkBackendAnymailFeatureTests(PostmarkBackendMockAPITestCase):
         self.assertNotIn('TextBody', data)
 
     def test_merge_data(self):
-        self.message.merge_data = {
-            'alice@example.com': {'name': "Alice", 'group': "Developers"},
-        }
-        with self.assertRaisesMessage(AnymailUnsupportedFeature, 'merge_data'):
-            self.message.send()
+        self.set_mock_response(raw=json.dumps([{
+            "ErrorCode": 0,
+            "Message": "OK",
+            "To": "alice@example.com",
+            "SubmittedAt": "2016-03-12T15:27:50.4468803-05:00",
+            "MessageID": "b7bc2f4a-e38e-4336-af7d-e6c392c2f817",
+        }, {
+            "ErrorCode": 0,
+            "Message": "OK",
+            "To": "bob@example.com",
+            "SubmittedAt": "2016-03-12T15:27:50.4468803-05:00",
+            "MessageID": "e2ecbbfc-fe12-463d-b933-9fe22915106d",
+        }]).encode('utf-8'))
+
+        message = AnymailMessage(
+            from_email='from@example.com',
+            template_id=1234567,  # Postmark only supports merge_data content in a template
+            to=['alice@example.com', 'Bob <bob@example.com>'],
+            merge_data={
+                'alice@example.com': {'name': "Alice", 'group': "Developers"},
+                'bob@example.com': {'name': "Bob"},  # and leave group undefined
+                'nobody@example.com': {'name': "Not a recipient for this message"},
+            },
+            merge_global_data={'group': "Users", 'site': "ExampleCo"}
+        )
+        message.send()
+
+        self.assert_esp_called('/email/batchWithTemplates')
+        data = self.get_api_call_json()
+        messages = data["Messages"]
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0], {
+            "From": "from@example.com",
+            "To": "alice@example.com",
+            "TemplateId": 1234567,
+            "TemplateModel": {"name": "Alice", "group": "Developers", "site": "ExampleCo"},
+        })
+        self.assertEqual(messages[1], {
+            "From": "from@example.com",
+            "To": "Bob <bob@example.com>",
+            "TemplateId": 1234567,
+            "TemplateModel": {"name": "Bob", "group": "Users", "site": "ExampleCo"},
+        })
+
+        recipients = message.anymail_status.recipients
+        self.assertEqual(recipients['alice@example.com'].status, 'sent')
+        self.assertEqual(recipients['alice@example.com'].message_id, 'b7bc2f4a-e38e-4336-af7d-e6c392c2f817')
+        self.assertEqual(recipients['bob@example.com'].status, 'sent')
+        self.assertEqual(recipients['bob@example.com'].message_id, 'e2ecbbfc-fe12-463d-b933-9fe22915106d')
+
+    def test_merge_data_no_template(self):
+        # merge_data={} can be used to force batch sending without a template
+        self.set_mock_response(raw=json.dumps([{
+            "ErrorCode": 0,
+            "Message": "OK",
+            "To": "alice@example.com",
+            "SubmittedAt": "2016-03-12T15:27:50.4468803-05:00",
+            "MessageID": "b7bc2f4a-e38e-4336-af7d-e6c392c2f817",
+        }, {
+            "ErrorCode": 0,
+            "Message": "OK",
+            "To": "bob@example.com",
+            "SubmittedAt": "2016-03-12T15:27:50.4468803-05:00",
+            "MessageID": "e2ecbbfc-fe12-463d-b933-9fe22915106d",
+        }]).encode('utf-8'))
+
+        message = AnymailMessage(
+            from_email='from@example.com',
+            to=['alice@example.com', 'Bob <bob@example.com>'],
+            merge_data={},
+            subject="Test batch send",
+            body="Test body",
+        )
+        message.send()
+
+        self.assert_esp_called('/email/batch')
+        data = self.get_api_call_json()
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[0], {
+            "From": "from@example.com",
+            "To": "alice@example.com",
+            "Subject": "Test batch send",
+            "TextBody": "Test body",
+        })
+        self.assertEqual(data[1], {
+            "From": "from@example.com",
+            "To": "Bob <bob@example.com>",
+            "Subject": "Test batch send",
+            "TextBody": "Test body",
+        })
+
+        recipients = message.anymail_status.recipients
+        self.assertEqual(recipients['alice@example.com'].status, 'sent')
+        self.assertEqual(recipients['alice@example.com'].message_id, 'b7bc2f4a-e38e-4336-af7d-e6c392c2f817')
+        self.assertEqual(recipients['bob@example.com'].status, 'sent')
+        self.assertEqual(recipients['bob@example.com'].message_id, 'e2ecbbfc-fe12-463d-b933-9fe22915106d')
 
     def test_default_omits_options(self):
         """Make sure by default we don't send any ESP-specific options.
@@ -433,10 +524,11 @@ class PostmarkBackendAnymailFeatureTests(PostmarkBackendMockAPITestCase):
         response_content = b"""{
             "MessageID":"abcdef01-2345-6789-0123-456789abcdef",
             "ErrorCode":0,
+            "To":"Recipient <to1@example.com>",
             "Message":"OK"
         }"""
         self.set_mock_response(raw=response_content)
-        msg = mail.EmailMessage('Subject', 'Message', 'from@example.com', ['to1@example.com'],)
+        msg = mail.EmailMessage('Subject', 'Message', 'from@example.com', ['Recipient <to1@example.com>'],)
         sent = msg.send()
         self.assertEqual(sent, 1)
         self.assertEqual(msg.anymail_status.status, {'sent'})

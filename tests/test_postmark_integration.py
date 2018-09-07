@@ -58,11 +58,12 @@ class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
             reply_to=["reply1@example.com", "Reply 2 <reply2@example.com>"],
             headers={"X-Anymail-Test": "value"},
 
-            # no send_at, track_clicks support
+            # no send_at support
             metadata={"meta1": "simple string", "meta2": 2},
             tags=["tag 1"],  # max one tag
             track_opens=True,
             track_clicks=True,
+            merge_data={},  # force batch send (distinct message for each `to`)
         )
         message.attach("attachment1.txt", "Here is some\ntext for you", "text/plain")
         message.attach("attachment2.csv", "ID,Name\n1,Amy Lina", "text/csv")
@@ -74,6 +75,11 @@ class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
 
         message.send()
         self.assertEqual(message.anymail_status.status, {'sent'})
+        self.assertEqual(message.anymail_status.recipients['test+to1@anymail.info'].status, 'sent')
+        self.assertEqual(message.anymail_status.recipients['test+to2@anymail.info'].status, 'sent')
+        # distinct messages should have different message_ids:
+        self.assertNotEqual(message.anymail_status.recipients['test+to1@anymail.info'].message_id,
+                            message.anymail_status.recipients['test+to2@anymail.info'].message_id)
 
     def test_invalid_from(self):
         self.message.from_email = 'webmaster@localhost'  # Django's default From
@@ -90,9 +96,13 @@ class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     def test_template(self):
         message = AnymailMessage(
             from_email="from@test-pm.anymail.info",
-            to=["test+to1@anymail.info"],
+            to=["test+to1@anymail.info", "Second Recipient <test+to2@anymail.info>"],
             template_id=POSTMARK_TEST_TEMPLATE_ID,
-            merge_global_data={"name": "Test Recipient", "order_no": "12345"},
+            merge_data={
+                "test+to1@anymail.info": {"name": "Recipient 1", "order_no": "12345"},
+                "test+to2@anymail.info": {"order_no": "6789"},
+            },
+            merge_global_data={"name": "Valued Customer"},
         )
         message.send()
         self.assertEqual(message.anymail_status.status, {'sent'})

@@ -2,7 +2,7 @@ import re
 
 from ..exceptions import AnymailRequestsAPIError
 from ..message import AnymailRecipientStatus
-from ..utils import get_anymail_setting
+from ..utils import get_anymail_setting, parse_address_list
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload
 
@@ -33,58 +33,90 @@ class EmailBackend(AnymailRequestsBackend):
             super(EmailBackend, self).raise_for_status(response, payload, message)
 
     def parse_recipient_status(self, response, payload, message):
+        # default to "unknown" status for each recipient, unless/until we find otherwise
+        unknown_status = AnymailRecipientStatus(message_id=None, status='unknown')
+        recipient_status = {to.addr_spec: unknown_status for to in payload.to_emails}
+
         parsed_response = self.deserialize_json_response(response, payload, message)
-        try:
-            error_code = parsed_response["ErrorCode"]
-            msg = parsed_response["Message"]
-        except (KeyError, TypeError):
-            raise AnymailRequestsAPIError("Invalid Postmark API response format",
-                                          email_message=message, payload=payload, response=response,
-                                          backend=self)
+        if not isinstance(parsed_response, list):
+            # non-batch calls return a single response object
+            parsed_response = [parsed_response]
 
-        message_id = parsed_response.get("MessageID", None)
-        rejected_emails = []
+        for one_response in parsed_response:
+            try:
+                # these fields should always be present
+                error_code = one_response["ErrorCode"]
+                msg = one_response["Message"]
+            except (KeyError, TypeError):
+                raise AnymailRequestsAPIError("Invalid Postmark API response format",
+                                              email_message=message, payload=payload, response=response,
+                                              backend=self)
 
-        if error_code == 300:  # Invalid email request
-            # Either the From address or at least one recipient was invalid. Email not sent.
-            if "'From' address" in msg:
-                # Normal error
+            if error_code == 0:
+                # At least partial success, and (some) email was sent.
+                try:
+                    to_header = one_response["To"]
+                    message_id = one_response["MessageID"]
+                except KeyError:
+                    raise AnymailRequestsAPIError("Invalid Postmark API success response format",
+                                                  email_message=message, payload=payload,
+                                                  response=response, backend=self)
+                for to in parse_address_list(to_header):
+                    recipient_status[to.addr_spec.lower()] = AnymailRecipientStatus(
+                        message_id=message_id, status='sent')
+                # Sadly, have to parse human-readable message to figure out if everyone got it:
+                #   "Message OK, but will not deliver to these inactive addresses: {addr_spec, ...}.
+                #    Inactive recipients are ones that have generated a hard bounce or a spam complaint."
+                reject_addr_specs = self._addr_specs_from_error_msg(
+                    msg, r'inactive addresses:\s*(.*)\.\s*Inactive recipients')
+                for reject_addr_spec in reject_addr_specs:
+                    recipient_status[reject_addr_spec] = AnymailRecipientStatus(
+                        message_id=None, status='rejected')
+
+            elif error_code == 300:  # Invalid email request
+                # Either the From address or at least one recipient was invalid. Email not sent.
+                # response["To"] is not populated for this error; must examine response["Message"]:
+                #   "Invalid 'To' address: '{addr_spec}'."
+                #   "Error parsing 'To': Illegal email domain '{domain}' in address '{addr_spec}'."
+                #   "Error parsing 'To': Illegal email address '{addr_spec}'. It must contain the '@' symbol."
+                #   "Invalid 'From' address: '{email_address}'."
+                if "'From' address" in msg:
+                    # Normal error
+                    raise AnymailRequestsAPIError(email_message=message, payload=payload, response=response,
+                                                  backend=self)
+                else:
+                    # Use AnymailRecipientsRefused logic
+                    invalid_addr_specs = self._addr_specs_from_error_msg(msg, r"address:?\s*'(.*)'")
+                    for invalid_addr_spec in invalid_addr_specs:
+                        recipient_status[invalid_addr_spec] = AnymailRecipientStatus(
+                            message_id=None, status='invalid')
+
+            elif error_code == 406:  # Inactive recipient
+                # All recipients were rejected as hard-bounce or spam-complaint. Email not sent.
+                # response["To"] is not populated for this error; must examine response["Message"]:
+                #   "You tried to send to a recipient that has been marked as inactive.\n
+                #    Found inactive addresses: {addr_spec, ...}.\n
+                #    Inactive recipients are ones that have generated a hard bounce or a spam complaint. "
+                reject_addr_specs = self._addr_specs_from_error_msg(
+                    msg, r'inactive addresses:\s*(.*)\.\s*Inactive recipients')
+                for reject_addr_spec in reject_addr_specs:
+                    recipient_status[reject_addr_spec] = AnymailRecipientStatus(
+                        message_id=None, status='rejected')
+
+            else:  # Other error
                 raise AnymailRequestsAPIError(email_message=message, payload=payload, response=response,
                                               backend=self)
-            else:
-                # Use AnymailRecipientsRefused logic
-                default_status = 'invalid'
-        elif error_code == 406:  # Inactive recipient
-            # All recipients were rejected as hard-bounce or spam-complaint. Email not sent.
-            default_status = 'rejected'
-        elif error_code == 0:
-            # At least partial success, and email was sent.
-            # Sadly, have to parse human-readable message to figure out if everyone got it.
-            default_status = 'sent'
-            rejected_emails = self.parse_inactive_recipients(msg)
-        else:
-            raise AnymailRequestsAPIError(email_message=message, payload=payload, response=response,
-                                          backend=self)
 
-        return {
-            recipient.addr_spec: AnymailRecipientStatus(
-                message_id=message_id,
-                status=('rejected' if recipient.addr_spec.lower() in rejected_emails
-                        else default_status)
-            )
-            for recipient in payload.all_recipients
-        }
+        return recipient_status
 
-    def parse_inactive_recipients(self, msg):
-        """Return a list of 'inactive' email addresses from a Postmark "OK" response
+    @staticmethod
+    def _addr_specs_from_error_msg(error_msg, pattern):
+        """Extract a list of email addr_specs from Postmark error_msg.
 
-        :param str msg: the "Message" from the Postmark API response
+        pattern must be a re whose first group matches a comma-separated
+        list of addr_specs in the message
         """
-        # Example msg with inactive recipients:
-        #   "Message OK, but will not deliver to these inactive addresses: one@xample.com, two@example.com."
-        #   " Inactive recipients are ones that have generated a hard bounce or a spam complaint."
-        # Example msg with everything OK: "OK"
-        match = re.search(r'inactive addresses:\s*(.*)\.\s*Inactive recipients', msg)
+        match = re.search(pattern, error_msg, re.MULTILINE)
         if match:
             emails = match.group(1)  # "one@xample.com, two@example.com"
             return [email.strip().lower() for email in emails.split(',')]
@@ -101,15 +133,23 @@ class PostmarkPayload(RequestsPayload):
             # 'X-Postmark-Server-Token': see get_request_params (and set_esp_extra)
         }
         self.server_token = backend.server_token  # added to headers later, so esp_extra can override
-        self.all_recipients = []  # used for backend.parse_recipient_status
+        self.to_emails = []
+        self.merge_data = None
         super(PostmarkPayload, self).__init__(message, defaults, backend, headers=headers, *args, **kwargs)
 
     def get_api_endpoint(self):
+        batch_send = self.merge_data is not None and len(self.to_emails) > 1
         if 'TemplateId' in self.data or 'TemplateModel' in self.data:
-            # This is the one Postmark API documented to have a trailing slash. (Typo?)
-            return "email/withTemplate/"
+            if batch_send:
+                return "email/batchWithTemplates"
+            else:
+                # This is the one Postmark API documented to have a trailing slash. (Typo?)
+                return "email/withTemplate/"
         else:
-            return "email"
+            if batch_send:
+                return "email/batch"
+            else:
+                return "email"
 
     def get_request_params(self, api_url):
         params = super(PostmarkPayload, self).get_request_params(api_url)
@@ -117,7 +157,26 @@ class PostmarkPayload(RequestsPayload):
         return params
 
     def serialize_data(self):
-        return self.serialize_json(self.data)
+        data = self.data
+        api_endpoint = self.get_api_endpoint()
+        if api_endpoint == "email/batchWithTemplates":
+            data = {"Messages": [self.data_for_recipient(to) for to in self.to_emails]}
+        elif api_endpoint == "email/batch":
+            data = [self.data_for_recipient(to) for to in self.to_emails]
+        return self.serialize_json(data)
+
+    def data_for_recipient(self, to):
+        data = self.data.copy()
+        data["To"] = to.address
+        if self.merge_data and to.addr_spec in self.merge_data:
+            recipient_data = self.merge_data[to.addr_spec]
+            if "TemplateModel" in data:
+                # merge recipient_data into merge_global_data
+                data["TemplateModel"] = data["TemplateModel"].copy()
+                data["TemplateModel"].update(recipient_data)
+            else:
+                data["TemplateModel"] = recipient_data
+        return data
 
     #
     # Payload construction
@@ -136,7 +195,8 @@ class PostmarkPayload(RequestsPayload):
         if emails:
             field = recipient_type.capitalize()
             self.data[field] = ', '.join([email.address for email in emails])
-            self.all_recipients += emails  # used for backend.parse_recipient_status
+            if recipient_type == "to":
+                self.to_emails = emails
 
     def set_subject(self, subject):
         self.data["Subject"] = subject
@@ -204,7 +264,9 @@ class PostmarkPayload(RequestsPayload):
             if field in self.data and not self.data[field]:
                 del self.data[field]
 
-    # merge_data: Postmark doesn't support per-recipient substitutions
+    def set_merge_data(self, merge_data):
+        # late-bind
+        self.merge_data = merge_data
 
     def set_merge_global_data(self, merge_global_data):
         self.data["TemplateModel"] = merge_global_data

@@ -30,6 +30,13 @@ v4.2
 
 *In development*
 
+Features
+~~~~~~~~
+
+*  **Postmark:** Support per-recipient template `merge_data` and batch sending. (Batch
+   sending can be used with or without a template. See
+   `docs <https://anymail.readthedocs.io/en/stable/esps/postmark/#postmark-templates>`__.)
+
 Fixes
 ~~~~~
 

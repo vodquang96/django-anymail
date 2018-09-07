@@ -127,39 +127,49 @@ see :ref:`unsupported-features`.
 Batch sending/merge and ESP templates
 -------------------------------------
 
-Postmark supports :ref:`ESP stored templates <esp-stored-templates>`
-populated with global merge data for all recipients, but does not
-offer :ref:`batch sending <batch-send>` with per-recipient merge data.
-Anymail's :attr:`~anymail.message.AnymailMessage.merge_data`
-message attribute is not supported with the Postmark backend.
+Postmark offers both :ref:`ESP stored templates <esp-stored-templates>`
+and :ref:`batch sending <batch-send>` with per-recipient merge data.
+
+.. versionchanged:: 4.2
+
+    Added Postmark :attr:`~anymail.message.AnymailMessage.merge_data` and batch sending
+    support. (Earlier Anymail releases only supported
+    :attr:`~anymail.message.AnymailMessage.merge_global_data` with Postmark.)
 
 To use a Postmark template, set the message's
-:attr:`~anymail.message.AnymailMessage.template_id` to the numeric
-Postmark "TemplateID" and supply the "TemplateModel" using
-the :attr:`~anymail.message.AnymailMessage.merge_global_data`
-message attribute:
+:attr:`~anymail.message.AnymailMessage.template_id` to the numeric Postmark
+"TemplateID" (*not* its name or "TemplateAlias"). You can find a template's
+numeric id near the top right in Postmark's template editor.
+
+Supply the Postmark "TemplateModel" variables using Anymail's normalized
+:attr:`~anymail.message.AnymailMessage.merge_data` and
+:attr:`~anymail.message.AnymailMessage.merge_global_data` message attributes:
 
   .. code-block:: python
 
       message = EmailMessage(
           # (subject and body come from the template, so don't include those)
-          from_email="from@example.com",
-          to=["alice@example.com"]  # single recipient...
-          # ...multiple to emails would all get the same message
-          # (and would all see each other's emails in the "to" header)
+          to=["alice@example.com", "Bob <bob@example.com>"]
       )
-      message.template_id = 80801  # use this Postmark template
+      message.template_id = 80801  # Postmark template id
+      message.merge_data = {
+          'alice@example.com': {'name': "Alice", 'order_no': "12345"},
+          'bob@example.com': {'name': "Bob", 'order_no': "54321"},
+      }
       message.merge_global_data = {
-          'name': "Alice",
-          'order_no': "12345",
           'ship_date': "May 15",
-          'items': [
-              {'product': "Widget", 'price': "9.99"},
-              {'product': "Gadget", 'price': "17.99"},
-          ],
       }
 
 Postmark does not allow overriding the message's subject or body with a template.
+(You can customize the subject by including variables in the template's subject.)
+
+When you supply per-recipient :attr:`~anymail.message.AnymailMessage.merge_data`,
+Anymail automatically switches to Postmark's batch send API, so that
+each "to" recipient sees only their own email address. (Any cc's or bcc's will be
+duplicated for *every* to-recipient.)
+
+If you want to use batch sending with a regular message (without a template), set
+merge data to an empty dict: `message.merge_data = {}`.
 
 See this `Postmark blog post on templates`_ for more information.
 
