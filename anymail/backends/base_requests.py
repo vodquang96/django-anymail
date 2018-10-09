@@ -1,4 +1,7 @@
+from __future__ import print_function
+
 import requests
+import six
 from six.moves.urllib.parse import urljoin
 
 from anymail.utils import get_anymail_setting
@@ -32,6 +35,8 @@ class AnymailRequestsBackend(AnymailBaseBackend):
             self.session.headers["User-Agent"] = "django-anymail/{version}-{esp} {orig}".format(
                 esp=self.esp_name.lower(), version=__version__,
                 orig=self.session.headers.get("User-Agent", ""))
+            if self.debug_api_requests:
+                self.session.hooks['response'].append(self._dump_api_request)
             return True
 
     def close(self):
@@ -99,6 +104,33 @@ class AnymailRequestsBackend(AnymailBaseBackend):
             raise AnymailRequestsAPIError("Invalid JSON in %s API response" % self.esp_name,
                                           email_message=message, payload=payload, response=response,
                                           backend=self)
+
+    @staticmethod
+    def _dump_api_request(response, **kwargs):
+        """Print the request and response for debugging"""
+        # (This is not byte-for-byte, but a readable text representation that assumes
+        # UTF-8 encoding if encoded, and that omits the CR in CRLF line endings.
+        # If you need the raw bytes, configure HTTPConnection logging as shown
+        # in http://docs.python-requests.org/en/v3.0.0/api/#api-changes)
+        request = response.request  # a PreparedRequest
+        print(u"\n===== Anymail API request")
+        print(u"{method} {url}\n{headers}".format(
+            method=request.method, url=request.url,
+            headers=u"".join(u"{header}: {value}\n".format(header=header, value=value)
+                             for (header, value) in request.headers.items()),
+        ))
+        if request.body is not None:
+            body_text = (request.body if isinstance(request.body, six.text_type)
+                         else request.body.decode("utf-8", errors="replace")
+                         ).replace("\r\n", "\n")
+            print(body_text)
+        print(u"\n----- Response")
+        print(u"HTTP {status} {reason}\n{headers}\n{body}".format(
+            status=response.status_code, reason=response.reason,
+            headers=u"".join(u"{header}: {value}\n".format(header=header, value=value)
+                             for (header, value) in response.headers.items()),
+            body=response.text,  # Let Requests decode body content for us
+        ))
 
 
 class RequestsPayload(BasePayload):

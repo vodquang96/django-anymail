@@ -25,6 +25,20 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
+v4.3
+----
+
+*In development*
+
+Features
+~~~~~~~~
+
+*  Add (undocumented) DEBUG_API_REQUESTS Anymail setting. When enabled, prints raw
+   API request and response during send. Currently implemented only for Requests-based
+   backends (all but Amazon SES and SparkPost). Because this can expose API keys and
+   other sensitive info in log files, it should not be used in production.
+
+
 v4.2
 ----
 

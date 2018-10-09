@@ -29,6 +29,8 @@ class AnymailBaseBackend(BaseEmailBackend):
                                                                kwargs=kwargs, default=False)
         self.ignore_recipient_status = get_anymail_setting('ignore_recipient_status',
                                                            kwargs=kwargs, default=False)
+        self.debug_api_requests = get_anymail_setting('debug_api_requests',  # generate debug output
+                                                      kwargs=kwargs, default=False)
 
         # Merge SEND_DEFAULTS and <esp_name>_SEND_DEFAULTS settings
         send_defaults = get_anymail_setting('send_defaults', default={})  # but not from kwargs

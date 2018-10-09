@@ -12,6 +12,7 @@ from distutils.util import strtobool
 
 import six
 from django.test import Client
+from six.moves import StringIO
 
 
 def envbool(var, default=False):
@@ -172,6 +173,41 @@ class AnymailTestMixin:
         except (ValueError, AttributeError, TypeError):
             raise self.failureException(
                 msg or "%r is not a valid UUID" % uuid_str)
+
+    @contextmanager
+    def assertPrints(self, expected, match="contain", msg=None):
+        """Use as a context manager; checks that code writes `expected` to stdout.
+
+        `match` can be "contain", "equal", "start", "end", or the name of any str
+        method that takes one str argument and returns a boolean, or None to simply
+        capture stdout without checking it. Default is "contain".
+
+        Returns StringIO buffer; the output text is available as cm.getvalue().
+
+        >>> with self.assertPrints("foo") as cm:
+        ...     print("foo")
+        >>> self.assertNotIn("bar", cm.getvalue())
+        """
+        matchfn = {
+            "contain": "__contains__",
+            "equal": "__eq__",
+            "start": "startswith",
+            "end": "endswith",
+        }.get(match, match)
+        old_stdout = sys.stdout
+        buffer = StringIO()
+        try:
+            sys.stdout = buffer
+            yield buffer
+            if matchfn:
+                actual = buffer.getvalue()
+                bound_matchfn = getattr(actual, matchfn)
+                if not bound_matchfn(expected):
+                    raise self.failureException(
+                        msg or "Stdout {actual!r} does not {match} {expected!r}".format(
+                            actual=actual, match=match, expected=expected))
+        finally:
+            sys.stdout = old_stdout
 
 
 # Backported from Python 3.4
