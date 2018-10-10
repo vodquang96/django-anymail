@@ -103,8 +103,8 @@ class MailgunPayload(RequestsPayload):
                     filename if isinstance(filename, str) else filename.encode("utf-8"),
                     charset="utf-8")
                 form_data = form_data.replace(
-                    b'filename*=%s' % rfc2231_filename.encode("utf-8"),
-                    b'filename="%s"' % filename.encode("utf-8"))
+                    b'filename*=' + rfc2231_filename.encode("utf-8"),
+                    b'filename="' + filename.encode("utf-8") + b'"')
             params["data"] = form_data
             params["headers"]["Content-Type"] = prepared.headers["Content-Type"]  # multipart/form-data; boundary=...
             params["files"] = None  # these are now in the form_data body
