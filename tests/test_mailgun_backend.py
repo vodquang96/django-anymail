@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from datetime import date, datetime
+from textwrap import dedent
+
 try:
     from email import message_from_bytes
 except ImportError:
@@ -171,9 +173,50 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
     def test_unicode_attachment_correctly_decoded(self):
         self.message.attach(u"Une pièce jointe.html", u'<p>\u2019</p>', mimetype='text/html')
         self.message.send()
-        files = self.get_api_call_files()
-        attachments = [value for (field, value) in files if field == 'attachment']
-        self.assertEqual(len(attachments), 1)
+
+        # Verify the RFC 7578 compliance workaround has kicked in:
+        data = self.get_api_call_data().decode("utf-8")
+        self.assertNotIn("filename*=", data)  # No RFC 2231 encoding
+        self.assertIn(u'Content-Disposition: form-data; name="attachment"; filename="Une pièce jointe.html"', data)
+
+        files = self.get_api_call_files(required=False)
+        self.assertFalse(files)  # files should have been moved to formdata body
+
+    def test_rfc_7578_compliance(self):
+        # Check some corner cases in the workaround that undoes RFC 2231 multipart/form-data encoding...
+        self.message.subject = u"Testing for filename*=utf-8''problems"
+        self.message.body = u"The attached message should have an attachment named 'vedhæftet fil.txt'"
+        # A forwarded message with its own attachment:
+        forwarded_message = dedent("""\
+            MIME-Version: 1.0
+            From: sender@example.com
+            Subject: This is a test message
+            Content-Type: multipart/mixed; boundary="boundary"
+
+            --boundary
+            Content-Type: text/plain
+
+            This message has an attached file with a non-ASCII filename.
+            --boundary
+            Content-Type: text/plain; name*=utf-8''vedh%C3%A6ftet%20fil.txt
+            Content-Disposition: attachment; filename*=utf-8''vedh%C3%A6ftet%20fil.txt
+
+            This is an attachment.
+            --boundary--
+            """)
+        self.message.attach(u"besked med vedhæftede filer", forwarded_message, "message/rfc822")
+        self.message.send()
+
+        data = self.get_api_call_data().decode("utf-8").replace("\r\n", "\n")
+        # Top-level attachment (in form-data) should have RFC 7578 filename (raw Unicode):
+        self.assertIn(
+            u'Content-Disposition: form-data; name="attachment"; filename="besked med vedhæftede filer"', data)
+        # Embedded message/rfc822 attachment should retain its RFC 2231 encoded filename:
+        self.assertIn("Content-Type: text/plain; name*=utf-8''vedh%C3%A6ftet%20fil.txt", data)
+        self.assertIn("Content-Disposition: attachment; filename*=utf-8''vedh%C3%A6ftet%20fil.txt", data)
+        # References to RFC 2231 in message text should remain intact:
+        self.assertIn("Testing for filename*=utf-8''problems", data)
+        self.assertIn(u"The attached message should have an attachment named 'vedhæftet fil.txt'", data)
 
     def test_embedded_images(self):
         image_filename = SAMPLE_IMAGE_FILENAME

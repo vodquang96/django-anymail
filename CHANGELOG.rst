@@ -38,6 +38,14 @@ Features
    backends (all but Amazon SES and SparkPost). Because this can expose API keys and
    other sensitive info in log files, it should not be used in production.
 
+Fixes
+~~~~~
+
+*  **Mailgun:** Fix problem where attachments with non-ASCII filenames would be lost.
+   (Works around Requests/urllib3 issue encoding multipart/form-data filenames in a way
+   that isn't RFC 7578 compliant. Thanks to `@decibyte`_ for catching the problem and
+   `@costela`_ for identifying the related Mailgun API oddity.)
+
 
 v4.2
 ----
@@ -833,6 +841,8 @@ Features
 .. _#115: https://github.com/anymail/issues/115
 
 .. _@calvin: https://github.com/calvin
+.. _@costela: https://github.com/costela
+.. _@decibyte: https://github.com/decibyte
 .. _@joshkersey: https://github.com/joshkersey
 .. _@Lekensteyn: https://github.com/Lekensteyn
 .. _@lewistaylor: https://github.com/lewistaylor

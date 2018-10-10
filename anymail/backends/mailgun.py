@@ -1,4 +1,7 @@
 from datetime import datetime
+from email.utils import encode_rfc2231
+
+from requests import Request
 
 from ..exceptions import AnymailRequestsAPIError, AnymailError
 from ..message import AnymailRecipientStatus
@@ -78,6 +81,35 @@ class MailgunPayload(RequestsPayload):
                                backend=self.backend, email_message=self.message, payload=self)
         return "%s/messages" % self.sender_domain
 
+    def get_request_params(self, api_url):
+        params = super(MailgunPayload, self).get_request_params(api_url)
+        non_ascii_filenames = [filename
+                               for (field, (filename, content, mimetype)) in params["files"]
+                               if filename is not None and not isascii(filename)]
+        if non_ascii_filenames:
+            # Workaround https://github.com/requests/requests/issues/4652:
+            # Mailgun expects RFC 7578 compliant multipart/form-data, and is confused
+            # by Requests/urllib3's improper use of RFC 2231 encoded filename parameters
+            # ("filename*=utf-8''...") in Content-Disposition headers.
+            # The workaround is to pre-generate the (non-compliant) form-data body, and
+            # replace 'filename*={RFC 2231 encoded}' with 'filename="{UTF-8 bytes}"'.
+            # Replace _only_ the filenames that will be problems (not all "filename*=...")
+            # to minimize potential side effects--e.g., in attached messages that might
+            # have their own attachments with (correctly) RFC 2231 encoded filenames.
+            prepared = Request(**params).prepare()
+            form_data = prepared.body  # bytes
+            for filename in non_ascii_filenames:  # text
+                rfc2231_filename = encode_rfc2231(  # wants a str (text in PY3, bytes in PY2)
+                    filename if isinstance(filename, str) else filename.encode("utf-8"),
+                    charset="utf-8")
+                form_data = form_data.replace(
+                    b'filename*=%s' % rfc2231_filename.encode("utf-8"),
+                    b'filename="%s"' % filename.encode("utf-8"))
+            params["data"] = form_data
+            params["headers"]["Content-Type"] = prepared.headers["Content-Type"]  # multipart/form-data; boundary=...
+            params["files"] = None  # these are now in the form_data body
+        return params
+
     def serialize_data(self):
         self.populate_recipient_variables()
         return self.data
@@ -113,6 +145,7 @@ class MailgunPayload(RequestsPayload):
     def init_payload(self):
         self.data = {}   # {field: [multiple, values]}
         self.files = []  # [(field, multiple), (field, values)]
+        self.headers = {}
 
     def set_from_email_list(self, emails):
         # Mailgun supports multiple From email addresses
@@ -204,3 +237,15 @@ class MailgunPayload(RequestsPayload):
         # Allow override of sender_domain via esp_extra
         # (but pop it out of params to send to Mailgun)
         self.sender_domain = self.data.pop("sender_domain", self.sender_domain)
+
+
+def isascii(s):
+    """Returns True if str s is entirely ASCII characters.
+
+    (Compare to Python 3.7 `str.isascii()`.)
+    """
+    try:
+        s.encode("ascii")
+    except UnicodeEncodeError:
+        return False
+    return True

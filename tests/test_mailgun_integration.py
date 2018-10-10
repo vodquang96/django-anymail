@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import unicode_literals
+
 import os
 import logging
 import unittest
@@ -116,7 +120,7 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
             track_opens=True,
         )
         message.attach("attachment1.txt", "Here is some\ntext for you", "text/plain")
-        message.attach("attachment2.csv", "ID,Name\n1,3", "text/csv")
+        message.attach("vedhæftet fil.csv", "ID,Name\n1,3", "text/csv")
         cid = message.attach_inline_image_file(sample_image_path(), domain=MAILGUN_TEST_DOMAIN)
         message.attach_alternative(
             "<div>This is the <i>html</i> body <img src='cid:%s'></div>" % cid,
@@ -151,7 +155,7 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         self.assertEqual(len(attachments), 2)  # because inline image shouldn't be an attachment
         self.assertEqual(attachments[0]["filename"], "attachment1.txt")
         self.assertEqual(attachments[0]["content-type"], "text/plain")
-        self.assertEqual(attachments[1]["filename"], "attachment2.csv")
+        self.assertEqual(attachments[1]["filename"], "vedhæftet fil.csv")
         self.assertEqual(attachments[1]["content-type"], "text/csv")
 
         # No other fields are verifiable from the event data.
