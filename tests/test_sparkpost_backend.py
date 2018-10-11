@@ -315,10 +315,11 @@ class SparkPostBackendStandardEmailTests(SparkPostBackendMockAPITestCase):
 
     def test_api_error_includes_details(self):
         """AnymailAPIError should include ESP's error message"""
-        failure_response = b"""{ "errors": [ {
-            "message": "Something went wrong",
-            "description": "Helpful explanation from your ESP"
-        } ] }"""
+        failure_response = b"""{
+            "errors": [{
+                "message": "Helpful explanation from your ESP"
+            }]
+        }"""
         self.set_mock_failure(raw=failure_response)
         with self.assertRaisesMessage(AnymailAPIError, "Helpful explanation from your ESP"):
             self.message.send()
