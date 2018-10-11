@@ -188,9 +188,13 @@ class MailgunPayload(RequestsPayload):
         if attachment.inline:
             field = "inline"
             name = attachment.cid
+            if not name:
+                self.unsupported_feature("inline attachments without Content-ID")
         else:
             field = "attachment"
             name = attachment.name
+            if not name:
+                self.unsupported_feature("attachments without filenames")
         self.files.append(
             (field, (name, attachment.content, attachment.mimetype))
         )

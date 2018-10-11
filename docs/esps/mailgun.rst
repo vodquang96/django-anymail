@@ -147,11 +147,40 @@ values directly to Mailgun. You can use any of the (non-file) parameters listed 
 Limitations and quirks
 ----------------------
 
+**Attachments require filenames**
+  Mailgun has an `undocumented API requirement`_ that every attachment must have a
+  filename. Attachments with missing filenames are silently dropped from the sent
+  message. Similarly, every inline attachment must have a :mailheader:`Content-ID`.
+
+  To avoid unexpected behavior, Anymail will raise an
+  :exc:`~anymail.exceptions.AnymailUnsupportedFeature` error if you attempt to send
+  a message through Mailgun with any attachments that don't have filenames (or inline
+  attachments that don't have :mailheader:`Content-ID`\s).
+
+  Ensure your attachments have filenames by using
+  :class:`message.attach_file(filename) <django.core.mail.EmailMessage>`,
+  :class:`message.attach(content, filename="...") <django.core.mail.EmailMessage>`,
+  or if you are constructing your own MIME objects to attach,
+  :meth:`mimeobj.add_header("Content-Disposition", "attachment", filename="...") <email.message.Message.add_header>`.
+
+  Ensure your inline attachments have Content-IDs by using Anymail's
+  :ref:`inline image helpers <inline-images>`, or if you are constructing your own MIME objects,
+  :meth:`mimeobj.add_header("Content-ID", "...") <email.message.Message.add_header>` and
+  :meth:`mimeobj.add_header("Content-Disposition", "inline") <email.message.Message.add_header>`.
+
+  .. versionchanged:: 4.3
+
+      Earlier Anymail releases did not check for these cases, and attachments
+      without filenames/Content-IDs would be ignored by Mailgun without notice.
+
 **Envelope sender uses only domain**
   Anymail's :attr:`~anymail.message.AnymailMessage.envelope_sender` is used to
   select your Mailgun :ref:`sender domain <mailgun-sender-domain>`. For
   obvious reasons, only the domain portion applies. You can use anything before
   the @, and it will be ignored.
+
+.. _undocumented API requirement:
+    https://mailgun.uservoice.com/forums/156243-feature-requests/suggestions/35668606
 
 
 .. _mailgun-templates:

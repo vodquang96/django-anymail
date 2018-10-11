@@ -138,16 +138,19 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         png_content = b"PNG\xb4 pretend this is the contents of a png file"
         self.message.attach(filename="test.png", content=png_content)
 
-        # Should work with a MIMEBase object (also tests no filename)...
+        # Should work with a MIMEBase object...
         pdf_content = b"PDF\xb4 pretend this is valid pdf data"
         mimeattachment = MIMEBase('application', 'pdf')
         mimeattachment.set_payload(pdf_content)
+        mimeattachment["Content-Disposition"] = 'attachment; filename="custom filename"'  # Mailgun requires filename
         self.message.attach(mimeattachment)
 
         # And also with an message/rfc822 attachment
         forwarded_email_content = sample_email_content()
         forwarded_email = message_from_bytes(forwarded_email_content)
         rfcmessage = MIMEBase("message", "rfc822")
+        rfcmessage.add_header("Content-Disposition", "attachment",
+                              filename="forwarded message")  # Mailgun requires filename
         rfcmessage.attach(forwarded_email)
         self.message.attach(rfcmessage)
 
@@ -157,13 +160,15 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         self.assertEqual(len(attachments), 4)
         self.assertEqual(attachments[0], ('test.txt', text_content, 'text/plain'))
         self.assertEqual(attachments[1], ('test.png', png_content, 'image/png'))  # type inferred from filename
-        self.assertEqual(attachments[2], (None, pdf_content, 'application/pdf'))  # no filename
+        self.assertEqual(attachments[2], ("custom filename", pdf_content, 'application/pdf'))
         # Email messages can get a bit changed with respect to whitespace characters
         # in headers, without breaking the message, so we tolerate that:
-        self.assertEqual(attachments[3][0], None)
+        self.assertEqual(attachments[3][0], "forwarded message")
         self.assertEqualIgnoringHeaderFolding(
             attachments[3][1],
-            b'Content-Type: message/rfc822\nMIME-Version: 1.0\n\n' + forwarded_email_content)
+            b'Content-Type: message/rfc822\nMIME-Version: 1.0\n' +
+            b'Content-Disposition: attachment; filename="forwarded message"\n' +
+            b'\n' + forwarded_email_content)
         self.assertEqual(attachments[3][2], 'message/rfc822')
 
         # Make sure the image attachment is not treated as embedded:
@@ -218,6 +223,23 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         self.assertIn("Testing for filename*=utf-8''problems", data)
         self.assertIn(u"The attached message should have an attachment named 'vedhæftet fil.txt'", data)
 
+    def test_attachment_missing_filename(self):
+        """Mailgun silently drops attachments without filenames, so warn the caller"""
+        mimeattachment = MIMEBase('application', 'pdf')
+        mimeattachment.set_payload(b"PDF\xb4 pretend this is valid pdf data")
+        mimeattachment["Content-Disposition"] = 'attachment'
+        self.message.attach(mimeattachment)
+
+        with self.assertRaisesMessage(AnymailUnsupportedFeature, "attachments without filenames"):
+            self.message.send()
+
+    def test_inline_missing_contnet_id(self):
+        mimeattachment = MIMEImage(b"imagedata", "x-fakeimage")
+        mimeattachment["Content-Disposition"] = 'inline; filename="fakeimage.txt"'
+        self.message.attach(mimeattachment)
+        with self.assertRaisesMessage(AnymailUnsupportedFeature, "inline attachments without Content-ID"):
+            self.message.send()
+
     def test_embedded_images(self):
         image_filename = SAMPLE_IMAGE_FILENAME
         image_path = sample_image_path(image_filename)
@@ -247,6 +269,7 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         self.message.attach_file(image_path)  # option 1: attach as a file
 
         image = MIMEImage(image_data)  # option 2: construct the MIMEImage and attach it directly
+        image.set_param("filename", "custom-filename", "Content-Disposition")  # Mailgun requires filenames
         self.message.attach(image)
 
         self.message.send()
@@ -254,7 +277,7 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         attachments = [value for (field, value) in files if field == 'attachment']
         self.assertEqual(len(attachments), 2)
         self.assertEqual(attachments[0], (image_filename, image_data, 'image/png'))
-        self.assertEqual(attachments[1], (None, image_data, 'image/png'))  # name unknown -- not attached as file
+        self.assertEqual(attachments[1], ("custom-filename", image_data, 'image/png'))
         # Make sure the image attachments are not treated as inline:
         inlines = [value for (field, value) in files if field == 'inline']
         self.assertEqual(len(inlines), 0)

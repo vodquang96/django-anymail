@@ -45,10 +45,14 @@ Features
 Fixes
 ~~~~~
 
+*  **Mailgun:** Raise `AnymailUnsupportedFeature` error when attempting to send an
+   attachment without a filename (or inline attachment without a *Content-ID*), because
+   Mailgun silently drops these attachments from the sent message. (See
+   `docs <https://anymail.readthedocs.io/en/latest/esps/mailgun/#limitations-and-quirks>`__.
+   Thanks `@costela`_ for identifying this undocumented Mailgun API limitation.)
 *  **Mailgun:** Fix problem where attachments with non-ASCII filenames would be lost.
    (Works around Requests/urllib3 issue encoding multipart/form-data filenames in a way
-   that isn't RFC 7578 compliant. Thanks to `@decibyte`_ for catching the problem and
-   `@costela`_ for identifying the related Mailgun API oddity.)
+   that isn't RFC 7578 compliant. Thanks to `@decibyte`_ for catching the problem.)
 
 
 v4.2
