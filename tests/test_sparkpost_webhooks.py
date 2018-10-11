@@ -207,6 +207,34 @@ class SparkPostDeliveryTestCase(WebhookTestCase):
         self.assertEqual(event.recipient, "suppressed@example.com")
         self.assertEqual(event.mta_response, "554 5.7.1 recipient address suppressed due to customer policy")
 
+    def test_generation_failure_event(self):
+        # This is what you get from a template rendering failure
+        raw_events = [{"msys": {"message_event": {
+            "type": "generation_failure",
+            "error_code": "554",
+            "event_id": "139013368081587254",
+            "raw_rcpt_to": "recipient@example.com",
+            "raw_reason": "554 5.3.3 [internal] Error while rendering part html: ...",
+            "rcpt_subs": {"name": "Alice", "order_no": "12345"},
+            "rcpt_to": "recipient@example.com",
+            "reason": "554 5.3.3 [internal] Error while rendering part html: ...",
+            "tdate": "2018-10-11T23:24:45.000Z",
+            "template_id": "test-template",
+            "template_version": "3",
+            "transmission_id": "139013368081177607",
+            "timestamp": "2018-10-11T23:24:45.000+00:00"
+        }}}]
+        response = self.client.post('/anymail/sparkpost/tracking/',
+                                    content_type='application/json', data=json.dumps(raw_events))
+        self.assertEqual(response.status_code, 200)
+        kwargs = self.assert_handler_called_once_with(self.tracking_handler, sender=SparkPostTrackingWebhookView,
+                                                      event=ANY, esp_name='SparkPost')
+        event = kwargs['event']
+        self.assertIsInstance(event, AnymailTrackingEvent)
+        self.assertEqual(event.event_type, "failed")
+        self.assertEqual(event.recipient, "recipient@example.com")
+        self.assertEqual(event.mta_response, "554 5.3.3 [internal] Error while rendering part html: ...")
+
     def test_bounce_challenge_response(self):
         # Test for changing initial event_type based on bounce_class
         raw_events = [{"msys": {"message_event": {
