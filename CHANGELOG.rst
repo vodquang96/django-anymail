@@ -28,7 +28,7 @@ Release history
 v4.3
 ----
 
-*In development*
+*2018-10-11*
 
 Features
 ~~~~~~~~
@@ -37,10 +37,6 @@ Features
    header as inline, matching the behavior of many email clients. For maximum
    compatibility, you should always set both (or use Anymail's inline helper functions).
    (Thanks `@costela`_.)
-*  Add (undocumented) DEBUG_API_REQUESTS Anymail setting. When enabled, prints raw
-   API request and response during send. Currently implemented only for Requests-based
-   backends (all but Amazon SES and SparkPost). Because this can expose API keys and
-   other sensitive info in log files, it should not be used in production.
 
 Fixes
 ~~~~~
@@ -48,11 +44,18 @@ Fixes
 *  **Mailgun:** Raise `AnymailUnsupportedFeature` error when attempting to send an
    attachment without a filename (or inline attachment without a *Content-ID*), because
    Mailgun silently drops these attachments from the sent message. (See
-   `docs <https://anymail.readthedocs.io/en/latest/esps/mailgun/#limitations-and-quirks>`__.
+   `docs <https://anymail.readthedocs.io/en/stable/esps/mailgun/#limitations-and-quirks>`__.
    Thanks `@costela`_ for identifying this undocumented Mailgun API limitation.)
 *  **Mailgun:** Fix problem where attachments with non-ASCII filenames would be lost.
    (Works around Requests/urllib3 issue encoding multipart/form-data filenames in a way
    that isn't RFC 7578 compliant. Thanks to `@decibyte`_ for catching the problem.)
+
+Other
+~~~~~
+*  Add (undocumented) DEBUG_API_REQUESTS Anymail setting. When enabled, prints raw
+   API request and response during send. Currently implemented only for Requests-based
+   backends (all but Amazon SES and SparkPost). Because this can expose API keys and
+   other sensitive info in log files, it should not be used in production.
 
 
 v4.2
