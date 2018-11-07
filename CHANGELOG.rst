@@ -25,6 +25,28 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
+v5.0
+----
+
+*In development*
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+* **Mailgun:** Anymail's status tracking webhooks now report Mailgun "temporary failure"
+  events as Anymail's normalized "deferred" `event_type`. (Previously they were reported
+  as "bounced", lumping them in with permanent failures.) The new behavior is consistent
+  with how Anymail handles other ESP's tracking notifications. In the unlikely case your
+  code depended on "temporary failure" showing up as "bounced" you will need to update it.
+  (Thanks `@costela`_.)
+
+Fixes
+~~~~~
+
+* **Mailgun:** Improve error reporting when an inbound route is accidentally pointed
+  at Anymail's tracking webhook url or vice versa.
+
+
 v4.3
 ----
 
