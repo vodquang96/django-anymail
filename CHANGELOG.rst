@@ -28,7 +28,7 @@ Release history
 v5.0
 ----
 
-*In development*
+*2018-11-07*
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
