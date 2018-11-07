@@ -7,11 +7,14 @@ from django.test import override_settings
 from django.utils.timezone import utc
 from mock import ANY
 
+from anymail.exceptions import AnymailConfigurationError
 from anymail.inbound import AnymailInboundMessage
 from anymail.signals import AnymailInboundEvent
 from anymail.webhooks.mailgun import MailgunInboundWebhookView
 
-from .test_mailgun_webhooks import TEST_API_KEY, mailgun_sign_legacy_payload, querydict_to_postdict
+from .test_mailgun_webhooks import (
+    TEST_API_KEY, mailgun_sign_payload,
+    mailgun_sign_legacy_payload, querydict_to_postdict)
 from .utils import sample_image_content, sample_email_content
 from .webhook_cases import WebhookTestCase
 
@@ -174,3 +177,34 @@ class MailgunInboundTestCase(WebhookTestCase):
         self.assertEqual(message.subject, 'Raw MIME test')
         self.assertEqual(message.text, u"It's a body\N{HORIZONTAL ELLIPSIS}\n")
         self.assertEqual(message.html, u"""<div dir="ltr">It's a body\N{HORIZONTAL ELLIPSIS}</div>\n""")
+
+    def test_misconfigured_tracking(self):
+        raw_event = mailgun_sign_payload({
+            "event-data": {
+                "event": "clicked",
+                "timestamp": 1534109600.089676,
+                "recipient": "recipient@example.com",
+                "url": "https://example.com/test"
+            }
+        })
+        with self.assertRaisesMessage(
+            AnymailConfigurationError,
+            "You seem to have set Mailgun's *clicked tracking* webhook"
+            " to Anymail's Mailgun *inbound* webhook URL."
+        ):
+            self.client.post('/anymail/mailgun/inbound/',
+                             data=json.dumps(raw_event), content_type='application/json')
+
+    def test_misconfigured_tracking_legacy(self):
+        raw_event = mailgun_sign_legacy_payload({
+            'domain': 'example.com',
+            'message-headers': '[]',
+            'recipient': 'recipient@example.com',
+            'event': 'delivered',
+        })
+        with self.assertRaisesMessage(
+            AnymailConfigurationError,
+            "You seem to have set Mailgun's *delivered tracking* webhook"
+            " to Anymail's Mailgun *inbound* webhook URL."
+        ):
+            self.client.post('/anymail/mailgun/inbound/', data=raw_event)

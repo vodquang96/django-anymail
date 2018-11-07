@@ -8,6 +8,7 @@ from django.test import override_settings
 from django.utils.timezone import utc
 from mock import ANY
 
+from anymail.exceptions import AnymailConfigurationError
 from anymail.signals import AnymailTrackingEvent
 from anymail.webhooks.mailgun import MailgunTrackingWebhookView
 
@@ -698,3 +699,16 @@ class MailgunLegacyTestCase(WebhookTestCase):
         kwargs = self.assert_handler_called_once_with(self.tracking_handler)
         event = kwargs['event']
         self.assertEqual(event.tags, ["tag1", "tag2"])
+
+    def test_misconfigured_inbound(self):
+        raw_event = mailgun_sign_legacy_payload({
+            'recipient': 'test@inbound.example.com',
+            'sender': 'envelope-from@example.org',
+            'message-headers': '[]',
+            'body-plain': 'Test body plain',
+            'body-html': '<div>Test body html</div>',
+        })
+
+        errmsg = "You seem to have set Mailgun's *inbound* route to Anymail's Mailgun *tracking* webhook URL."
+        with self.assertRaisesMessage(AnymailConfigurationError, errmsg):
+            self.client.post('/anymail/mailgun/tracking/', data=raw_event)

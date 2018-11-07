@@ -7,7 +7,7 @@ from django.utils.crypto import constant_time_compare
 from django.utils.timezone import utc
 
 from .base import AnymailBaseWebhookView
-from ..exceptions import AnymailWebhookValidationFailure, AnymailInvalidAddress
+from ..exceptions import AnymailConfigurationError, AnymailWebhookValidationFailure, AnymailInvalidAddress
 from ..inbound import AnymailInboundMessage
 from ..signals import inbound, tracking, AnymailInboundEvent, AnymailTrackingEvent, EventType, RejectReason
 from ..utils import get_anymail_setting, combine, querydict_getfirst, parse_single_address
@@ -200,6 +200,12 @@ class MailgunTrackingWebhookView(MailgunBaseWebhookView):
         # to avoid potential conflicting user-data.
         esp_event.getfirst = querydict_getfirst.__get__(esp_event)
 
+        if 'event' not in esp_event and 'sender' in esp_event:
+            # Inbound events don't (currently) have an event field
+            raise AnymailConfigurationError(
+                "You seem to have set Mailgun's *inbound* route "
+                "to Anymail's Mailgun *tracking* webhook URL.")
+
         event_type = self.legacy_event_types.get(esp_event.getfirst('event'), EventType.UNKNOWN)
         timestamp = datetime.fromtimestamp(int(esp_event['timestamp']), tz=utc)  # use *last* value of timestamp
         # Message-Id is not documented for every event, but seems to always be included.
@@ -319,12 +325,27 @@ class MailgunInboundWebhookView(MailgunBaseWebhookView):
     signal = inbound
 
     def parse_events(self, request):
+        if request.content_type == "application/json":
+            esp_event = json.loads(request.body.decode('utf-8'))
+            event_type = esp_event.get('event-data', {}).get('event', '')
+            raise AnymailConfigurationError(
+                "You seem to have set Mailgun's *%s tracking* webhook "
+                "to Anymail's Mailgun *inbound* webhook URL. "
+                "(Or Mailgun has changed inbound events to use json.)"
+                % event_type)
         return [self.esp_to_anymail_event(request)]
 
     def esp_to_anymail_event(self, request):
         # Inbound uses the entire Django request as esp_event, because we need POST and FILES.
         # Note that request.POST is case-sensitive (unlike email.message.Message headers).
         esp_event = request
+
+        if request.POST.get('event', 'inbound') != 'inbound':
+            # (Legacy) tracking event
+            raise AnymailConfigurationError(
+                "You seem to have set Mailgun's *%s tracking* webhook "
+                "to Anymail's Mailgun *inbound* webhook URL." % request.POST['event'])
+
         if 'body-mime' in request.POST:
             # Raw-MIME
             message = AnymailInboundMessage.parse_raw_mime(request.POST['body-mime'])
