@@ -137,9 +137,14 @@ and :ref:`batch sending <batch-send>` with per-recipient merge data.
     :attr:`~anymail.message.AnymailMessage.merge_global_data` with Postmark.)
 
 To use a Postmark template, set the message's
-:attr:`~anymail.message.AnymailMessage.template_id` to the numeric Postmark
-"TemplateID" (*not* its name or "TemplateAlias"). You can find a template's
-numeric id near the top right in Postmark's template editor.
+:attr:`~anymail.message.AnymailMessage.template_id` to either the numeric Postmark
+"TemplateID" or its string "TemplateAlias" (which is *not* the template's name).
+You can find a template's numeric id near the top right in Postmark's template editor,
+and set the alias near the top right above the name.
+
+.. versionchanged:: 5.0
+
+    Earlier Anymail releases only allowed numeric template IDs.
 
 Supply the Postmark "TemplateModel" variables using Anymail's normalized
 :attr:`~anymail.message.AnymailMessage.merge_data` and
@@ -151,7 +156,7 @@ Supply the Postmark "TemplateModel" variables using Anymail's normalized
           # (subject and body come from the template, so don't include those)
           to=["alice@example.com", "Bob <bob@example.com>"]
       )
-      message.template_id = 80801  # Postmark template id
+      message.template_id = 80801  # Postmark template id or alias
       message.merge_data = {
           'alice@example.com': {'name': "Alice", 'order_no': "12345"},
           'bob@example.com': {'name': "Bob", 'order_no': "54321"},

@@ -40,6 +40,12 @@ Breaking changes
   code depended on "temporary failure" showing up as "bounced" you will need to update it.
   (Thanks `@costela`_.)
 
+Features
+~~~~~~~~
+
+* **Postmark:** Allow either template alias (string) or numeric template id for
+  Anymail's `template_id` when sending with Postmark templates.
+
 Fixes
 ~~~~~
 

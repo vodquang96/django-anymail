@@ -385,6 +385,17 @@ class PostmarkBackendAnymailFeatureTests(PostmarkBackendMockAPITestCase):
         self.assertNotIn('HtmlBody', data)
         self.assertNotIn('TextBody', data)
 
+    def test_template_alias(self):
+        # Anymail template_id can be either Postmark TemplateId or TemplateAlias
+        message = AnymailMessage(
+            from_email='from@example.com', to=['to@example.com'],
+            template_id='welcome-message',
+        )
+        message.send()
+        self.assert_esp_called('/email/withTemplate/')
+        data = self.get_api_call_json()
+        self.assertEqual(data['TemplateAlias'], 'welcome-message')
+
     def test_merge_data(self):
         self.set_mock_response(raw=json.dumps([{
             "ErrorCode": 0,

@@ -139,7 +139,7 @@ class PostmarkPayload(RequestsPayload):
 
     def get_api_endpoint(self):
         batch_send = self.merge_data is not None and len(self.to_emails) > 1
-        if 'TemplateId' in self.data or 'TemplateModel' in self.data:
+        if 'TemplateAlias' in self.data or 'TemplateId' in self.data or 'TemplateModel' in self.data:
             if batch_send:
                 return "email/batchWithTemplates"
             else:
@@ -257,7 +257,11 @@ class PostmarkPayload(RequestsPayload):
         self.data["TrackOpens"] = track_opens
 
     def set_template_id(self, template_id):
-        self.data["TemplateId"] = template_id
+        try:
+            self.data["TemplateId"] = int(template_id)
+        except ValueError:
+            self.data["TemplateAlias"] = template_id
+
         # Subject, TextBody, and HtmlBody aren't allowed with TemplateId;
         # delete Django default subject and body empty strings:
         for field in ("Subject", "TextBody", "HtmlBody"):
