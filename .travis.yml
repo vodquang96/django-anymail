@@ -25,21 +25,21 @@ matrix:
     - { env: DJANGO=1.11, python: 3.4 }
     - { env: DJANGO=1.11, python: 3.5 }
     - { env: DJANGO=1.11, python: 3.6 }
-    - { env: DJANGO=1.11, python: pypy }
+    - { env: DJANGO=1.11, python: pypy2.7-6.0 }
     # Django 2.0: Python 3.5+
     - { env: DJANGO=2.0, python: 3.5 }
     - { env: DJANGO=2.0, python: 3.6 }
-    - { env: DJANGO=2.0, python: pypy3 }
+    - { env: DJANGO=2.0, python: pypy3.5-6.0 }
     # Django 2.1: Python 3.5, 3.6, or 3.7
     - { env: DJANGO=2.1, python: 3.5 }
     - { env: DJANGO=2.1 RUN_LIVE_TESTS=true, python: 3.6 }
     - { env: DJANGO=2.1, python: 3.7 }
-    - { env: DJANGO=2.1, python: pypy3 }
+    - { env: DJANGO=2.1, python: pypy3.5-6.0 }
     # Django 2.2: Python 3.5, 3.6, or 3.7
     - { env: DJANGO=2.2, python: 3.5 }
     - { env: DJANGO=2.2, python: 3.6 }
     - { env: DJANGO=2.2, python: 3.7 }
-    - { env: DJANGO=2.2, python: pypy3 }
+    - { env: DJANGO=2.2, python: pypy3.5-6.0 }
     # Django development master (direct from GitHub source):
     - { env: DJANGO=master, python: 3.6 }
 
