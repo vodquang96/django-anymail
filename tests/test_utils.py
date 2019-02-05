@@ -25,7 +25,8 @@ from anymail.utils import (
     Attachment,
     is_lazy, force_non_lazy, force_non_lazy_dict, force_non_lazy_list,
     update_deep,
-    get_request_uri, get_request_basic_auth, parse_rfc2822date, querydict_getfirst)
+    get_request_uri, get_request_basic_auth, parse_rfc2822date, querydict_getfirst,
+    CaseInsensitiveCasePreservingDict)
 
 
 class ParseAddressListTests(SimpleTestCase):
@@ -415,3 +416,28 @@ class LazyErrorTests(SimpleTestCase):
         lazy = _LazyError(ValueError("lazy failure"))  # creating doesn't cause error
         with self.assertRaisesMessage(ValueError, "lazy failure"):
             self.unused = lazy()  # call *does* cause error
+
+
+class CaseInsensitiveCasePreservingDictTests(SimpleTestCase):
+    def setUp(self):
+        self.dict = CaseInsensitiveCasePreservingDict()
+        self.dict["Accept"] = "application/text+xml"
+        self.dict["accEPT"] = "application/json"
+
+    def test_preserves_first_key(self):
+        self.assertEqual(list(self.dict.keys()), ["Accept"])
+
+    def test_copy(self):
+        copy = self.dict.copy()
+        self.assertIsNot(copy, self.dict)
+        self.assertEqual(copy, self.dict)
+        # Here's why the superclass CaseInsensitiveDict.copy is insufficient:
+        self.assertIsInstance(copy, CaseInsensitiveCasePreservingDict)
+
+    def test_get_item(self):
+        self.assertEqual(self.dict["accept"], "application/json")
+        self.assertEqual(self.dict["Accept"], "application/json")
+        self.assertEqual(self.dict["accEPT"], "application/json")
+
+    # The base CaseInsensitiveDict functionality is well-tested in Requests,
+    # so we don't repeat it here.

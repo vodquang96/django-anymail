@@ -12,6 +12,7 @@ from django.core.mail.message import sanitize_address, DEFAULT_ATTACHMENT_MIME_T
 from django.utils.encoding import force_text
 from django.utils.functional import Promise
 from django.utils.timezone import utc, get_fixed_timezone
+from requests.structures import CaseInsensitiveDict
 from six.moves.urllib.parse import urlsplit, urlunsplit
 
 try:
@@ -571,3 +572,34 @@ def parse_rfc2822date(s):
     except (IndexError, TypeError, ValueError):
         # despite the docs, parsedate_to_datetime often dies on unparseable input
         return None
+
+
+class CaseInsensitiveCasePreservingDict(CaseInsensitiveDict):
+    """A dict with case-insensitive keys, which preserves the *first* key set.
+
+    >>> cicpd = CaseInsensitiveCasePreservingDict()
+    >>> cicpd["Accept"] = "application/text+xml"
+    >>> cicpd["accEPT"] = "application/json"
+    >>> cicpd["accept"]
+    "application/json"
+    >>> cicpd.keys()
+    ["Accept"]
+
+    Compare to CaseInsensitiveDict, which preserves *last* key set:
+    >>> cid = CaseInsensitiveCasePreservingDict()
+    >>> cid["Accept"] = "application/text+xml"
+    >>> cid["accEPT"] = "application/json"
+    >>> cid.keys()
+    ["accEPT"]
+    """
+    def __setitem__(self, key, value):
+        _k = key.lower()
+        try:
+            # retrieve earlier matching key, if any
+            key, _ = self._store[_k]
+        except KeyError:
+            pass
+        self._store[_k] = (key, value)
+
+    def copy(self):
+        return self.__class__(self._store.values())
