@@ -25,6 +25,28 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
+Unreleased
+----------
+
+*In development*
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+* **Postmark:** Anymail's `message.anymail_status.recipients[email]` no longer
+  lowercases the recipient's email address. For consistency with other ESPs, it now
+  uses the recipient email with whatever case was used in the sent message. If your
+  code is doing something like `message.anymail_status.recipients[email.lower()]`,
+  you should remove the `.lower()`
+
+Fixes
+~~~~~
+
+* **Postmark:** Don't error if a message is sent with only Cc and/or Bcc recipients
+  (but no To addresses). Also, `message.anymail_status.recipients[email]` now includes
+  send status for Cc and Bcc recipients. (Thanks to `@ailionx`_ for reporting the error.)
+
+
 v5.0
 ----
 
@@ -879,6 +901,7 @@ Features
 .. _#112: https://github.com/anymail/issues/112
 .. _#115: https://github.com/anymail/issues/115
 
+.. _@ailionx: https://github.com/ailionx
 .. _@calvin: https://github.com/calvin
 .. _@costela: https://github.com/costela
 .. _@decibyte: https://github.com/decibyte

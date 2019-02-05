@@ -550,6 +550,27 @@ class PostmarkBackendAnymailFeatureTests(PostmarkBackendMockAPITestCase):
         self.assertEqual(msg.anymail_status.esp_response.content, response_content)
 
     # noinspection PyUnresolvedReferences
+    def test_send_without_to_attaches_anymail_status(self):
+        """The anymail_status should be attached even if there are no `to` recipients"""
+        # Despite Postmark's docs, the "To" field is *not* required if cc or bcc is provided.
+        response_content = b"""{
+            "SubmittedAt": "2019-01-28T13:54:35.5813997-05:00",
+            "MessageID":"abcdef01-2345-6789-0123-456789abcdef",
+            "ErrorCode":0,
+            "Message":"OK"
+        }"""
+        self.set_mock_response(raw=response_content)
+        msg = mail.EmailMessage('Subject', 'Message', 'from@example.com', cc=['cc@example.com'],)
+        sent = msg.send()
+        self.assertEqual(sent, 1)
+        self.assertEqual(msg.anymail_status.status, {'sent'})
+        self.assertEqual(msg.anymail_status.message_id, 'abcdef01-2345-6789-0123-456789abcdef')
+        self.assertEqual(msg.anymail_status.recipients['cc@example.com'].status, 'sent')
+        self.assertEqual(msg.anymail_status.recipients['cc@example.com'].message_id,
+                         'abcdef01-2345-6789-0123-456789abcdef')
+        self.assertEqual(msg.anymail_status.esp_response.content, response_content)
+
+    # noinspection PyUnresolvedReferences
     def test_send_failed_anymail_status(self):
         """ If the send fails, anymail_status should contain initial values"""
         self.set_mock_response(status_code=500)
@@ -596,11 +617,11 @@ class PostmarkBackendRecipientsRefusedTests(PostmarkBackendMockAPITestCase):
                 b'Inactive recipients are ones that have generated a hard bounce or a spam complaint."}'
         )
         msg = mail.EmailMessage('Subject', 'Body', 'from@example.com',
-                                ['hardbounce@example.com', 'Hates Spam <spam@example.com>'])
+                                ['HardBounce@example.com', 'Hates Spam <spam@example.com>'])
         with self.assertRaises(AnymailRecipientsRefused):
             msg.send()
         status = msg.anymail_status
-        self.assertEqual(status.recipients['hardbounce@example.com'].status, 'rejected')
+        self.assertEqual(status.recipients['HardBounce@example.com'].status, 'rejected')
         self.assertEqual(status.recipients['spam@example.com'].status, 'rejected')
 
     def test_recipients_invalid(self):
@@ -608,11 +629,11 @@ class PostmarkBackendRecipientsRefusedTests(PostmarkBackendMockAPITestCase):
             status_code=422,
             raw=b"""{"ErrorCode":300,"Message":"Invalid 'To' address: 'invalid@localhost'."}"""
         )
-        msg = mail.EmailMessage('Subject', 'Body', 'from@example.com', ['invalid@localhost'])
+        msg = mail.EmailMessage('Subject', 'Body', 'from@example.com', ['Invalid@LocalHost'])
         with self.assertRaises(AnymailRecipientsRefused):
             msg.send()
         status = msg.anymail_status
-        self.assertEqual(status.recipients['invalid@localhost'].status, 'invalid')
+        self.assertEqual(status.recipients['Invalid@LocalHost'].status, 'invalid')
 
     def test_from_email_invalid(self):
         # Invalid 'From' address generates same Postmark ErrorCode 300 as invalid 'To',
@@ -634,10 +655,10 @@ class PostmarkBackendRecipientsRefusedTests(PostmarkBackendMockAPITestCase):
                 b'Inactive recipients are ones that have generated a hard bounce or a spam complaint."}'
         )
         msg = mail.EmailMessage('Subject', 'Body', 'from@example.com',
-                                ['hardbounce@example.com', 'Hates Spam <spam@example.com>'])
+                                ['HardBounce@example.com', 'Hates Spam <spam@example.com>'])
         msg.send(fail_silently=True)
         status = msg.anymail_status
-        self.assertEqual(status.recipients['hardbounce@example.com'].status, 'rejected')
+        self.assertEqual(status.recipients['HardBounce@example.com'].status, 'rejected')
         self.assertEqual(status.recipients['spam@example.com'].status, 'rejected')
 
     @override_settings(ANYMAIL_IGNORE_RECIPIENT_STATUS=True)
@@ -650,10 +671,10 @@ class PostmarkBackendRecipientsRefusedTests(PostmarkBackendMockAPITestCase):
                 b'Inactive recipients are ones that have generated a hard bounce or a spam complaint. "}'
         )
         msg = mail.EmailMessage('Subject', 'Body', 'from@example.com',
-                                ['hardbounce@example.com', 'Hates Spam <spam@example.com>'])
+                                ['HardBounce@example.com', 'Hates Spam <spam@example.com>'])
         msg.send()
         status = msg.anymail_status
-        self.assertEqual(status.recipients['hardbounce@example.com'].status, 'rejected')
+        self.assertEqual(status.recipients['HardBounce@example.com'].status, 'rejected')
         self.assertEqual(status.recipients['spam@example.com'].status, 'rejected')
 
     def test_mixed_response(self):
@@ -669,11 +690,11 @@ class PostmarkBackendRecipientsRefusedTests(PostmarkBackendMockAPITestCase):
                 b' Inactive recipients are ones that have generated a hard bounce or a spam complaint."}'
         )
         msg = mail.EmailMessage('Subject', 'Body', 'from@example.com',
-                                ['hardbounce@example.com', 'valid@example.com', 'Hates Spam <spam@example.com>'])
+                                ['HardBounce@example.com', 'valid@example.com', 'Hates Spam <spam@example.com>'])
         sent = msg.send()
         self.assertEqual(sent, 1)  # one message sent, successfully, to 1 of 3 recipients
         status = msg.anymail_status
-        self.assertEqual(status.recipients['hardbounce@example.com'].status, 'rejected')
+        self.assertEqual(status.recipients['HardBounce@example.com'].status, 'rejected')
         self.assertEqual(status.recipients['valid@example.com'].status, 'sent')
         self.assertEqual(status.recipients['spam@example.com'].status, 'rejected')
 

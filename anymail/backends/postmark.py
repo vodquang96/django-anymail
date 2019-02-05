@@ -2,7 +2,7 @@ import re
 
 from ..exceptions import AnymailRequestsAPIError
 from ..message import AnymailRecipientStatus
-from ..utils import get_anymail_setting, parse_address_list
+from ..utils import get_anymail_setting, parse_address_list, CaseInsensitiveCasePreservingDict
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload
 
@@ -33,9 +33,13 @@ class EmailBackend(AnymailRequestsBackend):
             super(EmailBackend, self).raise_for_status(response, payload, message)
 
     def parse_recipient_status(self, response, payload, message):
-        # default to "unknown" status for each recipient, unless/until we find otherwise
+        # Default to "unknown" status for each recipient, unless/until we find otherwise.
+        # (This also forces recipient_status email capitalization to match that as sent,
+        # while correctly handling Postmark's lowercase-only inactive recipient reporting.)
         unknown_status = AnymailRecipientStatus(message_id=None, status='unknown')
-        recipient_status = {to.addr_spec: unknown_status for to in payload.to_emails}
+        recipient_status = CaseInsensitiveCasePreservingDict({
+            recip.addr_spec: unknown_status
+            for recip in payload.to_emails + payload.cc_and_bcc_emails})
 
         parsed_response = self.deserialize_json_response(response, payload, message)
         if not isinstance(parsed_response, list):
@@ -55,18 +59,34 @@ class EmailBackend(AnymailRequestsBackend):
             if error_code == 0:
                 # At least partial success, and (some) email was sent.
                 try:
-                    to_header = one_response["To"]
                     message_id = one_response["MessageID"]
                 except KeyError:
                     raise AnymailRequestsAPIError("Invalid Postmark API success response format",
                                                   email_message=message, payload=payload,
                                                   response=response, backend=self)
-                for to in parse_address_list(to_header):
-                    recipient_status[to.addr_spec.lower()] = AnymailRecipientStatus(
+
+                # Assume all To recipients are "sent" unless proven otherwise below.
+                # (Must use "To" from API response to get correct individual MessageIDs in batch send.)
+                try:
+                    to_header = one_response["To"]  # (missing if cc- or bcc-only send)
+                except KeyError:
+                    pass  # cc- or bcc-only send; per-recipient status not available
+                else:
+                    for to in parse_address_list(to_header):
+                        recipient_status[to.addr_spec] = AnymailRecipientStatus(
+                            message_id=message_id, status='sent')
+
+                # Assume all Cc and Bcc recipients are "sent" unless proven otherwise below.
+                # (Postmark doesn't report "Cc" or "Bcc" in API response; use original payload values.)
+                for recip in payload.cc_and_bcc_emails:
+                    recipient_status[recip.addr_spec] = AnymailRecipientStatus(
                         message_id=message_id, status='sent')
+
+                # Change "sent" to "rejected" if Postmark reported an address as "Inactive".
                 # Sadly, have to parse human-readable message to figure out if everyone got it:
                 #   "Message OK, but will not deliver to these inactive addresses: {addr_spec, ...}.
                 #    Inactive recipients are ones that have generated a hard bounce or a spam complaint."
+                # Note that error message emails are addr_spec only (no display names) and forced lowercase.
                 reject_addr_specs = self._addr_specs_from_error_msg(
                     msg, r'inactive addresses:\s*(.*)\.\s*Inactive recipients')
                 for reject_addr_spec in reject_addr_specs:
@@ -107,7 +127,7 @@ class EmailBackend(AnymailRequestsBackend):
                 raise AnymailRequestsAPIError(email_message=message, payload=payload, response=response,
                                               backend=self)
 
-        return recipient_status
+        return dict(recipient_status)
 
     @staticmethod
     def _addr_specs_from_error_msg(error_msg, pattern):
@@ -134,6 +154,7 @@ class PostmarkPayload(RequestsPayload):
         }
         self.server_token = backend.server_token  # added to headers later, so esp_extra can override
         self.to_emails = []
+        self.cc_and_bcc_emails = []  # need to track (separately) for parse_recipient_status
         self.merge_data = None
         super(PostmarkPayload, self).__init__(message, defaults, backend, headers=headers, *args, **kwargs)
 
@@ -197,6 +218,8 @@ class PostmarkPayload(RequestsPayload):
             self.data[field] = ', '.join([email.address for email in emails])
             if recipient_type == "to":
                 self.to_emails = emails
+            else:
+                self.cc_and_bcc_emails += emails
 
     def set_subject(self, subject):
         self.data["Subject"] = subject
