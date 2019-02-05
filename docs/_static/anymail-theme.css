@@ -1,6 +1,7 @@
 /* Anymail modifications to sphinx-rtd-theme styles */
 
 /* List item spacing: https://github.com/rtfd/sphinx_rtd_theme/issues/590 */
+/*        Regression: https://github.com/rtfd/sphinx_rtd_theme/issues/705 */
 .rst-content .section ol li p:last-child,
 .rst-content .section ul li p:last-child {
     margin-bottom: 24px;
@@ -38,4 +39,30 @@ table.sticky-left th:first-of-type[colspan] > p {
     position: -webkit-sticky; /* Safari */
     position: sticky;
     left: 17px; /* (.wy-table $table-padding-size) + (docutils border="1" in html) */
+}
+
+
+/* Show code cross-reference links as clickable $link-color (blue).
+
+   Sphinx-rtd-theme usually wants `.rst-content a code` to be $link-color [1], but has
+   a more specific rule setting `.rst-content a code.xref` to $text-codexref-color,
+   bold [2]. And $text-codexref-color is $text-color (black).
+
+   This makes code.xref's inside an <a> use standard link coloring instead.
+
+   [1]: https://github.com/rtfd/sphinx_rtd_theme/blob/0.4.2/sass/_theme_rst.sass#L293-L294
+   [2]: https://github.com/rtfd/sphinx_rtd_theme/blob/0.4.2/sass/_theme_rst.sass#L287-L289
+
+   Related: https://github.com/rtfd/sphinx_rtd_theme/issues/153
+            https://github.com/rtfd/sphinx_rtd_theme/issues/92
+*/
+.rst-content a code.xref {
+    color: #2980B9;
+    font-weight: inherit;
+}
+.rst-content a:hover code.xref {
+    color: #3091d1;
+}
+.rst-content a:visited code.xref {
+    color: #9B59B6;
 }
