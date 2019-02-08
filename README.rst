@@ -100,6 +100,7 @@ or SparkPost or any other supported ESP where you see "mailgun":
         }
         EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"  # or sendgrid.EmailBackend, or...
         DEFAULT_FROM_EMAIL = "you@example.com"  # if you don't already have this in settings
+        SERVER_EMAIL = "your-server@example.com"  # ditto (default from-email for Django errors)
 
 
 3. Now the regular `Django email functions <https://docs.djangoproject.com/en/stable/topics/email/>`_

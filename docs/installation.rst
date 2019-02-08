@@ -68,9 +68,10 @@ planning to *receive* email.)
    use :ref:`multiple Anymail backends <multiple-backends>` to send particular
    messages through different ESPs.)
 
-2. If you don't already have a :setting:`DEFAULT_FROM_EMAIL` in your settings,
-   this is a good time to add one. (Django's default is "webmaster\@localhost",
-   which some ESPs will reject.)
+2. If you don't already have :setting:`DEFAULT_FROM_EMAIL` and :setting:`SERVER_EMAIL`
+   in your settings, this is a good time to add them. (Django's defaults are
+   "webmaster\@localhost" and "root\@localhost", respectively, and most ESPs won't
+   allow sending from those addresses.)
 
 With the settings above, you are ready to send outgoing email through your ESP.
 If you also want to enable status tracking or inbound handling, continue with the
