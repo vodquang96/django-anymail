@@ -1,19 +1,18 @@
 import os
 import unittest
 
-from django.test import SimpleTestCase
-from django.test.utils import override_settings
+from django.test import SimpleTestCase, override_settings, tag
 
 from anymail.exceptions import AnymailAPIError
 from anymail.message import AnymailMessage
 
-from .utils import AnymailTestMixin, sample_image_path, RUN_LIVE_TESTS
+from .utils import AnymailTestMixin, sample_image_path
 
 MAILJET_TEST_API_KEY = os.getenv('MAILJET_TEST_API_KEY')
 MAILJET_TEST_SECRET_KEY = os.getenv('MAILJET_TEST_SECRET_KEY')
 
 
-@unittest.skipUnless(RUN_LIVE_TESTS, "RUN_LIVE_TESTS disabled in this environment")
+@tag('mailjet', 'live')
 @unittest.skipUnless(MAILJET_TEST_API_KEY and MAILJET_TEST_SECRET_KEY,
                      "Set MAILJET_TEST_API_KEY and MAILJET_TEST_SECRET_KEY "
                      "environment variables to run Mailjet integration tests")

@@ -2,18 +2,17 @@ import os
 import unittest
 
 from django.core import mail
-from django.test import SimpleTestCase
-from django.test.utils import override_settings
+from django.test import SimpleTestCase, override_settings, tag
 
 from anymail.exceptions import AnymailAPIError, AnymailRecipientsRefused
 from anymail.message import AnymailMessage
 
-from .utils import AnymailTestMixin, sample_image_path, RUN_LIVE_TESTS
+from .utils import AnymailTestMixin, sample_image_path
 
 MANDRILL_TEST_API_KEY = os.getenv('MANDRILL_TEST_API_KEY')
 
 
-@unittest.skipUnless(RUN_LIVE_TESTS, "RUN_LIVE_TESTS disabled in this environment")
+@tag('mandrill', 'live')
 @unittest.skipUnless(MANDRILL_TEST_API_KEY,
                      "Set MANDRILL_TEST_API_KEY environment variable to run integration tests")
 @override_settings(MANDRILL_API_KEY=MANDRILL_TEST_API_KEY,

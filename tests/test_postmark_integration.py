@@ -1,13 +1,12 @@
 import os
 import unittest
 
-from django.test import SimpleTestCase
-from django.test.utils import override_settings
+from django.test import SimpleTestCase, override_settings, tag
 
 from anymail.exceptions import AnymailAPIError
 from anymail.message import AnymailMessage
 
-from .utils import AnymailTestMixin, sample_image_path, RUN_LIVE_TESTS
+from .utils import AnymailTestMixin, sample_image_path
 
 
 # For most integration tests, Postmark's sandboxed "POSTMARK_API_TEST" token is used.
@@ -16,7 +15,7 @@ POSTMARK_TEST_SERVER_TOKEN = os.getenv('POSTMARK_TEST_SERVER_TOKEN')
 POSTMARK_TEST_TEMPLATE_ID = os.getenv('POSTMARK_TEST_TEMPLATE_ID')
 
 
-@unittest.skipUnless(RUN_LIVE_TESTS, "RUN_LIVE_TESTS disabled in this environment")
+@tag('postmark', 'live')
 @override_settings(ANYMAIL_POSTMARK_SERVER_TOKEN="POSTMARK_API_TEST",
                    EMAIL_BACKEND="anymail.backends.postmark.EmailBackend")
 class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):

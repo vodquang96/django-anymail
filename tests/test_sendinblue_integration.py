@@ -1,18 +1,17 @@
 import os
 import unittest
 
-from django.test import SimpleTestCase
-from django.test.utils import override_settings
+from django.test import SimpleTestCase, override_settings, tag
 
 from anymail.exceptions import AnymailAPIError
 from anymail.message import AnymailMessage
 
-from .utils import AnymailTestMixin, RUN_LIVE_TESTS
+from .utils import AnymailTestMixin
 
 SENDINBLUE_TEST_API_KEY = os.getenv('SENDINBLUE_TEST_API_KEY')
 
 
-@unittest.skipUnless(RUN_LIVE_TESTS, "RUN_LIVE_TESTS disabled in this environment")
+@tag('sendinblue', 'live')
 @unittest.skipUnless(SENDINBLUE_TEST_API_KEY,
                      "Set SENDINBLUE_TEST_API_KEY environment variable "
                      "to run SendinBlue integration tests")

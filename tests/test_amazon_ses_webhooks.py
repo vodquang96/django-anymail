@@ -2,8 +2,7 @@ import json
 import warnings
 from datetime import datetime
 
-import botocore.exceptions
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.utils.timezone import utc
 from mock import ANY, patch
 
@@ -27,6 +26,7 @@ class AmazonSESWebhookTestsMixin(object):
             **kwargs)
 
 
+@tag('amazon_ses')
 class AmazonSESWebhookSecurityTests(WebhookTestCase, AmazonSESWebhookTestsMixin, WebhookBasicAuthTestsMixin):
     def call_webhook(self):
         return self.post_from_sns('/anymail/amazon_ses/tracking/',
@@ -43,6 +43,7 @@ class AmazonSESWebhookSecurityTests(WebhookTestCase, AmazonSESWebhookTestsMixin,
         self.assertEqual(response["WWW-Authenticate"], 'Basic realm="Anymail WEBHOOK_SECRET"')
 
 
+@tag('amazon_ses')
 class AmazonSESNotificationsTests(WebhookTestCase, AmazonSESWebhookTestsMixin):
     def test_bounce_event(self):
         # This test includes a complete Amazon SES example event. (Later tests omit some payload for brevity.)
@@ -404,6 +405,7 @@ class AmazonSESNotificationsTests(WebhookTestCase, AmazonSESWebhookTestsMixin):
             self.post_from_sns('/anymail/amazon_ses/tracking/', raw_sns_message)
 
 
+@tag('amazon_ses')
 class AmazonSESSubscriptionManagementTests(WebhookTestCase, AmazonSESWebhookTestsMixin):
     # Anymail will automatically respond to SNS subscription notifications
     # if Anymail is configured to require basic auth via WEBHOOK_SECRET.
@@ -450,7 +452,8 @@ class AmazonSESSubscriptionManagementTests(WebhookTestCase, AmazonSESWebhookTest
 
     def test_sns_subscription_confirmation_failure(self):
         """Auto-confirmation allows error through if confirm call fails"""
-        self.mock_client_instance.confirm_subscription.side_effect = botocore.exceptions.ClientError({
+        from botocore.exceptions import ClientError
+        self.mock_client_instance.confirm_subscription.side_effect = ClientError({
             'Error': {
                 'Type': 'Sender',
                 'Code': 'InternalError',
@@ -461,7 +464,7 @@ class AmazonSESSubscriptionManagementTests(WebhookTestCase, AmazonSESWebhookTest
                 'HTTPStatusCode': 500,
             }
         }, operation_name="confirm_subscription")
-        with self.assertRaisesMessage(botocore.exceptions.ClientError, "Gremlins!"):
+        with self.assertRaisesMessage(ClientError, "Gremlins!"):
             self.post_from_sns('/anymail/amazon_ses/tracking/', self.SNS_SUBSCRIPTION_CONFIRMATION)
         # didn't notify receivers:
         self.assertEqual(self.tracking_handler.call_count, 0)

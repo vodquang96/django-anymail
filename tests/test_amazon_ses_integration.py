@@ -5,13 +5,12 @@ import os
 import unittest
 import warnings
 
-from django.test import SimpleTestCase
-from django.test.utils import override_settings
+from django.test import SimpleTestCase, override_settings, tag
 
 from anymail.exceptions import AnymailAPIError
 from anymail.message import AnymailMessage
 
-from .utils import AnymailTestMixin, sample_image_path, RUN_LIVE_TESTS
+from .utils import AnymailTestMixin, sample_image_path
 
 try:
     ResourceWarning
@@ -24,7 +23,6 @@ AMAZON_SES_TEST_SECRET_ACCESS_KEY = os.getenv("AMAZON_SES_TEST_SECRET_ACCESS_KEY
 AMAZON_SES_TEST_REGION_NAME = os.getenv("AMAZON_SES_TEST_REGION_NAME", "us-east-1")
 
 
-@unittest.skipUnless(RUN_LIVE_TESTS, "RUN_LIVE_TESTS disabled in this environment")
 @unittest.skipUnless(AMAZON_SES_TEST_ACCESS_KEY_ID and AMAZON_SES_TEST_SECRET_ACCESS_KEY,
                      "Set AMAZON_SES_TEST_ACCESS_KEY_ID and AMAZON_SES_TEST_SECRET_ACCESS_KEY "
                      "environment variables to run Amazon SES integration tests")
@@ -43,6 +41,7 @@ AMAZON_SES_TEST_REGION_NAME = os.getenv("AMAZON_SES_TEST_REGION_NAME", "us-east-
         },
         "AMAZON_SES_CONFIGURATION_SET_NAME": "TestConfigurationSet",  # actual config set in Anymail test account
     })
+@tag('amazon_ses', 'live')
 class AmazonSESBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     """Amazon SES API integration tests
 
