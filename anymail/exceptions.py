@@ -75,13 +75,13 @@ class AnymailError(Exception):
             except UnicodeDecodeError:
                 reason = reason.decode('iso-8859-1')
 
-        description = "%s API response %d: %s" % (self.esp_name or "ESP", self.status_code, reason)
+        description = "%s API response %d (%s)" % (self.esp_name or "ESP", self.status_code, reason)
         try:
             json_response = self.response.json()
-            description += "\n" + json.dumps(json_response, indent=2)
+            description += ":\n" + json.dumps(json_response, indent=2)
         except (AttributeError, KeyError, ValueError):  # not JSON = ValueError
             try:
-                description += " " + self.response.text
+                description += ": %r" % self.response.text
             except AttributeError:
                 pass
         return description
