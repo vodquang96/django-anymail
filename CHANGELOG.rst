@@ -42,6 +42,9 @@ Breaking changes
 Fixes
 ~~~~~
 
+* **Mailgun:** Better error message for invalid sender domains (that caused a cryptic
+  "Mailgun API response 200: OK Mailgun Magnificent API" error in earlier releases).
+
 * **Postmark:** Don't error if a message is sent with only Cc and/or Bcc recipients
   (but no To addresses). Also, `message.anymail_status.recipients[email]` now includes
   send status for Cc and Bcc recipients. (Thanks to `@ailionx`_ for reporting the error.)

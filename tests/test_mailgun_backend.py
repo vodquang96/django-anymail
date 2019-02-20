@@ -20,7 +20,7 @@ from django.test import SimpleTestCase, override_settings, tag
 from django.utils.timezone import get_fixed_timezone, override as override_current_timezone
 
 from anymail.exceptions import (
-    AnymailAPIError, AnymailInvalidAddress,
+    AnymailError, AnymailAPIError, AnymailInvalidAddress,
     AnymailRequestsAPIError, AnymailUnsupportedFeature)
 from anymail.message import attach_inline_image_file
 
@@ -506,6 +506,23 @@ class MailgunBackendAnymailFeatureTests(MailgunBackendMockAPITestCase):
     def test_sender_domain_setting(self):
         self.message.send()
         self.assert_esp_called('/mg.example.com/messages')  # setting overrides from_email
+
+    def test_invalid_sender_domain(self):
+        # Make sure we won't construct an invalid API endpoint like
+        # `https://api.mailgun.net/v3/example.com/INVALID/messages`
+        # (which returns a cryptic 200-OK "Mailgun Magnificent API" response).
+        self.message.from_email = "<from@example.com/invalid>"
+        with self.assertRaisesMessage(AnymailError,
+                                      "Invalid sender domain 'example.com/invalid'"):
+            self.message.send()
+
+    @override_settings(ANYMAIL_MAILGUN_SENDER_DOMAIN='example.com%2Finvalid')
+    def test_invalid_sender_domain_setting(self):
+        # See previous test. Also, note that Mailgun unquotes % encoding *before*
+        # extracting the sender domain (so %2f is just as bad as '/')
+        with self.assertRaisesMessage(AnymailError,
+                                      "Invalid sender domain 'example.com%2Finvalid'"):
+            self.message.send()
 
     def test_default_omits_options(self):
         """Make sure by default we don't send any ESP-specific options.

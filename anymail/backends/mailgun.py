@@ -1,5 +1,6 @@
 from datetime import datetime
 from email.utils import encode_rfc2231
+from six.moves.urllib.parse import quote_plus
 
 from requests import Request
 
@@ -79,7 +80,12 @@ class MailgunPayload(RequestsPayload):
                                "Either provide valid `from_email`, "
                                "or set `message.esp_extra={'sender_domain': 'example.com'}`",
                                backend=self.backend, email_message=self.message, payload=self)
-        return "%s/messages" % self.sender_domain
+        if '/' in self.sender_domain or '%' in self.sender_domain:
+            # Mailgun returns a cryptic 200-OK "Mailgun Magnificent API" response
+            # if '/' (or even %-encoded '/') confuses it about the API endpoint.
+            raise AnymailError("Invalid sender domain '%s'" % self.sender_domain,
+                               backend=self.backend, email_message=self.message, payload=self)
+        return "%s/messages" % quote_plus(self.sender_domain)
 
     def get_request_params(self, api_url):
         params = super(MailgunPayload, self).get_request_params(api_url)
