@@ -60,8 +60,8 @@ matrix:
 cache: pip
 
 install:
-  # pin tox to avoid https://github.com/tox-dev/tox/issues/1160
-  - pip install tox~=3.6.1
+  # avoid https://github.com/tox-dev/tox/issues/1160
+  - pip install tox!=3.7.0
 
 script:
   - tox

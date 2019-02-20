@@ -19,7 +19,7 @@ flake8 = "*"
 mock = "*"
 sphinx = "*"
 sphinx-rtd-theme = "*"
-tox = "~=3.6.1"
+tox = "!=3.7.0"
 twine = "*"
 
 [requires]
