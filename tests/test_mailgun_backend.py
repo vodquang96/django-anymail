@@ -565,7 +565,7 @@ class MailgunBackendAnymailFeatureTests(MailgunBackendMockAPITestCase):
         # (which returns a cryptic 200-OK "Mailgun Magnificent API" response).
         self.message.from_email = "<from@example.com/invalid>"
         with self.assertRaisesMessage(AnymailError,
-                                      "Invalid sender domain 'example.com/invalid'"):
+                                      "Invalid '/' in sender domain 'example.com/invalid'"):
             self.message.send()
 
     @override_settings(ANYMAIL_MAILGUN_SENDER_DOMAIN='example.com%2Finvalid')
@@ -573,8 +573,15 @@ class MailgunBackendAnymailFeatureTests(MailgunBackendMockAPITestCase):
         # See previous test. Also, note that Mailgun unquotes % encoding *before*
         # extracting the sender domain (so %2f is just as bad as '/')
         with self.assertRaisesMessage(AnymailError,
-                                      "Invalid sender domain 'example.com%2Finvalid'"):
+                                      "Invalid '/' in sender domain 'example.com%2Finvalid'"):
             self.message.send()
+
+    @override_settings(ANYMAIL_MAILGUN_SENDER_DOMAIN='example.com # oops')
+    def test_encode_sender_domain(self):
+        # See previous tests. For anything other than slashes, we let Mailgun detect
+        # the problem (but must properly encode the domain in the API URL)
+        self.message.send()
+        self.assert_esp_called('/example.com%20%23%20oops/messages')
 
     def test_default_omits_options(self):
         """Make sure by default we don't send any ESP-specific options.

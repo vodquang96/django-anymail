@@ -1,3 +1,5 @@
+from six.moves.urllib.parse import quote
+
 from ..exceptions import AnymailRequestsAPIError
 from ..message import AnymailRecipientStatus, ANYMAIL_STATUSES
 from ..utils import get_anymail_setting, EmailAddress, parse_address_list
@@ -131,7 +133,7 @@ class MailjetPayload(RequestsPayload):
         template_id = self.data.get("Mj-TemplateID")
         if template_id and not self.data.get("FromEmail"):
             response = self.backend.session.get(
-                "%sREST/template/%s/detailcontent" % (self.backend.api_url, template_id),
+                "%sREST/template/%s/detailcontent" % (self.backend.api_url, quote(str(template_id), safe='')),
                 auth=self.auth, timeout=self.backend.timeout
             )
             self.backend.raise_for_status(response, None, self.message)

@@ -1,4 +1,5 @@
 from requests.structures import CaseInsensitiveDict
+from six.moves.urllib.parse import quote
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload
 from ..exceptions import AnymailRequestsAPIError
@@ -76,7 +77,7 @@ class SendinBluePayload(RequestsPayload):
 
     def get_api_endpoint(self):
         if self.template_id:
-            return "smtp/templates/%s/send" % self.template_id
+            return "smtp/templates/%s/send" % quote(str(self.template_id), safe='')
         else:
             return "smtp/email"
 
