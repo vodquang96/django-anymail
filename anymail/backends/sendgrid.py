@@ -75,9 +75,9 @@ class SendGridPayload(RequestsPayload):
         self.use_dynamic_template = False  # how to represent merge_data
         self.message_id = None  # Message-ID -- assigned in serialize_data unless provided in headers
         self.merge_field_format = backend.merge_field_format
-        self.merge_data = None  # late-bound per-recipient data
-        self.merge_global_data = None
-        self.merge_metadata = None
+        self.merge_data = {}  # late-bound per-recipient data
+        self.merge_global_data = {}
+        self.merge_metadata = {}
 
         http_headers = kwargs.pop('headers', {})
         http_headers['Authorization'] = 'Bearer %s' % backend.api_key
@@ -101,6 +101,8 @@ class SendGridPayload(RequestsPayload):
 
         if self.generate_message_id:
             self.set_anymail_id()
+        if self.is_batch():
+            self.expand_personalizations_for_batch()
         self.build_merge_data()
         self.build_merge_metadata()
 
@@ -115,91 +117,57 @@ class SendGridPayload(RequestsPayload):
         self.message_id = str(uuid.uuid4())
         self.data.setdefault("custom_args", {})["anymail_id"] = self.message_id
 
+    def expand_personalizations_for_batch(self):
+        """Split data["personalizations"] into individual message for each recipient"""
+        assert len(self.data["personalizations"]) == 1
+        base_personalization = self.data["personalizations"].pop()
+        to_list = base_personalization.pop("to")  # {email, name?} for each message.to
+        for recipient in to_list:
+            personalization = base_personalization.copy()
+            personalization["to"] = [recipient]
+            self.data["personalizations"].append(personalization)
+
     def build_merge_data(self):
-        if self.use_dynamic_template:
-            self.build_merge_data_dynamic()
-        else:
-            self.build_merge_data_legacy()
+        if self.merge_data or self.merge_global_data:
+            # Always build dynamic_template_data first,
+            # then convert it to legacy template format if needed
+            for personalization in self.data["personalizations"]:
+                assert len(personalization["to"]) == 1
+                recipient_email = personalization["to"][0]["email"]
+                dynamic_template_data = self.merge_global_data.copy()
+                dynamic_template_data.update(self.merge_data.get(recipient_email, {}))
+                if dynamic_template_data:
+                    personalization["dynamic_template_data"] = dynamic_template_data
 
-    def build_merge_data_dynamic(self):
-        """Set personalizations[...]['dynamic_template_data']"""
-        if self.merge_global_data is not None:
-            assert len(self.data["personalizations"]) == 1
-            self.data["personalizations"][0].setdefault(
-                "dynamic_template_data", {}).update(self.merge_global_data)
+            if not self.use_dynamic_template:
+                self.convert_dynamic_template_data_to_legacy_substitutions()
 
-        if self.merge_data is not None:
-            # Burst apart each to-email in personalizations[0] into a separate
-            # personalization, and add merge_data for that recipient
-            assert len(self.data["personalizations"]) == 1
-            base_personalizations = self.data["personalizations"].pop()
-            to_list = base_personalizations.pop("to")  # {email, name?} for each message.to
-            for recipient in to_list:
-                personalization = base_personalizations.copy()  # captures cc, bcc, merge_global_data, esp_extra
-                personalization["to"] = [recipient]
-                try:
-                    recipient_data = self.merge_data[recipient["email"]]
-                except KeyError:
-                    pass  # no merge_data for this recipient
-                else:
-                    if "dynamic_template_data" in personalization:
-                        # merge per-recipient data into (copy of) merge_global_data
-                        personalization["dynamic_template_data"] = personalization["dynamic_template_data"].copy()
-                        personalization["dynamic_template_data"].update(recipient_data)
-                    else:
-                        personalization["dynamic_template_data"] = recipient_data
-                self.data["personalizations"].append(personalization)
-
-    def build_merge_data_legacy(self):
-        """Set personalizations[...]['substitutions'] and data['sections']"""
+    def convert_dynamic_template_data_to_legacy_substitutions(self):
+        """Change personalizations[...]['dynamic_template_data'] to ...['substitutions]"""
         merge_field_format = self.merge_field_format or '{}'
 
-        if self.merge_data is not None:
-            # Burst apart each to-email in personalizations[0] into a separate
-            # personalization, and add merge_data for that recipient
-            assert len(self.data["personalizations"]) == 1
-            base_personalizations = self.data["personalizations"].pop()
-            to_list = base_personalizations.pop("to")  # {email, name?} for each message.to
-            all_fields = set()
-            for recipient in to_list:
-                personalization = base_personalizations.copy()  # captures cc, bcc, and any esp_extra
-                personalization["to"] = [recipient]
-                try:
-                    recipient_data = self.merge_data[recipient["email"]]
-                    personalization["substitutions"] = {merge_field_format.format(field): data
-                                                        for field, data in recipient_data.items()}
-                    all_fields = all_fields.union(recipient_data.keys())
-                except KeyError:
-                    pass  # no merge_data for this recipient
-                self.data["personalizations"].append(personalization)
+        all_merge_fields = set()
+        for personalization in self.data["personalizations"]:
+            try:
+                dynamic_template_data = personalization.pop("dynamic_template_data")
+            except KeyError:
+                pass  # no substitutions for this recipient
+            else:
+                # Convert dynamic_template_data keys for substitutions, using merge_field_format
+                personalization["substitutions"] = {
+                    merge_field_format.format(field): data
+                    for field, data in dynamic_template_data.items()}
+                all_merge_fields.update(dynamic_template_data.keys())
 
-            if self.merge_field_format is None and len(all_fields) and all(field.isalnum() for field in all_fields):
+        if self.merge_field_format is None:
+            if all_merge_fields and all(field.isalnum() for field in all_merge_fields):
                 warnings.warn(
                     "Your SendGrid merge fields don't seem to have delimiters, "
                     "which can cause unexpected results with Anymail's merge_data. "
                     "Search SENDGRID_MERGE_FIELD_FORMAT in the Anymail docs for more info.",
                     AnymailWarning)
 
-        if self.merge_global_data is not None:
-            # (merge into any existing 'sections' from esp_extra)
-            self.data.setdefault("sections", {}).update({
-                merge_field_format.format(field): data
-                for field, data in self.merge_global_data.items()
-            })
-
-            # Confusingly, "Section tags have to be contained within a Substitution tag"
-            # (https://sendgrid.com/docs/API_Reference/SMTP_API/section_tags.html),
-            # so we need to insert a "-field-": "-field-" identity fallback for each
-            # missing global field in the recipient substitutions...
-            global_fields = [merge_field_format.format(field)
-                             for field in self.merge_global_data.keys()]
-            for personalization in self.data["personalizations"]:
-                substitutions = personalization.setdefault("substitutions", {})
-                substitutions.update({field: field for field in global_fields
-                                      if field not in substitutions})
-
-            if (self.merge_field_format is None and
-                    all(field.isalnum() for field in self.merge_global_data.keys())):
+            if self.merge_global_data and all(field.isalnum() for field in self.merge_global_data.keys()):
                 warnings.warn(
                     "Your SendGrid global merge fields don't seem to have delimiters, "
                     "which can cause unexpected results with Anymail's merge_data. "
@@ -207,26 +175,14 @@ class SendGridPayload(RequestsPayload):
                     AnymailWarning)
 
     def build_merge_metadata(self):
-        if self.merge_metadata is None:
-            return
-
-        if self.merge_data is None:
-            # Burst apart each to-email in personalizations[0] into a separate
-            # personalization, and add merge_metadata for that recipient
-            assert len(self.data["personalizations"]) == 1
-            base_personalizations = self.data["personalizations"].pop()
-            to_list = base_personalizations.pop("to")  # {email, name?} for each message.to
-            for recipient in to_list:
-                personalization = base_personalizations.copy()  # captures cc, bcc, and any esp_extra
-                personalization["to"] = [recipient]
-                self.data["personalizations"].append(personalization)
-
-        for personalization in self.data["personalizations"]:
-            recipient_email = personalization["to"][0]["email"]
-            recipient_metadata = self.merge_metadata.get(recipient_email)
-            if recipient_metadata:
-                recipient_custom_args = self.transform_metadata(recipient_metadata)
-                personalization["custom_args"] = recipient_custom_args
+        if self.merge_metadata:
+            for personalization in self.data["personalizations"]:
+                assert len(personalization["to"]) == 1
+                recipient_email = personalization["to"][0]["email"]
+                recipient_metadata = self.merge_metadata.get(recipient_email)
+                if recipient_metadata:
+                    recipient_custom_args = self.transform_metadata(recipient_metadata)
+                    personalization["custom_args"] = recipient_custom_args
 
     #
     # Payload construction

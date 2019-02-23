@@ -60,6 +60,9 @@ Fixes
   (but no To addresses). Also, `message.anymail_status.recipients[email]` now includes
   send status for Cc and Bcc recipients. (Thanks to `@ailionx`_ for reporting the error.)
 
+* **SendGrid:** With legacy templates, stop (ab)using "sections" for merge_global_data.
+  This avoids potential conflicts with a template's own use of SendGrid section tags.
+
 
 v5.0
 ----

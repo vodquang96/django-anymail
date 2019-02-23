@@ -515,18 +515,15 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
             {'to': [{'email': 'alice@example.com'}],
              'cc': [{'email': 'cc@example.com'}],  # all recipients get the cc
              'substitutions': {':name': "Alice", ':group': "Developers",
-                               ':site': ":site"}},  # tell SG to look for global field in 'sections'
+                               ':site': "ExampleCo"}},  # merge_global_data merged
             {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
              'cc': [{'email': 'cc@example.com'}],
-             'substitutions': {':name': "Bob", ':group': ":group", ':site': ":site"}},
+             'substitutions': {':name': "Bob", ':group': "Users", ':site': "ExampleCo"}},
             {'to': [{'email': 'celia@example.com'}],
              'cc': [{'email': 'cc@example.com'}],
-             'substitutions': {':group': ":group", ':site': ":site"}},  # look for global fields in 'sections'
+             'substitutions': {':group': "Users", ':site': "ExampleCo"}},
         ])
-        self.assertEqual(data['sections'], {
-            ':group': "Users",
-            ':site': "ExampleCo",
-        })
+        self.assertNotIn('sections', data)  # 'sections' no longer used for merge_global_data
 
     @override_settings(ANYMAIL_SENDGRID_MERGE_FIELD_FORMAT=":{}")  # :field as shown in SG examples
     def test_legacy_merge_field_format_setting(self):
@@ -541,11 +538,11 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         data = self.get_api_call_json()
         self.assertEqual(data['personalizations'], [
             {'to': [{'email': 'alice@example.com'}],
-             'substitutions': {':name': "Alice", ':group': "Developers", ':site': ":site"}},  # keys changed to :field
+             'substitutions': {':name': "Alice", ':group': "Developers",  # keys changed to :field
+                               ':site': "ExampleCo"}},
             {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
-             'substitutions': {':name': "Bob", ':site': ":site"}}
+             'substitutions': {':name': "Bob", ':site': "ExampleCo"}}
         ])
-        self.assertEqual(data['sections'], {':site': "ExampleCo"})
 
     def test_legacy_merge_field_format_esp_extra(self):
         # Provide merge field delimiters for an individual message
@@ -560,11 +557,10 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         data = self.get_api_call_json()
         self.assertEqual(data['personalizations'], [
             {'to': [{'email': 'alice@example.com'}],
-             'substitutions': {'*|name|*': "Alice", '*|group|*': "Developers", '*|site|*': "*|site|*"}},
+             'substitutions': {'*|name|*': "Alice", '*|group|*': "Developers", '*|site|*': "ExampleCo"}},
             {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
-             'substitutions': {'*|name|*': "Bob", '*|site|*': "*|site|*"}}
+             'substitutions': {'*|name|*': "Bob", '*|site|*': "ExampleCo"}}
         ])
-        self.assertEqual(data['sections'], {'*|site|*': "ExampleCo"})
         # Make sure our esp_extra merge_field_format doesn't get sent to SendGrid API:
         self.assertNotIn('merge_field_format', data)
 
@@ -682,20 +678,16 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
             {'to': [{'email': 'alice@example.com'}],
              'cc': [{'email': 'cc@example.com'}],  # all recipients get the cc
              'custom_args': {'order_id': '123'},
-             'substitutions': {':name': "Alice", ':group': "Developers", ':site': ":site"}},
+             'substitutions': {':name': "Alice", ':group': "Developers", ':site': "ExampleCo"}},
             {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
              'cc': [{'email': 'cc@example.com'}],
              'custom_args': {'order_id': '678', 'tier': 'premium'},
-             'substitutions': {':name': "Bob", ':group': ":group", ':site': ":site"}},
+             'substitutions': {':name': "Bob", ':group': "Users", ':site': "ExampleCo"}},
             {'to': [{'email': 'celia@example.com'}],
              'cc': [{'email': 'cc@example.com'}],
              # no custom_args
-             'substitutions': {':group': ":group", ':site': ":site"}},
+             'substitutions': {':group': "Users", ':site': "ExampleCo"}},
         ])
-        self.assertEqual(data['sections'], {
-            ':group': "Users",
-            ':site': "ExampleCo",
-        })
 
     @override_settings(ANYMAIL_SENDGRID_GENERATE_MESSAGE_ID=False)  # else we force custom_args
     def test_default_omits_options(self):
