@@ -1,4 +1,4 @@
-from django.test import override_settings, SimpleTestCase
+from django.test import override_settings, SimpleTestCase, tag
 
 from anymail.backends.base_requests import AnymailRequestsBackend, RequestsPayload
 from anymail.message import AnymailMessage, AnymailRecipientStatus
@@ -68,6 +68,7 @@ class RequestsBackendBaseTestCase(RequestsBackendMockAPITestCase):
         self.assertEqual(timeout, 5)
 
 
+@tag('live')
 @override_settings(EMAIL_BACKEND='tests.test_base_backends.MinimalRequestsBackend')
 class RequestsBackendLiveTestCase(SimpleTestCase, AnymailTestMixin):
     @override_settings(ANYMAIL_DEBUG_API_REQUESTS=True)
