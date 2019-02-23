@@ -63,9 +63,9 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
         self.assertEqual(data['from'], {'email': "from@sender.example.com"})
         self.assertEqual(data['personalizations'], [{
             'to': [{'email': "to@example.com"}],
+            # make sure the backend assigned the anymail_id for event tracking and notification
+            'custom_args': {'anymail_id': 'mocked-uuid-1'},
         }])
-        # make sure the backend assigned the anymail_id for event tracking and notification
-        self.assertEqual(data['custom_args']['anymail_id'], 'mocked-uuid-1')
 
     def test_name_addr(self):
         """Make sure RFC2822 name-addr format (with display-name) is allowed
@@ -115,6 +115,8 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
                        {'email': "cc2@example.com", 'name': '"Also CC"'}],
                 'bcc': [{'email': "bcc1@example.com"},
                         {'email': "bcc2@example.com", 'name': '"Also BCC"'}],
+                # make sure custom Message-ID also added to custom_args
+                'custom_args': {'anymail_id': 'mocked-uuid-1'},
             }])
 
         self.assertEqual(data['from'], {'email': "from@example.com"})
@@ -125,8 +127,6 @@ class SendGridBackendStandardEmailTests(SendGridBackendMockAPITestCase):
             'X-MyHeader': "my value",
             'Message-ID': "<mycustommsgid@sales.example.com>",
         })
-        # make sure custom Message-ID also added to custom_args
-        self.assertEqual(data['custom_args']['anymail_id'], 'mocked-uuid-1')
 
     def test_html_message(self):
         text_content = 'This is an important message.'
@@ -454,14 +454,17 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         self.assertEqual(data['personalizations'], [
             {'to': [{'email': 'alice@example.com'}],
              'cc': [{'email': 'cc@example.com'}],  # all recipients get the cc
+             'custom_args': {'anymail_id': 'mocked-uuid-1'},
              'dynamic_template_data': {
                  'name': "Alice", 'group': "Developers", 'site': "ExampleCo"}},
             {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
              'cc': [{'email': 'cc@example.com'}],
+             'custom_args': {'anymail_id': 'mocked-uuid-2'},
              'dynamic_template_data': {
                  'name': "Bob", 'group': "Users", 'site': "ExampleCo"}},
             {'to': [{'email': 'celia@example.com'}],
              'cc': [{'email': 'cc@example.com'}],
+             'custom_args': {'anymail_id': 'mocked-uuid-3'},
              'dynamic_template_data': {
                  'group': "Users", 'site': "ExampleCo"}},
         ])
@@ -477,6 +480,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         data = self.get_api_call_json()
         self.assertEqual(data['personalizations'], [
             {'to': [{'email': 'to@example.com'}],
+             'custom_args': {'anymail_id': 'mocked-uuid-1'},
              'dynamic_template_data': {"test": "data"}}])
 
         self.message.template_id = "d-apparently-not-legacy"
@@ -486,6 +490,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         data = self.get_api_call_json()
         self.assertEqual(data['personalizations'], [
             {'to': [{'email': 'to@example.com'}],
+             'custom_args': {'anymail_id': 'mocked-uuid-2'},
              'substitutions': {"<%test%>": "data"}}])
 
     def test_legacy_merge_data(self):
@@ -514,13 +519,16 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         self.assertEqual(data['personalizations'], [
             {'to': [{'email': 'alice@example.com'}],
              'cc': [{'email': 'cc@example.com'}],  # all recipients get the cc
+             'custom_args': {'anymail_id': 'mocked-uuid-1'},
              'substitutions': {':name': "Alice", ':group': "Developers",
                                ':site': "ExampleCo"}},  # merge_global_data merged
             {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
              'cc': [{'email': 'cc@example.com'}],
+             'custom_args': {'anymail_id': 'mocked-uuid-2'},
              'substitutions': {':name': "Bob", ':group': "Users", ':site': "ExampleCo"}},
             {'to': [{'email': 'celia@example.com'}],
              'cc': [{'email': 'cc@example.com'}],
+             'custom_args': {'anymail_id': 'mocked-uuid-3'},
              'substitutions': {':group': "Users", ':site': "ExampleCo"}},
         ])
         self.assertNotIn('sections', data)  # 'sections' no longer used for merge_global_data
@@ -538,9 +546,11 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         data = self.get_api_call_json()
         self.assertEqual(data['personalizations'], [
             {'to': [{'email': 'alice@example.com'}],
+             'custom_args': {'anymail_id': 'mocked-uuid-1'},
              'substitutions': {':name': "Alice", ':group': "Developers",  # keys changed to :field
                                ':site': "ExampleCo"}},
             {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
+             'custom_args': {'anymail_id': 'mocked-uuid-2'},
              'substitutions': {':name': "Bob", ':site': "ExampleCo"}}
         ])
 
@@ -557,8 +567,10 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         data = self.get_api_call_json()
         self.assertEqual(data['personalizations'], [
             {'to': [{'email': 'alice@example.com'}],
+             'custom_args': {'anymail_id': 'mocked-uuid-1'},
              'substitutions': {'*|name|*': "Alice", '*|group|*': "Developers", '*|site|*': "ExampleCo"}},
             {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
+             'custom_args': {'anymail_id': 'mocked-uuid-2'},
              'substitutions': {'*|name|*': "Bob", '*|site|*': "ExampleCo"}}
         ])
         # Make sure our esp_extra merge_field_format doesn't get sent to SendGrid API:
@@ -587,11 +599,11 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         data = self.get_api_call_json()
         self.assertEqual(data['personalizations'], [
             {'to': [{'email': 'alice@example.com'}],
-             'custom_args': {'order_id': '123'}},
+             # anymail_id added to other custom_args
+             'custom_args': {'anymail_id': 'mocked-uuid-1', 'order_id': '123'}},
             {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
-             'custom_args': {'order_id': '678', 'tier': 'premium'}},
+             'custom_args': {'anymail_id': 'mocked-uuid-2', 'order_id': '678', 'tier': 'premium'}},
         ])
-        self.assertEqual(data['custom_args'], {'anymail_id': 'mocked-uuid-1'})
 
     def test_metadata_with_merge_metadata(self):
         # Per SendGrid docs: "personalizations[x].custom_args will be merged
@@ -608,12 +620,11 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         data = self.get_api_call_json()
         self.assertEqual(data['personalizations'], [
             {'to': [{'email': 'alice@example.com'}],
-             'custom_args': {'order_id': '123'}},
+             'custom_args': {'anymail_id': 'mocked-uuid-1', 'order_id': '123'}},
             {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
-             'custom_args': {'order_id': '678', 'tier': 'premium'}},
+             'custom_args': {'anymail_id': 'mocked-uuid-2', 'order_id': '678', 'tier': 'premium'}},
         ])
-        self.assertEqual(data['custom_args'],
-                         {'tier': 'basic', 'batch': 'ax24', 'anymail_id': 'mocked-uuid-1'})
+        self.assertEqual(data['custom_args'], {'tier': 'basic', 'batch': 'ax24'})
 
     def test_merge_metadata_with_merge_data(self):
         # (using dynamic templates)
@@ -641,16 +652,17 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
              'cc': [{'email': 'cc@example.com'}],  # all recipients get the cc
              'dynamic_template_data': {
                  'name': "Alice", 'group': "Developers", 'site': "ExampleCo"},
-             'custom_args': {'order_id': '123'}},
+             'custom_args': {'anymail_id': 'mocked-uuid-1', 'order_id': '123'}},
             {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
              'cc': [{'email': 'cc@example.com'}],
              'dynamic_template_data': {
                  'name': "Bob", 'group': "Users", 'site': "ExampleCo"},
-             'custom_args': {'order_id': '678', 'tier': 'premium'}},
+             'custom_args': {'anymail_id': 'mocked-uuid-2', 'order_id': '678', 'tier': 'premium'}},
             {'to': [{'email': 'celia@example.com'}],
              'cc': [{'email': 'cc@example.com'}],
              'dynamic_template_data': {
-                 'group': "Users", 'site': "ExampleCo"}},
+                 'group': "Users", 'site': "ExampleCo"},
+             'custom_args': {'anymail_id': 'mocked-uuid-3'}},
         ])
 
     def test_merge_metadata_with_legacy_template(self):
@@ -677,15 +689,15 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         self.assertEqual(data['personalizations'], [
             {'to': [{'email': 'alice@example.com'}],
              'cc': [{'email': 'cc@example.com'}],  # all recipients get the cc
-             'custom_args': {'order_id': '123'},
+             'custom_args': {'anymail_id': 'mocked-uuid-1', 'order_id': '123'},
              'substitutions': {':name': "Alice", ':group': "Developers", ':site': "ExampleCo"}},
             {'to': [{'email': 'bob@example.com', 'name': '"Bob"'}],
              'cc': [{'email': 'cc@example.com'}],
-             'custom_args': {'order_id': '678', 'tier': 'premium'},
+             'custom_args': {'anymail_id': 'mocked-uuid-2', 'order_id': '678', 'tier': 'premium'},
              'substitutions': {':name': "Bob", ':group': "Users", ':site': "ExampleCo"}},
             {'to': [{'email': 'celia@example.com'}],
              'cc': [{'email': 'cc@example.com'}],
-             # no custom_args
+             'custom_args': {'anymail_id': 'mocked-uuid-3'},
              'substitutions': {':group': "Users", ':site': "ExampleCo"}},
         ])
 
@@ -756,8 +768,10 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         data = self.get_api_call_json()
         self.assertEqual(data['personalizations'], [
             {'to': [{'email': 'first@example.com', 'name': '"First recipient"'}],
+             'custom_args': {'anymail_id': 'mocked-uuid-1'},
              'future_feature': "works"},
             {'to': [{'email': 'second@example.com'}],
+             'custom_args': {'anymail_id': 'mocked-uuid-2'},
              'future_feature': "works"},  # merged into *every* recipient
         ])
 
@@ -770,6 +784,7 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         data = self.get_api_call_json()
         self.assertEqual(data['personalizations'], [
             {'to': [{'email': 'custom@example.com'}],
+             'custom_args': {'anymail_id': 'mocked-uuid-3'},
              'future_feature': "works"},
         ])
 
@@ -784,9 +799,21 @@ class SendGridBackendAnymailFeatureTests(SendGridBackendMockAPITestCase):
         self.assertEqual(msg.anymail_status.status, {'queued'})
         self.assertEqual(msg.anymail_status.message_id, 'mocked-uuid-1')
         self.assertEqual(msg.anymail_status.recipients['to1@example.com'].status, 'queued')
-        self.assertEqual(msg.anymail_status.recipients['to1@example.com'].message_id,
-                         msg.anymail_status.message_id)
+        self.assertEqual(msg.anymail_status.recipients['to1@example.com'].message_id, 'mocked-uuid-1')
         self.assertEqual(msg.anymail_status.esp_response.content, self.DEFAULT_RAW_RESPONSE)
+
+    def test_batch_recipients_get_unique_message_ids(self):
+        """In a batch send, each recipient should get a distinct own message_id"""
+        msg = mail.EmailMessage('Subject', 'Message', 'from@example.com',
+                                ['to1@example.com', 'Someone Else <to2@example.com>'],
+                                cc=['cc@example.com'])
+        msg.merge_data = {}  # force batch send
+        msg.send()
+        self.assertEqual(msg.anymail_status.message_id, {'mocked-uuid-1', 'mocked-uuid-2'})
+        self.assertEqual(msg.anymail_status.recipients['to1@example.com'].message_id, 'mocked-uuid-1')
+        self.assertEqual(msg.anymail_status.recipients['to2@example.com'].message_id, 'mocked-uuid-2')
+        # cc's (and bcc's) get copied for all batch recipients, but we can only communicate one message_id:
+        self.assertEqual(msg.anymail_status.recipients['cc@example.com'].message_id, 'mocked-uuid-2')
 
     @override_settings(ANYMAIL_SENDGRID_GENERATE_MESSAGE_ID=False)
     def test_disable_generate_message_id(self):

@@ -62,8 +62,9 @@ class EmailBackend(AnymailRequestsBackend):
         # (SendGrid uses a non-2xx response for any failures, caught in raise_for_status.)
         # SendGrid v3 doesn't provide any information in the response for a successful send,
         # so simulate a per-recipient status of "queued":
-        status = AnymailRecipientStatus(message_id=payload.message_id, status="queued")
-        return {recipient.addr_spec: status for recipient in payload.all_recipients}
+        return {recip.addr_spec: AnymailRecipientStatus(message_id=payload.message_ids.get(recip.addr_spec),
+                                                        status="queued")
+                for recip in payload.all_recipients}
 
 
 class SendGridPayload(RequestsPayload):
@@ -73,7 +74,7 @@ class SendGridPayload(RequestsPayload):
         self.generate_message_id = backend.generate_message_id
         self.workaround_name_quote_bug = backend.workaround_name_quote_bug
         self.use_dynamic_template = False  # how to represent merge_data
-        self.message_id = None  # Message-ID -- assigned in serialize_data unless provided in headers
+        self.message_ids = {}  # recipient -> generated message_id mapping
         self.merge_field_format = backend.merge_field_format
         self.merge_data = {}  # late-bound per-recipient data
         self.merge_global_data = {}
@@ -98,13 +99,12 @@ class SendGridPayload(RequestsPayload):
 
     def serialize_data(self):
         """Performs any necessary serialization on self.data, and returns the result."""
-
-        if self.generate_message_id:
-            self.set_anymail_id()
         if self.is_batch():
             self.expand_personalizations_for_batch()
         self.build_merge_data()
         self.build_merge_metadata()
+        if self.generate_message_id:
+            self.set_anymail_id()
 
         if not self.data["headers"]:
             del self.data["headers"]  # don't send empty headers
@@ -112,10 +112,12 @@ class SendGridPayload(RequestsPayload):
         return self.serialize_json(self.data)
 
     def set_anymail_id(self):
-        """Ensure message has a known anymail_id for later event tracking"""
-
-        self.message_id = str(uuid.uuid4())
-        self.data.setdefault("custom_args", {})["anymail_id"] = self.message_id
+        """Ensure each personalization has a known anymail_id for later event tracking"""
+        for personalization in self.data["personalizations"]:
+            message_id = str(uuid.uuid4())
+            personalization.setdefault("custom_args", {})["anymail_id"] = message_id
+            for recipient in personalization["to"] + personalization.get("cc", []) + personalization.get("bcc", []):
+                self.message_ids[recipient["email"]] = message_id
 
     def expand_personalizations_for_batch(self):
         """Split data["personalizations"] into individual message for each recipient"""

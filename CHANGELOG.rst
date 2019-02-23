@@ -39,12 +39,23 @@ Breaking changes
   code is doing something like `message.anymail_status.recipients[email.lower()]`,
   you should remove the `.lower()`
 
+* **SendGrid:** In batch sends, Anymail's SendGrid backend now assigns a separate
+  `message_id` for each "to" recipient, rather than sharing a single id for all
+  recipients. This improves accuracy of tracking and statistics (and matches the
+  behavior of many other ESPs).
+
+  If your code uses batch sending (merge_data with multiple to-addresses) and checks
+  `message.anymail_status.message_id` after sending, that value will now be a *set* of
+  ids. You can obtain each recipient's individual message_id with
+  `message.anymail_status.recipients[to_email].message_id`.
+  See `docs <https://anymail.readthedocs.io/en/latest/esps/sendgrid/#sendgrid-message-id>`__.
+
 Features
 ~~~~~~~~
 
 * Add new `merge_metadata` option for providing per-recipient metadata in batch
   sends. Available for all supported ESPs *except* Amazon SES and SendinBlue.
-  See `docs <https://anymail.readthedocs.io/en/latest/sending/anymail_additions/#anymail.message.AnymailMessage.merge_metadata>`_.
+  See `docs <https://anymail.readthedocs.io/en/latest/sending/anymail_additions/#anymail.message.AnymailMessage.merge_metadata>`__.
   (Thanks `@janneThoft`_ for the idea and SendGrid implementation.)
 
 * **Mailjet:** Remove limitation on using `cc` or `bcc` together with `merge_data`.

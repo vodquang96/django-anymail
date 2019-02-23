@@ -186,6 +186,13 @@ Limitations and quirks
   :setting:`SENDGRID_GENERATE_MESSAGE_ID <ANYMAIL_SENDGRID_GENERATE_MESSAGE_ID>`
   to False in your Anymail settings.
 
+  .. versionchanged:: 6.0
+
+      In batch sends, Anymail generates a distinct anymail_id for *each* "to"
+      recipient. (Previously, a single id was used for all batch recipients.) Check
+      :attr:`anymail_status.recipients[to_email].message_id <anymail.message.AnymailStatus.recipients>`
+      for individual batch-send tracking ids.
+
   .. versionchanged:: 3.0
 
       Previously, Anymail generated a custom :mailheader:`Message-ID`
