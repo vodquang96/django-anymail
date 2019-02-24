@@ -25,10 +25,10 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-Unreleased
-----------
+v6.0
+----
 
-*In development*
+*2019-02-23*
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -48,14 +48,14 @@ Breaking changes
   `message.anymail_status.message_id` after sending, that value will now be a *set* of
   ids. You can obtain each recipient's individual message_id with
   `message.anymail_status.recipients[to_email].message_id`.
-  See `docs <https://anymail.readthedocs.io/en/latest/esps/sendgrid/#sendgrid-message-id>`__.
+  See `docs <https://anymail.readthedocs.io/en/stable/esps/sendgrid/#sendgrid-message-id>`__.
 
 Features
 ~~~~~~~~
 
 * Add new `merge_metadata` option for providing per-recipient metadata in batch
   sends. Available for all supported ESPs *except* Amazon SES and SendinBlue.
-  See `docs <https://anymail.readthedocs.io/en/latest/sending/anymail_additions/#anymail.message.AnymailMessage.merge_metadata>`__.
+  See `docs <https://anymail.readthedocs.io/en/stable/sending/anymail_additions/#anymail.message.AnymailMessage.merge_metadata>`__.
   (Thanks `@janneThoft`_ for the idea and SendGrid implementation.)
 
 * **Mailjet:** Remove limitation on using `cc` or `bcc` together with `merge_data`.
@@ -547,7 +547,7 @@ Features
 ~~~~~~~~
 
 *  Anymail's Test EmailBackend is now
-   `documented <https://anymail.readthedocs.io/en/latest/tips/test_backend/>`__
+   `documented <https://anymail.readthedocs.io/en/stable/tips/test_backend/>`__
    (and cleaned up)
 
 
