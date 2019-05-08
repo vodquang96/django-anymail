@@ -26,7 +26,7 @@ from .exceptions import AnymailConfigurationError, AnymailInvalidAddress
 BASIC_NUMERIC_TYPES = six.integer_types + (float,)  # int, float, and (on Python 2) long
 
 
-UNSET = object()  # Used as non-None default value
+UNSET = type('UNSET', (object,), {})  # Used as non-None default value
 
 
 def combine(*args):

@@ -25,6 +25,18 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
+vNext
+-----
+
+*Unreleased changes on master*
+
+Fixes
+~~~~~
+
+* Support using `AnymailMessage` with django-mailer and similar packages that pickle
+  messages. (See `#147`_. Thanks to `@ewingrj`_ for identifying the problem.)
+
+
 v6.0
 ----
 
@@ -928,11 +940,13 @@ Features
 .. _#111: https://github.com/anymail/issues/111
 .. _#112: https://github.com/anymail/issues/112
 .. _#115: https://github.com/anymail/issues/115
+.. _#147: https://github.com/anymail/issues/147
 
 .. _@ailionx: https://github.com/ailionx
 .. _@calvin: https://github.com/calvin
 .. _@costela: https://github.com/costela
 .. _@decibyte: https://github.com/decibyte
+.. _@ewingrj: https://github.com/ewingrj
 .. _@janneThoft: https://github.com/janneThoft
 .. _@joshkersey: https://github.com/joshkersey
 .. _@Lekensteyn: https://github.com/Lekensteyn

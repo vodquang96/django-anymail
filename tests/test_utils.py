@@ -1,6 +1,8 @@
 # Tests for the anymail/utils.py module
 # (not to be confused with utilities for testing found in in tests/utils.py)
 import base64
+import copy
+import pickle
 from email.mime.image import MIMEImage
 from unittest import skipIf
 
@@ -24,7 +26,7 @@ from anymail.utils import (
     parse_address_list, parse_single_address, EmailAddress,
     Attachment,
     is_lazy, force_non_lazy, force_non_lazy_dict, force_non_lazy_list,
-    update_deep,
+    update_deep, UNSET,
     get_request_uri, get_request_basic_auth, parse_rfc2822date, querydict_getfirst,
     CaseInsensitiveCasePreservingDict)
 
@@ -441,3 +443,30 @@ class CaseInsensitiveCasePreservingDictTests(SimpleTestCase):
 
     # The base CaseInsensitiveDict functionality is well-tested in Requests,
     # so we don't repeat it here.
+
+
+class UnsetValueTests(SimpleTestCase):
+    """Tests for the UNSET sentinel value"""
+
+    def test_not_other_values(self):
+        self.assertIsNot(UNSET, None)
+        self.assertIsNot(UNSET, False)
+        self.assertNotEqual(UNSET, 0)
+        self.assertNotEqual(UNSET, "")
+
+    def test_unset_survives_pickle(self):
+        # Required for using AnymailMessage with django-mailer
+        pickled = pickle.dumps(UNSET)
+        self.assertIs(pickle.loads(pickled), UNSET)
+
+    def test_unset_survives_copy(self):
+        self.assertIs(copy.copy(UNSET), UNSET)
+        self.assertIs(copy.deepcopy(UNSET), UNSET)
+
+    def test_unset_has_useful_repr(self):
+        # (something better than '<object object at ...>')
+        self.assertIn("UNSET", repr(UNSET))
+
+    def test_equality(self):
+        # `is UNSET` is preferred to `== UNSET`, but both should work
+        self.assertEqual(UNSET, UNSET)
