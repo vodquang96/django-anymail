@@ -36,6 +36,9 @@ Fixes
 * Support using `AnymailMessage` with django-mailer and similar packages that pickle
   messages. (See `#147`_. Thanks to `@ewingrj`_ for identifying the problem.)
 
+* Fix UnicodeEncodeError error while reporting invalid email address on Python 2.7.
+  (See `#148`_. Thanks to `@fdemmer`_ for reporting the problem.)
+
 
 v6.0
 ----
@@ -941,12 +944,14 @@ Features
 .. _#112: https://github.com/anymail/issues/112
 .. _#115: https://github.com/anymail/issues/115
 .. _#147: https://github.com/anymail/issues/147
+.. _#148: https://github.com/anymail/issues/148
 
 .. _@ailionx: https://github.com/ailionx
 .. _@calvin: https://github.com/calvin
 .. _@costela: https://github.com/costela
 .. _@decibyte: https://github.com/decibyte
 .. _@ewingrj: https://github.com/ewingrj
+.. _@fdemmer: https://github.com/fdemmer
 .. _@janneThoft: https://github.com/janneThoft
 .. _@joshkersey: https://github.com/joshkersey
 .. _@Lekensteyn: https://github.com/Lekensteyn

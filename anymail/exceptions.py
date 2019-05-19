@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import json
 from traceback import format_exception_only
 
@@ -40,7 +42,7 @@ class AnymailError(Exception):
 
     def __str__(self):
         parts = [
-            " ".join([str(arg) for arg in self.args]),
+            " ".join([six.text_type(arg) for arg in self.args]),
             self.describe_raised_from(),
             self.describe_send(),
             self.describe_response(),

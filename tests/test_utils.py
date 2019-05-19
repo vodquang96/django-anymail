@@ -138,6 +138,12 @@ class ParseAddressListTests(SimpleTestCase):
         with self.assertRaisesMessage(AnymailInvalidAddress, "Display Name"):
             parse_address_list(['"Display Name"', '<valid@example.com>'])
 
+    def test_invalid_with_unicode(self):
+        # (assertRaisesMessage can't handle unicode in Python 2)
+        with self.assertRaises(AnymailInvalidAddress) as cm:
+            parse_address_list([u"\N{ENVELOPE}"])
+        self.assertIn(u"Invalid email address '\N{ENVELOPE}'", six.text_type(cm.exception))
+
     def test_single_string(self):
         # bare strings are used by the from_email parsing in BasePayload
         parsed_list = parse_address_list("one@example.com")
