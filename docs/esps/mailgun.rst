@@ -26,7 +26,8 @@ in your settings.py.
 
 .. rubric:: MAILGUN_API_KEY
 
-Required. Your Mailgun API key:
+Required for sending. Your Mailgun "Private API key" from the Mailgun
+`API security settings`_:
 
   .. code-block:: python
 
@@ -54,6 +55,27 @@ Mailgun sender domain, this setting is not needed.
 See :ref:`mailgun-sender-domain` below for examples.
 
 
+.. setting:: ANYMAIL_MAILGUN_WEBHOOK_SIGNING_KEY
+
+.. rubric:: MAILGUN_WEBHOOK_SIGNING_KEY
+
+.. versionadded:: 6.1
+
+Required for tracking or inbound webhooks. Your "HTTP webhook signing key" from the
+Mailgun `API security settings`_:
+
+  .. code-block:: python
+
+      ANYMAIL = {
+          ...
+          "MAILGUN_WEBHOOK_SIGNING_KEY": "<your webhook signing key>",
+      }
+
+If not provided, Anymail will attempt to validate webhooks using the
+:setting:`MAILGUN_API_KEY <ANYMAIL_MAILGUN_API_KEY>` setting instead. (These two keys have
+the same values for new Mailgun users, but will diverge if you ever rotate either key.)
+
+
 .. setting:: ANYMAIL_MAILGUN_API_URL
 
 .. rubric:: MAILGUN_API_URL
@@ -73,6 +95,9 @@ region:
         "MAILGUN_API_URL": "https://api.eu.mailgun.net/v3",
         # ...
       }
+
+
+.. _API security settings: https://app.mailgun.com/app/account/security/api_keys
 
 
 .. _mailgun-sender-domain:
@@ -260,9 +285,14 @@ Status tracking webhooks
 
     Added support for Mailgun's June, 2018 (non-"legacy") webhook format.
 
+.. versionchanged:: 6.1
+
+    Added support for a new :setting:`MAILGUN_WEBHOOK_SIGNING_KEY <ANYMAIL_MAILGUN_WEBHOOK_SIGNING_KEY>`
+    setting, separate from your MAILGUN_API_KEY.
+
 If you are using Anymail's normalized :ref:`status tracking <event-tracking>`, enter
-the url in the `Mailgun webhooks dashboard`_. (Be sure to select the correct sending
-domain---Mailgun's sandbox and production domains have separate webhook settings.)
+the url in the Mailgun webhooks config for your domain. (Be sure to select the correct
+sending domain---Mailgun's sandbox and production domains have separate webhook settings.)
 
 Mailgun allows you to enter a different URL for each event type: just enter this same
 Anymail tracking URL for all events you want to receive:
@@ -273,8 +303,9 @@ Anymail tracking URL for all events you want to receive:
      * *yoursite.example.com* is your Django site
 
 Mailgun implements a limited form of webhook signing, and Anymail will verify
-these signatures (based on your :setting:`MAILGUN_API_KEY <ANYMAIL_MAILGUN_API_KEY>`
-Anymail setting). By default, Mailgun's webhook signature provides similar security
+these signatures against your
+:setting:`MAILGUN_WEBHOOK_SIGNING_KEY <ANYMAIL_MAILGUN_WEBHOOK_SIGNING_KEY>`
+Anymail setting. By default, Mailgun's webhook signature provides similar security
 to Anymail's shared webhook secret, so it's acceptable to omit the
 :setting:`ANYMAIL_WEBHOOK_SECRET` setting (and "{random}:{random}@" portion of the
 webhook url) with Mailgun webhooks.
@@ -321,7 +352,6 @@ Mailgun's other event APIs.)
       newer, non-legacy webhooks.)
 
 
-.. _Mailgun webhooks dashboard: https://mailgun.com/app/webhooks
 .. _Mailgun webhook payload: https://documentation.mailgun.com/en/latest/user_manual.html#webhooks
 
 
@@ -333,7 +363,7 @@ Inbound webhook
 If you want to receive email from Mailgun through Anymail's normalized :ref:`inbound <inbound>`
 handling, follow Mailgun's `Receiving, Storing and Fowarding Messages`_ guide to set up
 an inbound route that forwards to Anymail's inbound webhook. (You can configure routes
-using Mailgun's API, or simply using the `Mailgun routes dashboard`_.)
+using Mailgun's API, or simply using the `Mailgun receiving config`_.)
 
 The *action* for your route will be either:
 
@@ -352,9 +382,17 @@ received email (including complex forms like multi-message mailing list digests)
 If you want to use Anymail's normalized :attr:`~anymail.inbound.AnymailInboundMessage.spam_detected` and
 :attr:`~anymail.inbound.AnymailInboundMessage.spam_score` attributes, you'll need to set your Mailgun
 domain's inbound spam filter to "Deliver spam, but add X-Mailgun-SFlag and X-Mailgun-SScore headers"
-(in the `Mailgun domains dashboard`_).
+(in the `Mailgun domains config`_).
+
+Anymail will verify Mailgun inbound message events using your
+:setting:`MAILGUN_WEBHOOK_SIGNING_KEY <ANYMAIL_MAILGUN_WEBHOOK_SIGNING_KEY>`
+Anymail setting. By default, Mailgun's webhook signature provides similar security
+to Anymail's shared webhook secret, so it's acceptable to omit the
+:setting:`ANYMAIL_WEBHOOK_SECRET` setting (and "{random}:{random}@" portion of the
+action) with Mailgun inbound routing.
+
 
 .. _Receiving, Storing and Fowarding Messages:
    https://documentation.mailgun.com/en/latest/user_manual.html#receiving-forwarding-and-storing-messages
-.. _Mailgun routes dashboard: https://app.mailgun.com/app/routes
-.. _Mailgun domains dashboard: https://app.mailgun.com/app/domains
+.. _Mailgun receiving config: https://app.mailgun.com/app/receiving/routes
+.. _Mailgun domains config: https://app.mailgun.com/app/sending/domains

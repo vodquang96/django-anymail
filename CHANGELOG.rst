@@ -25,6 +25,22 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
+vNext
+-----
+
+*UNRELEASED*
+
+Fixes
+~~~~~
+
+* **Mailgun:** Add new `MAILGUN_WEBHOOK_SIGNING_KEY` setting for verifying tracking and
+  inbound webhook calls. Mailgun's webhook signing key can become different from your
+  `MAILGUN_API_KEY` if you have ever rotated either key.
+  See `docs <https://anymail.readthedocs.io/en/latest/esps/mailgun/#std:setting-ANYMAIL_MAILGUN_WEBHOOK_SIGNING_KEY>`__.
+  (More in `#153`_. Thanks to `@dominik-lekse`_ for reporting the problem and Mailgun's
+  `@mbk-ok`_ for identifying the cause.)
+
+
 v6.0.1
 ------
 
@@ -945,17 +961,20 @@ Features
 .. _#115: https://github.com/anymail/issues/115
 .. _#147: https://github.com/anymail/issues/147
 .. _#148: https://github.com/anymail/issues/148
+.. _#153: https://github.com/anymail/issues/153
 
 .. _@ailionx: https://github.com/ailionx
 .. _@calvin: https://github.com/calvin
 .. _@costela: https://github.com/costela
 .. _@decibyte: https://github.com/decibyte
+.. _@dominik-lekse: https://github.com/dominik-lekse
 .. _@ewingrj: https://github.com/ewingrj
 .. _@fdemmer: https://github.com/fdemmer
 .. _@janneThoft: https://github.com/janneThoft
 .. _@joshkersey: https://github.com/joshkersey
 .. _@Lekensteyn: https://github.com/Lekensteyn
 .. _@lewistaylor: https://github.com/lewistaylor
+.. _@mbk-ok: https://github.com/mbk-ok
 .. _@RignonNoel: https://github.com/RignonNoel
 .. _@sebbacon: https://github.com/sebbacon
 .. _@varche1: https://github.com/varche1

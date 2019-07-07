@@ -13,14 +13,14 @@ from anymail.signals import AnymailInboundEvent
 from anymail.webhooks.mailgun import MailgunInboundWebhookView
 
 from .test_mailgun_webhooks import (
-    TEST_API_KEY, mailgun_sign_payload,
+    TEST_WEBHOOK_SIGNING_KEY, mailgun_sign_payload,
     mailgun_sign_legacy_payload, querydict_to_postdict)
 from .utils import sample_image_content, sample_email_content
 from .webhook_cases import WebhookTestCase
 
 
 @tag('mailgun')
-@override_settings(ANYMAIL_MAILGUN_API_KEY=TEST_API_KEY)
+@override_settings(ANYMAIL_MAILGUN_WEBHOOK_SIGNING_KEY=TEST_WEBHOOK_SIGNING_KEY)
 class MailgunInboundTestCase(WebhookTestCase):
     def test_inbound_basics(self):
         raw_event = mailgun_sign_legacy_payload({

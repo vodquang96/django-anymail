@@ -14,19 +14,19 @@ from anymail.webhooks.mailgun import MailgunTrackingWebhookView
 
 from .webhook_cases import WebhookTestCase, WebhookBasicAuthTestsMixin
 
-TEST_API_KEY = 'TEST_API_KEY'
+TEST_WEBHOOK_SIGNING_KEY = 'TEST_WEBHOOK_SIGNING_KEY'
 
 
-def mailgun_signature(timestamp, token, api_key):
+def mailgun_signature(timestamp, token, webhook_signing_key):
     """Generates a Mailgun webhook signature"""
     # https://documentation.mailgun.com/en/latest/user_manual.html#securing-webhooks
     return hmac.new(
-        key=api_key.encode('ascii'),
+        key=webhook_signing_key.encode('ascii'),
         msg='{timestamp}{token}'.format(timestamp=timestamp, token=token).encode('ascii'),
         digestmod=hashlib.sha256).hexdigest()
 
 
-def mailgun_sign_payload(data, api_key=TEST_API_KEY):
+def mailgun_sign_payload(data, webhook_signing_key=TEST_WEBHOOK_SIGNING_KEY):
     """Add or complete Mailgun webhook signature block in data dict"""
     # Modifies the dict in place
     event_data = data.get('event-data', {})
@@ -34,16 +34,16 @@ def mailgun_sign_payload(data, api_key=TEST_API_KEY):
     token = signature.setdefault('token', '1234567890abcdef1234567890abcdef')
     timestamp = signature.setdefault('timestamp',
                                      str(int(float(event_data.get('timestamp', '1234567890.123')))))
-    signature['signature'] = mailgun_signature(timestamp, token, api_key=api_key)
+    signature['signature'] = mailgun_signature(timestamp, token, webhook_signing_key=webhook_signing_key)
     return data
 
 
-def mailgun_sign_legacy_payload(data, api_key=TEST_API_KEY):
+def mailgun_sign_legacy_payload(data, webhook_signing_key=TEST_WEBHOOK_SIGNING_KEY):
     """Add a Mailgun webhook signature to data dict"""
     # Modifies the dict in place
     data.setdefault('timestamp', '1234567890')
     data.setdefault('token', '1234567890abcdef1234567890abcdef')
-    data['signature'] = mailgun_signature(data['timestamp'], data['token'], api_key=api_key)
+    data['signature'] = mailgun_signature(data['timestamp'], data['token'], webhook_signing_key=webhook_signing_key)
     return data
 
 
@@ -61,14 +61,44 @@ def querydict_to_postdict(qd):
 
 @tag('mailgun')
 class MailgunWebhookSettingsTestCase(WebhookTestCase):
-    def test_requires_api_key(self):
-        with self.assertRaises(ImproperlyConfigured):
+    def test_requires_webhook_signing_key(self):
+        with self.assertRaisesMessage(ImproperlyConfigured, "MAILGUN_WEBHOOK_SIGNING_KEY"):
             self.client.post('/anymail/mailgun/tracking/', content_type="application/json",
                              data=json.dumps(mailgun_sign_payload({'event-data': {'event': 'delivered'}})))
 
+    @override_settings(
+        ANYMAIL_MAILGUN_API_KEY='TEST_API_KEY',
+        ANYMAIL_MAILGUN_WEBHOOK_SIGNING_KEY='TEST_WEBHOOK_SIGNING_KEY',
+    )
+    def test_webhook_signing_is_different_from_api_key(self):
+        """Webhooks should use MAILGUN_WEBHOOK_SIGNING_KEY, not MAILGUN_API_KEY, if both provided"""
+        payload = json.dumps(mailgun_sign_payload({'event-data': {'event': 'delivered'}},
+                                                  webhook_signing_key='TEST_WEBHOOK_SIGNING_KEY'))
+        response = self.client.post('/anymail/mailgun/tracking/', content_type="application/json", data=payload)
+        self.assertEqual(response.status_code, 200)
+
+    @override_settings(ANYMAIL_MAILGUN_API_KEY='TEST_API_KEY')
+    def test_defaults_webhook_signing_to_api_key(self):
+        """Webhooks should default to MAILGUN_API_KEY if MAILGUN_WEBHOOK_SIGNING_KEY not provided"""
+        payload = json.dumps(mailgun_sign_payload({'event-data': {'event': 'delivered'}},
+                                                  webhook_signing_key='TEST_API_KEY'))
+        response = self.client.post('/anymail/mailgun/tracking/', content_type="application/json", data=payload)
+        self.assertEqual(response.status_code, 200)
+
+    def test_webhook_signing_key_view_params(self):
+        """Webhook signing key can be provided as a view param"""
+        view = MailgunTrackingWebhookView.as_view(webhook_signing_key='VIEW_SIGNING_KEY')
+        view_instance = view.view_class(**view.view_initkwargs)
+        self.assertEqual(view_instance.webhook_signing_key, b'VIEW_SIGNING_KEY')
+
+        # Can also use `api_key` param for backwards compatiblity with earlier Anymail versions
+        view = MailgunTrackingWebhookView.as_view(api_key='VIEW_API_KEY')
+        view_instance = view.view_class(**view.view_initkwargs)
+        self.assertEqual(view_instance.webhook_signing_key, b'VIEW_API_KEY')
+
 
 @tag('mailgun')
-@override_settings(ANYMAIL_MAILGUN_API_KEY=TEST_API_KEY)
+@override_settings(ANYMAIL_MAILGUN_WEBHOOK_SIGNING_KEY=TEST_WEBHOOK_SIGNING_KEY)
 class MailgunWebhookSecurityTestCase(WebhookTestCase, WebhookBasicAuthTestsMixin):
     should_warn_if_no_auth = False  # because we check webhook signature
 
@@ -90,14 +120,14 @@ class MailgunWebhookSecurityTestCase(WebhookTestCase, WebhookBasicAuthTestsMixin
 
     def test_verifies_bad_signature(self):
         data = mailgun_sign_payload({'event-data': {'event': 'delivered'}},
-                                    api_key="wrong API key")
+                                    webhook_signing_key="wrong signing key")
         response = self.client.post('/anymail/mailgun/tracking/', content_type="application/json",
                                     data=json.dumps(data))
         self.assertEqual(response.status_code, 400)
 
 
 @tag('mailgun')
-@override_settings(ANYMAIL_MAILGUN_API_KEY=TEST_API_KEY)
+@override_settings(ANYMAIL_MAILGUN_WEBHOOK_SIGNING_KEY=TEST_WEBHOOK_SIGNING_KEY)
 class MailgunTestCase(WebhookTestCase):
     # Tests for Mailgun's new webhooks (announced 2018-06-29)
 
@@ -449,7 +479,7 @@ class MailgunTestCase(WebhookTestCase):
 
 
 @tag('mailgun')
-@override_settings(ANYMAIL_MAILGUN_API_KEY=TEST_API_KEY)
+@override_settings(ANYMAIL_MAILGUN_WEBHOOK_SIGNING_KEY=TEST_WEBHOOK_SIGNING_KEY)
 class MailgunLegacyTestCase(WebhookTestCase):
     # Tests for Mailgun's "legacy" webhooks
     # (which were the only webhooks available prior to Anymail 4.0)

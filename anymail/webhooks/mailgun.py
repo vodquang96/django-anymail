@@ -10,7 +10,7 @@ from .base import AnymailBaseWebhookView
 from ..exceptions import AnymailConfigurationError, AnymailWebhookValidationFailure, AnymailInvalidAddress
 from ..inbound import AnymailInboundMessage
 from ..signals import inbound, tracking, AnymailInboundEvent, AnymailTrackingEvent, EventType, RejectReason
-from ..utils import get_anymail_setting, combine, querydict_getfirst, parse_single_address
+from ..utils import get_anymail_setting, combine, querydict_getfirst, parse_single_address, UNSET
 
 
 class MailgunBaseWebhookView(AnymailBaseWebhookView):
@@ -19,12 +19,18 @@ class MailgunBaseWebhookView(AnymailBaseWebhookView):
     esp_name = "Mailgun"
     warn_if_no_basic_auth = False  # because we validate against signature
 
+    webhook_signing_key = None  # (Declaring class attr allows override by kwargs in View.as_view.)
+
+    # The `api_key` attribute name is still allowed for compatibility with earlier Anymail releases.
     api_key = None  # (Declaring class attr allows override by kwargs in View.as_view.)
 
     def __init__(self, **kwargs):
+        # webhook_signing_key: falls back to api_key if webhook_signing_key not provided
         api_key = get_anymail_setting('api_key', esp_name=self.esp_name,
-                                      kwargs=kwargs, allow_bare=True)
-        self.api_key = api_key.encode('ascii')  # hmac.new requires bytes key in python 3
+                                      kwargs=kwargs, allow_bare=True, default=None)
+        webhook_signing_key = get_anymail_setting('webhook_signing_key', esp_name=self.esp_name,
+                                                  kwargs=kwargs, default=UNSET if api_key is None else api_key)
+        self.webhook_signing_key = webhook_signing_key.encode('ascii')  # hmac.new requires bytes key in python 3
         super(MailgunBaseWebhookView, self).__init__(**kwargs)
 
     def validate_request(self, request):
@@ -52,7 +58,7 @@ class MailgunBaseWebhookView(AnymailBaseWebhookView):
             except KeyError:
                 raise AnymailWebhookValidationFailure("Mailgun webhook called without required security fields")
 
-        expected_signature = hmac.new(key=self.api_key, msg='{}{}'.format(timestamp, token).encode('ascii'),
+        expected_signature = hmac.new(key=self.webhook_signing_key, msg='{}{}'.format(timestamp, token).encode('ascii'),
                                       digestmod=hashlib.sha256).hexdigest()
         if not constant_time_compare(signature, expected_signature):
             raise AnymailWebhookValidationFailure("Mailgun webhook called with incorrect signature")
