@@ -25,18 +25,18 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
------
+v6.1
+----
 
-*UNRELEASED*
+*2019-07-07*
 
-Fixes
-~~~~~
+Features
+~~~~~~~~
 
 * **Mailgun:** Add new `MAILGUN_WEBHOOK_SIGNING_KEY` setting for verifying tracking and
   inbound webhook calls. Mailgun's webhook signing key can become different from your
   `MAILGUN_API_KEY` if you have ever rotated either key.
-  See `docs <https://anymail.readthedocs.io/en/latest/esps/mailgun/#std:setting-ANYMAIL_MAILGUN_WEBHOOK_SIGNING_KEY>`__.
+  See `docs <https://anymail.readthedocs.io/en/stable/esps/mailgun/#std:setting-ANYMAIL_MAILGUN_WEBHOOK_SIGNING_KEY>`__.
   (More in `#153`_. Thanks to `@dominik-lekse`_ for reporting the problem and Mailgun's
   `@mbk-ok`_ for identifying the cause.)
 
