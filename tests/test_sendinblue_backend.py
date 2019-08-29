@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import json
-
 from base64 import b64encode, b64decode
 from datetime import datetime
 from decimal import Decimal
@@ -16,7 +15,6 @@ from django.utils.timezone import get_fixed_timezone, override as override_curre
 from anymail.exceptions import (AnymailAPIError, AnymailConfigurationError, AnymailSerializationError,
                                 AnymailUnsupportedFeature)
 from anymail.message import attach_inline_image_file
-
 from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
 from .utils import sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME, AnymailTestMixin
 
@@ -309,15 +307,10 @@ class SendinBlueBackendAnymailFeatureTests(SendinBlueBackendMockAPITestCase):
                 self.message.send()
 
     def test_tag(self):
-        self.message.tags = ["receipt"]
+        self.message.tags = ["receipt", "multiple"]
         self.message.send()
         data = self.get_api_call_json()
-        self.assertCountEqual(data['headers']["X-Mailin-tag"], "receipt")
-
-    def test_multiple_tags(self):
-        self.message.tags = ["receipt", "repeat-user"]
-        with self.assertRaises(AnymailUnsupportedFeature):
-            self.message.send()
+        self.assertEqual(data['tags'], ["receipt", "multiple"])
 
     def test_tracking(self):
         # Test one way...
@@ -336,55 +329,25 @@ class SendinBlueBackendAnymailFeatureTests(SendinBlueBackendMockAPITestCase):
     def test_template_id(self):
         # subject, body, and from_email must be None for SendinBlue template send:
         message = mail.EmailMessage(
-            subject=None,
+            subject='My Subject',
             body=None,
-            # recipient and reply_to display names are not allowed
-            to=['alice@example.com'],  # single 'to' recommended (all 'to' get the same message)
-            cc=['cc1@example.com', 'cc2@example.com'],
-            bcc=['bcc@example.com'],
-            reply_to=['reply@example.com'],
+            from_email='from@example.com',
+            to=['Recipient <to@example.com>'],  # single 'to' recommended (all 'to' get the same message)
+            cc=['Recipient <cc1@example.com>', 'Recipient <cc2@example.com>'],
+            bcc=['Recipient <bcc@example.com>'],
+            reply_to=['Recipient <reply@example.com>'],
         )
-        message.from_email = None  # from_email must be cleared after constructing EmailMessage
-
         message.template_id = 12  # SendinBlue uses per-account numeric ID to identify templates
-        message.merge_global_data = {
-            'buttonUrl': 'https://example.com',
-        }
-
         message.send()
-
-        # Template API call uses different endpoint and payload format from normal send:
-        self.assert_esp_called('/v3/smtp/templates/12/send')
         data = self.get_api_call_json()
-        self.assertEqual(data['emailTo'], ["alice@example.com"])
-        self.assertEqual(data['emailCc'], ["cc1@example.com", "cc2@example.com"])
-        self.assertEqual(data['emailBcc'], ["bcc@example.com"])
-        self.assertEqual(data['replyTo'], 'reply@example.com')
-        self.assertEqual(data['attributes'], {'buttonUrl': 'https://example.com'})
-
-        # Make sure these normal-send parameters didn't get left in:
-        self.assertNotIn('to', data)
-        self.assertNotIn('cc', data)
-        self.assertNotIn('bcc', data)
-        self.assertNotIn('sender', data)
-        self.assertNotIn('subject', data)
-        self.assertNotIn('textContent', data)
-        self.assertNotIn('htmlContent', data)
+        self.assertEqual(data['templateId'], 12)
+        self.assertEqual(data['subject'], 'My Subject')
+        self.assertEqual(data['to'], [{'email': "to@example.com", 'name': 'Recipient'}])
 
     def test_unsupported_template_overrides(self):
         # SendinBlue doesn't allow overriding any template headers/content
         message = mail.EmailMessage(to=['to@example.com'])
         message.template_id = "9"
-
-        message.from_email = "from@example.com"
-        with self.assertRaisesMessage(AnymailUnsupportedFeature, "overriding template from_email"):
-            message.send()
-        message.from_email = None
-
-        message.subject = "nope, can't change template subject"
-        with self.assertRaisesMessage(AnymailUnsupportedFeature, "overriding template subject"):
-            message.send()
-        message.subject = None
 
         message.body = "nope, can't change text body"
         with self.assertRaisesMessage(AnymailUnsupportedFeature, "overriding template body content"):
@@ -394,33 +357,6 @@ class SendinBlueBackendAnymailFeatureTests(SendinBlueBackendMockAPITestCase):
             message.send()
         message.body = None
 
-    def test_unsupported_template_display_names(self):
-        # SendinBlue doesn't support display names in template recipients or reply-to
-        message = mail.EmailMessage()
-        message.from_email = None
-        message.template_id = "9"
-
-        message.to = ["Recipient <to@example.com>"]
-        with self.assertRaisesMessage(AnymailUnsupportedFeature, "display names in to when sending with a template"):
-            message.send()
-        message.to = ["to@example.com"]
-
-        message.cc = ["Recipient <cc@example.com>"]
-        with self.assertRaisesMessage(AnymailUnsupportedFeature, "display names in cc when sending with a template"):
-            message.send()
-        message.cc = []
-
-        message.bcc = ["Recipient <bcc@example.com>"]
-        with self.assertRaisesMessage(AnymailUnsupportedFeature, "display names in bcc when sending with a template"):
-            message.send()
-        message.bcc = []
-
-        message.reply_to = ["Reply-To <reply@example.com>"]
-        with self.assertRaisesMessage(AnymailUnsupportedFeature,
-                                      "display names in reply_to when sending with a template"):
-            message.send()
-        message.reply_to = []
-
     def test_merge_data(self):
         self.message.merge_data = {
             'alice@example.com': {':name': "Alice", ':group': "Developers"},
@@ -428,6 +364,14 @@ class SendinBlueBackendAnymailFeatureTests(SendinBlueBackendMockAPITestCase):
         }
         with self.assertRaises(AnymailUnsupportedFeature):
             self.message.send()
+
+    def test_merge_global_data(self):
+        self.message.merge_global_data = {
+            'a': 'b'
+        }
+        self.message.send()
+        data = self.get_api_call_json()
+        self.assertEqual(data['params'], {'a': 'b'})
 
     def test_default_omits_options(self):
         """Make sure by default we don't send any ESP-specific options.
@@ -445,7 +389,6 @@ class SendinBlueBackendAnymailFeatureTests(SendinBlueBackendMockAPITestCase):
         self.assertNotIn('atributes', data)
 
     def test_esp_extra(self):
-        self.message.tags = ["tag"]
         # SendinBlue doesn't offer any esp-extra but we will test
         # with some extra of SendGrid to see if it's work in the future
         self.message.esp_extra = {
@@ -455,8 +398,8 @@ class SendinBlueBackendAnymailFeatureTests(SendinBlueBackendMockAPITestCase):
             },
             'tracking_settings': {
                 'subscription_tracking': {
-                        'enable': True,
-                        'substitution_tag': '[unsubscribe_url]',
+                    'enable': True,
+                    'substitution_tag': '[unsubscribe_url]',
                 },
             },
         }
@@ -467,15 +410,13 @@ class SendinBlueBackendAnymailFeatureTests(SendinBlueBackendMockAPITestCase):
         self.assertEqual(data['asm'], {'group_id': 1})
         self.assertEqual(data['tracking_settings']['subscription_tracking'],
                          {'enable': True, 'substitution_tag': "[unsubscribe_url]"})
-        # make sure we didn't overwrite Anymail message options:
-        self.assertEqual(data['headers']["X-Mailin-tag"], "tag")
 
     # noinspection PyUnresolvedReferences
     def test_send_attaches_anymail_status(self):
         """ The anymail_status should be attached to the message when it is sent """
         # the DEFAULT_RAW_RESPONSE above is the *only* success response SendinBlue returns,
         # so no need to override it here
-        msg = mail.EmailMessage('Subject', 'Message', 'from@example.com', ['to1@example.com'],)
+        msg = mail.EmailMessage('Subject', 'Message', 'from@example.com', ['to1@example.com'], )
         sent = msg.send()
         self.assertEqual(sent, 1)
         self.assertEqual(msg.anymail_status.status, {'queued'})
