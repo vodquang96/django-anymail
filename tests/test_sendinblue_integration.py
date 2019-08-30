@@ -90,7 +90,8 @@ class SendinBlueBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         )
         message.from_email = None  # Required for SendinBlue templates
 
-        message.attach("attachment1.txt", "Here is some\ntext for you", "text/plain")
+        # Attachments don't work with templates in Sendinblue's newer API:
+        # message.attach("attachment1.txt", "Here is some\ntext for you", "text/plain")
 
         message.send()
         self.assertEqual(message.anymail_status.status, {'queued'})  # SendinBlue always queues
