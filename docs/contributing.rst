@@ -71,7 +71,7 @@ and Python versions. Tests are run at least once a week, to check whether ESP AP
 and other dependencies have changed out from under Anymail.
 
 For local development, the recommended test command is
-:shell:`tox -e django21-py36-all,django111-py27-all,lint`, which tests a representative
+:shell:`tox -e django22-py37-all,django111-py27-all,lint`, which tests a representative
 combination of Python and Django versions. It also runs :pypi:`flake8` and other
 code-style checkers. Some other test options are covered below, but using this
 tox command catches most problems, and is a good pre-pull-request check.
@@ -110,7 +110,7 @@ with those, `pyenv`_ is a helpful way to install and manage multiple Python vers
         $ tox -e django21-py36-all,django111-py27-all tests.test_mailgun_backend tests.test_utils
 
         ## to test more Python/Django versions:
-        $ tox  # ALL 20+ envs! (grab a coffee, or use `detox` to run tests in parallel)
+        $ tox --parallel auto  # ALL 20+ envs! (in parallel if possible)
         $ tox --skip-missing-interpreters  # if some Python versions aren't installed
 
 In addition to the mocked tests, Anymail has integration tests which *do* call live ESP APIs.
