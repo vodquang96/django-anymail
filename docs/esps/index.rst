@@ -47,7 +47,7 @@ Email Service Provider                        |Amazon SES|  |Mailgun|    |Mailje
 .. rubric:: :ref:`templates-and-merge`
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 :attr:`~AnymailMessage.template_id`           Yes           Yes          Yes         Yes          Yes         Yes         Yes           Yes
-:attr:`~AnymailMessage.merge_data`            Yes           Yes          Yes         Yes          No          Yes         No            Yes
+:attr:`~AnymailMessage.merge_data`            Yes           Yes          Yes         Yes          Yes         Yes         No            Yes
 :attr:`~AnymailMessage.merge_global_data`     Yes           (emulated)   Yes         Yes          Yes         Yes         Yes           Yes
 
 .. rubric:: :ref:`Status <esp-send-status>` and :ref:`event tracking <event-tracking>`
