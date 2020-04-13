@@ -25,19 +25,47 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
+v7.1
 -----
 
-*Unreleased changes on master*
+*2020-04-13*
 
 Fixes
 ~~~~~
 
 * **Postmark:** Fix API error when sending with template to single recipient.
   (Thanks to `@jc-ee`_ for finding and fixing the issue.)
+
 * **SendGrid:** Allow non-batch template send to multiple recipients when
   `merge_global_data` is set without `merge_data`. (Broken in v6.0. Thanks to
   `@vgrebenschikov`_ for the bug report.)
+
+Features
+~~~~~~~~
+
+* Add `DEBUG_API_REQUESTS` setting to dump raw ESP API requests, which can assist
+  in debugging or reporting problems to ESPs.
+  (See `docs <https://anymail.readthedocs.io/en/stable/installation/#std:setting-ANYMAIL_DEBUG_API_REQUESTS>`__.
+  This setting has was quietly added in Anymail v4.3, and is now officially documented.)
+
+* **Sendinblue:** Now supports file attachments on template sends, when using their
+  new template language. (Sendinblue removed this API limitation on 2020-02-18; the
+  change works with Anymail v7.0 and later. Thanks to `@sebashwa`_ for noting
+  the API change and updating Anymail's docs.)
+
+Other
+~~~~~
+
+* Test against released Django 3.0.
+
+* **SendGrid:** Document unpredictable behavior in the SendGrid API that can cause
+  text attachments to be sent with the wrong character set.
+  (See `docs <https://anymail.readthedocs.io/en/stable/esps/sendgrid/#limitations-and-quirks>`__
+  under "Wrong character set on text attachments." Thanks to `@nuschk`_ and `@swrobel`_
+  for helping track down the issue and reporting it to SendGrid.)
+
+* Docs: Fix a number of typos and some outdated information. (Thanks `@alee`_ and
+  `@Honza-m`_.)
 
 
 v7.0
@@ -58,9 +86,10 @@ Breaking changes
     recipient display names).
 
   * Sendinblue's API no longer supports sending attachments when using templates.
+    [Note: Sendinblue removed this API limitation on 2020-02-18.]
 
   Ordinary, non-template sending is not affected by these changes. See
-  `docs <https://anymail.readthedocs.io/en/stable/esps/sendinblue/#batch-sending-merge-and-esp-templates>`_
+  `docs <https://anymail.readthedocs.io/en/stable/esps/sendinblue/#batch-sending-merge-and-esp-templates>`__
   for more info and alternatives. (Thanks `@Thorbenl`_.)
 
 Features
@@ -1020,6 +1049,7 @@ Features
 .. _#153: https://github.com/anymail/issues/153
 
 .. _@ailionx: https://github.com/ailionx
+.. _@alee: https://github.com/alee
 .. _@anstosa: https://github.com/anstosa
 .. _@calvin: https://github.com/calvin
 .. _@costela: https://github.com/costela
@@ -1027,14 +1057,18 @@ Features
 .. _@dominik-lekse: https://github.com/dominik-lekse
 .. _@ewingrj: https://github.com/ewingrj
 .. _@fdemmer: https://github.com/fdemmer
+.. _@Honza-m: https://github.com/Honza-m
 .. _@janneThoft: https://github.com/janneThoft
 .. _@jc-ee: https://github.com/jc-ee
 .. _@joshkersey: https://github.com/joshkersey
 .. _@Lekensteyn: https://github.com/Lekensteyn
 .. _@lewistaylor: https://github.com/lewistaylor
 .. _@mbk-ok: https://github.com/mbk-ok
+.. _@nuschk: https://github.com/nuschk
 .. _@RignonNoel: https://github.com/RignonNoel
+.. _@sebashwa: https://github.com/sebashwa
 .. _@sebbacon: https://github.com/sebbacon
+.. _@swrobel: https://github.com/swrobel
 .. _@Thorbenl: https://github.com/Thorbenl
 .. _@varche1: https://github.com/varche1
 .. _@vgrebenschikov: https://github.com/vgrebenschikov
