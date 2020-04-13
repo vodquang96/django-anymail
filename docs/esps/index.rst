@@ -32,7 +32,7 @@ The table below summarizes the Anymail features supported for each ESP.
 .. rst-class:: sticky-left
 
 ============================================  ============  ===========  ==========  ===========  ==========  ==========  ============  ===========
-Email Service Provider                        |Amazon SES|  |Mailgun|    |Mailjet|   |Mandrill|   |Postmark|  |SendGrid|  |SendinBlue|  |SparkPost|
+Email Service Provider                        |Amazon SES|  |Mailgun|    |Mailjet|   |Mandrill|   |Postmark|  |SendGrid|  |Sendinblue|  |SparkPost|
 ============================================  ============  ===========  ==========  ===========  ==========  ==========  ============  ===========
 .. rubric:: :ref:`Anymail send options <anymail-send-options>`
 ---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ meaningless. (And even specific features don't matter if you don't plan to use t
 .. |Mandrill| replace:: :ref:`mandrill-backend`
 .. |Postmark| replace:: :ref:`postmark-backend`
 .. |SendGrid| replace:: :ref:`sendgrid-backend`
-.. |SendinBlue| replace:: :ref:`sendinblue-backend`
+.. |Sendinblue| replace:: :ref:`sendinblue-backend`
 .. |SparkPost| replace:: :ref:`sparkpost-backend`
 .. |AnymailTrackingEvent| replace:: :class:`~anymail.signals.AnymailTrackingEvent`
 .. |AnymailInboundEvent| replace:: :class:`~anymail.signals.AnymailInboundEvent`

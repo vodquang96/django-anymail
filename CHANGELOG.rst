@@ -48,7 +48,7 @@ v7.0
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-* **SendinBlue templates:** Support Sendinblue's new (ESP stored) Django templates and
+* **Sendinblue templates:** Support Sendinblue's new (ESP stored) Django templates and
   new API for template sending. This removes most of the odd limitations in the older
   (now-deprecated) SendinBlue template send API, but involves two breaking changes:
 
@@ -70,7 +70,7 @@ Features
   See `docs <https://anymail.readthedocs.io/en/stable/esps/mailgun/#batch-sending-merge-and-esp-templates>`__.
   (Thanks `@anstosa`_.)
 
-* **SendinBlue:** Support multiple `tags`. (Thanks `@Thorbenl`_.)
+* **Sendinblue:** Support multiple `tags`. (Thanks `@Thorbenl`_.)
 
 
 Other
