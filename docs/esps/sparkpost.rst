@@ -17,7 +17,7 @@ backend. Either include the "sparkpost" option when you install Anymail:
 
     .. code-block:: console
 
-        $ pip install django-anymail[sparkpost]
+        $ pip install "django-anymail[sparkpost]"
 
 or separately run `pip install sparkpost`.
 

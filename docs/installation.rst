@@ -12,7 +12,7 @@ To use Anymail in your Django project:
 
     .. code-block:: console
 
-        $ pip install django-anymail[sendgrid,sparkpost]
+        $ pip install "django-anymail[sendgrid,sparkpost]"
 
    The `[sendgrid,sparkpost]` part of that command tells pip you also
    want to install additional packages required for those ESPs.

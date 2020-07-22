@@ -27,7 +27,7 @@ backend. Either include the "amazon_ses" option when you install Anymail:
 
     .. code-block:: console
 
-        $ pip install django-anymail[amazon_ses]
+        $ pip install "django-anymail[amazon_ses]"
 
 or separately run `pip install boto3`.
 

@@ -77,7 +77,7 @@ or SparkPost or any other supported ESP where you see "mailgun":
 
    .. code-block:: console
 
-        $ pip install django-anymail[mailgun]
+        $ pip install "django-anymail[mailgun]"
 
    (The `[mailgun]` part installs any additional packages needed for that ESP.
    Mailgun doesn't have any, but some other ESPs do.)
