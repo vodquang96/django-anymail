@@ -25,12 +25,12 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
------
+v7.2 LTS
+--------
 
-*Unreleased changes in development*
+*2020-07-25*
 
-This is an extended support release. Anymail vNext will receive security updates
+This is an extended support release. Anymail v7.2 will receive security updates
 and fixes for any breaking ESP API changes through at least July, 2021.
 
 Fixes
