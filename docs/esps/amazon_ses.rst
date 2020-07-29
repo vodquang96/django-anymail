@@ -518,11 +518,18 @@ Anymail will automatically handle SNS endpoint confirmation for you, for both tr
 webhooks, if both:
 
 1. You have deployed your Django project with :ref:`Anymail webhooks enabled <webhooks-configuration>`
-   and an Anymail :setting:`WEBHOOK_SECRET <ANYMAIL_WEBHOOK_SECRET>` set, before subscribing the SNS Topic
+   and an Anymail :setting:`WEBHOOK_SECRET <ANYMAIL_WEBHOOK_SECRET>` set, **before** subscribing the SNS Topic
    to the webhook URL.
 
-   (If you subscribed the SNS topic too early, you can re-send the confirmation request later
-   from the Subscriptions section of the Amazon SNS dashboard.)
+   .. caution::
+
+      If you create the SNS subscription *before* deploying your Django project with the webhook secret
+      set, confirmation will fail and you will need to **re-create the subscription** by entering the
+      full URL and webhook secret into the SNS console again.
+
+      You **cannot** use the SNS console's "Request confirmation" button to re-try confirmation.
+      (That will fail due to an `SNS console bug`_ that sends authentication as asterisks,
+      rather than the username:password secret you originally entered.)
 
 2. The SNS endpoint URL includes the correct Anymail :setting:`WEBHOOK_SECRET <ANYMAIL_WEBHOOK_SECRET>`
    as HTTP basic authentication. (Amazon SNS only allows this with https urls, not plain http.)
@@ -537,11 +544,13 @@ to `False` in your ANYMAIL settings.
 When auto-confirmation is disabled (or if Anymail receives an unexpected confirmation request),
 it will raise an :exc:`AnymailWebhookValidationFailure`, which should show up in your Django error
 logging. The error message will include the Token you can use to manually confirm the subscription
-in the Amazon SNS dashboard or through the SNS API.
+in the Amazon SNS console or through the SNS API.
 
 
 .. _Sending SNS messages to HTTPS endpoints:
     https://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.html
+.. _SNS console bug:
+    https://github.com/anymail/django-anymail/issues/194#issuecomment-665350148
 
 
 .. _amazon-ses-settings:
