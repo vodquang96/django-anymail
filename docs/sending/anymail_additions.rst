@@ -26,6 +26,12 @@ The first approach is usually the simplest. The other two can be
 helpful if you are working with Python development tools that
 offer type checking or other static code analysis.
 
+Availability of these features varies by ESP, and there may be additional
+limitations even when an ESP does support a particular feature. Be sure
+to check Anymail's docs for your :ref:`specific ESP <supported-esps>`.
+If you try to use a feature your ESP does not offer, Anymail will raise
+an :ref:`unsupported feature <unsupported-features>` error.
+
 
 .. _anymail-send-options:
 
@@ -99,8 +105,10 @@ ESP send options (AnymailMessage)
 
     .. attribute:: metadata
 
-        Set this to a `dict` of metadata values the ESP should store
-        with the message, for later search and retrieval.
+        If your ESP supports tracking arbitrary metadata, you can set this to
+        a `dict` of metadata values the ESP should store with the message, for
+        later search and retrieval. This can be useful with Anymail's
+        :ref:`status tracking <event-tracking>` webhooks.
 
         .. code-block:: python
 
@@ -114,10 +122,14 @@ ESP send options (AnymailMessage)
         You should format any non-string data into a string before setting it
         as metadata. See :ref:`formatting-merge-data`.
 
+        Depending on the ESP, this metadata **could be exposed to the recipients**
+        in the message headers, so don't include sensitive data.
+
 
     .. attribute:: merge_metadata
 
-        Set this to a `dict` of *per-recipient* metadata values the ESP should store
+        On a message with multiple recipients, if your ESP supports it, you can
+        set this to a `dict` of *per-recipient* metadata values the ESP should store
         with the message, for later search and retrieval. Each key in the dict is a
         recipient email (address portion only), and its value is a dict of metadata
         for that recipient:
@@ -139,11 +151,15 @@ ESP send options (AnymailMessage)
         :attr:`!merge_metadata` values will take precedence over :attr:`!metadata`
         for that recipient.
 
+        Depending on the ESP, this metadata **could be exposed to the recipients**
+        in the message headers, so don't include sensitive data.
+
 
     .. attribute:: tags
 
-        Set this to a `list` of `str` tags to apply to the message (usually
-        for segmenting ESP reporting).
+        If your ESP supports it, you can set this to a `list` of `str` tags to apply
+        to the message. This can be useful for segmenting your ESP's reports, and is
+        also often used with Anymail's :ref:`status tracking <event-tracking>` webhooks.
 
         .. code-block:: python
 
@@ -165,8 +181,12 @@ ESP send options (AnymailMessage)
 
     .. attribute:: track_opens
 
-        Set this to `True` or `False` to override your ESP account default
-        setting for tracking when users open a message.
+        If your ESP supports open tracking, you can set this to `True` or `False`
+        to override your ESP's default for this particular message. (Most ESPs let you
+        configure open tracking defaults at the account or sending domain level.)
+
+        For example, if you have configured your ESP to *not* insert open tracking
+        pixels by default, this will attempt to enable that for this one message:
 
         .. code-block:: python
 
@@ -175,8 +195,12 @@ ESP send options (AnymailMessage)
 
     .. attribute:: track_clicks
 
-        Set this to `True` or `False` to override your ESP account default
-        setting for tracking when users click on a link in a message.
+        If your ESP supports click tracking, you can set this to `True` or `False`
+        to override your ESP's default for this particular message. (Most ESPs let you
+        configure click tracking defaults at the account or sending domain level.)
+
+        For example, if you have configured your ESP to normally rewrite links to add
+        click tracking, this will attempt to disable that for this one message:
 
         .. code-block:: python
 
@@ -185,9 +209,9 @@ ESP send options (AnymailMessage)
 
     .. attribute:: send_at
 
-        Set this to a `~datetime.datetime`, `~datetime.date` to
-        have the ESP wait until the specified time to send the message.
-        (You can also use a `float` or `int`, which will be treated
+        If your ESP supports scheduled transactional sending, you can set this to a
+        `~datetime.datetime` to have the ESP delay sending the message until the
+        specified time. (You can also use a `float` or `int`, which will be treated
         as a POSIX timestamp as in :func:`time.time`.)
 
         .. code-block:: python
@@ -212,14 +236,18 @@ ESP send options (AnymailMessage)
 
     .. attribute:: esp_extra
 
-      Set this to a `dict` of additional, ESP-specific settings for the message.
+      Although Anymail normalizes common ESP features, many ESPs offer additional
+      functionality that doesn't map neatly to Anymail's standard options. You can
+      use :attr:`!esp_extra` as an "escape hatch" to access ESP functionality that
+      Anymail doesn't (or doesn't yet) support.
 
-      Using this attribute is inherently non-portable between ESPs, and is
-      intended as an "escape hatch" for accessing functionality that Anymail
-      doesn't (or doesn't yet) support.
-
+      Set it to a `dict` of additional, ESP-specific settings for the message.
       See the notes for each :ref:`specific ESP <supported-esps>` for information
       on its :attr:`!esp_extra` handling.
+
+      Using this attribute is inherently non-portable between ESPs, so it's best to
+      avoid it unless absolutely necessary. If you ever want to switch ESPs, you will
+      need to update or remove all uses of :attr:`!esp_extra` to avoid unexpected behavior.
 
 
     .. rubric:: Status response from the ESP
@@ -230,7 +258,7 @@ ESP send options (AnymailMessage)
         to each :class:`~django.core.mail.EmailMessage` as it is sent.
 
         The value is an :class:`AnymailStatus`.
-        See :ref:`esp-send-status` for details.
+        See :ref:`esp-send-status` below for details.
 
 
     .. rubric:: Convenience methods
