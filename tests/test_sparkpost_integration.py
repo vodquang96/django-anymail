@@ -62,8 +62,10 @@ class SparkPostBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
             body="This is the text body",
             from_email="Test From <test@test-sp.anymail.info>, also-from@test-sp.anymail.info",
             to=["to1@test.sink.sparkpostmail.com", "Recipient 2 <to2@test.sink.sparkpostmail.com>"],
-            cc=["cc1@test.sink.sparkpostmail.com", "Copy 2 <cc2@test.sink.sparkpostmail.com>"],
-            bcc=["bcc1@test.sink.sparkpostmail.com", "Blind Copy 2 <bcc2@test.sink.sparkpostmail.com>"],
+            # Limit the live b/cc's to avoid running through our small monthly allowance:
+            # cc=["cc1@test.sink.sparkpostmail.com", "Copy 2 <cc2@test.sink.sparkpostmail.com>"],
+            # bcc=["bcc1@test.sink.sparkpostmail.com", "Blind Copy 2 <bcc2@test.sink.sparkpostmail.com>"],
+            cc=["Copy To <cc@test.sink.sparkpostmail.com>"],
             reply_to=["reply1@example.com", "Reply 2 <reply2@example.com>"],
             headers={"X-Anymail-Test": "value"},
 
