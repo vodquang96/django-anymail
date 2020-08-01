@@ -18,7 +18,7 @@ POSTMARK_TEST_TEMPLATE_ID = os.getenv('POSTMARK_TEST_TEMPLATE_ID')
 @tag('postmark', 'live')
 @override_settings(ANYMAIL_POSTMARK_SERVER_TOKEN="POSTMARK_API_TEST",
                    EMAIL_BACKEND="anymail.backends.postmark.EmailBackend")
-class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
+class PostmarkBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
     """Postmark API integration tests
 
     These tests run against the **live** Postmark API, but using a
@@ -26,7 +26,7 @@ class PostmarkBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     """
 
     def setUp(self):
-        super(PostmarkBackendIntegrationTests, self).setUp()
+        super().setUp()
         self.message = AnymailMessage('Anymail Postmark integration test', 'Text content',
                                       'from@example.com', ['test+to1@anymail.info'])
         self.message.attach_alternative('<p>HTML content</p>', "text/html")

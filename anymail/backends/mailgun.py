@@ -1,14 +1,13 @@
 from datetime import datetime
 from email.utils import encode_rfc2231
-from six.moves.urllib.parse import quote
+from urllib.parse import quote
 
 from requests import Request
 
-from ..exceptions import AnymailRequestsAPIError, AnymailError
+from .base_requests import AnymailRequestsBackend, RequestsPayload
+from ..exceptions import AnymailError, AnymailRequestsAPIError
 from ..message import AnymailRecipientStatus
 from ..utils import get_anymail_setting, rfc2822date
-
-from .base_requests import AnymailRequestsBackend, RequestsPayload
 
 
 # Feature-detect whether requests (urllib3) correctly uses RFC 7578 encoding for non-
@@ -17,7 +16,7 @@ from .base_requests import AnymailRequestsBackend, RequestsPayload
 # (Note: when this workaround is removed, please also remove the "old_urllib3" tox envs.)
 def is_requests_rfc_5758_compliant():
     request = Request(method='POST', url='https://www.example.com',
-                      files=[('attachment', (u'\N{NOT SIGN}.txt', 'test', 'text/plain'))])
+                      files=[('attachment', ('\N{NOT SIGN}.txt', 'test', 'text/plain'))])
     prepared = request.prepare()
     form_data = prepared.body  # bytes
     return b'filename*=' not in form_data
@@ -43,7 +42,7 @@ class EmailBackend(AnymailRequestsBackend):
                                       default="https://api.mailgun.net/v3")
         if not api_url.endswith("/"):
             api_url += "/"
-        super(EmailBackend, self).__init__(api_url, **kwargs)
+        super().__init__(api_url, **kwargs)
 
     def build_message_payload(self, message, defaults):
         return MailgunPayload(message, defaults, self)
@@ -62,10 +61,10 @@ class EmailBackend(AnymailRequestsBackend):
         try:
             message_id = parsed_response["id"]
             mailgun_message = parsed_response["message"]
-        except (KeyError, TypeError):
+        except (KeyError, TypeError) as err:
             raise AnymailRequestsAPIError("Invalid Mailgun API response format",
                                           email_message=message, payload=payload, response=response,
-                                          backend=self)
+                                          backend=self) from err
         if not mailgun_message.startswith("Queued"):
             raise AnymailRequestsAPIError("Unrecognized Mailgun API message '%s'" % mailgun_message,
                                           email_message=message, payload=payload, response=response,
@@ -89,7 +88,7 @@ class MailgunPayload(RequestsPayload):
         self.merge_metadata = {}
         self.to_emails = []
 
-        super(MailgunPayload, self).__init__(message, defaults, backend, auth=auth, *args, **kwargs)
+        super().__init__(message, defaults, backend, auth=auth, *args, **kwargs)
 
     def get_api_endpoint(self):
         if self.sender_domain is None:
@@ -105,7 +104,7 @@ class MailgunPayload(RequestsPayload):
         return "%s/messages" % quote(self.sender_domain, safe='')
 
     def get_request_params(self, api_url):
-        params = super(MailgunPayload, self).get_request_params(api_url)
+        params = super().get_request_params(api_url)
         non_ascii_filenames = [filename
                                for (field, (filename, content, mimetype)) in params["files"]
                                if filename is not None and not isascii(filename)]
@@ -122,9 +121,7 @@ class MailgunPayload(RequestsPayload):
             prepared = Request(**params).prepare()
             form_data = prepared.body  # bytes
             for filename in non_ascii_filenames:  # text
-                rfc2231_filename = encode_rfc2231(  # wants a str (text in PY3, bytes in PY2)
-                    filename if isinstance(filename, str) else filename.encode("utf-8"),
-                    charset="utf-8")
+                rfc2231_filename = encode_rfc2231(filename, charset="utf-8")
                 form_data = form_data.replace(
                     b'filename*=' + rfc2231_filename.encode("utf-8"),
                     b'filename="' + filename.encode("utf-8") + b'"')

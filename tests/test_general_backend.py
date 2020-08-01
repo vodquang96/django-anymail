@@ -1,7 +1,6 @@
 from datetime import datetime
 from email.mime.text import MIMEText
 
-import six
 from django.core import mail
 from django.core.exceptions import ImproperlyConfigured
 from django.core.mail import get_connection, send_mail
@@ -9,7 +8,7 @@ from django.test import SimpleTestCase
 from django.test.utils import override_settings
 from django.utils.functional import Promise
 from django.utils.timezone import utc
-from django.utils.translation import ugettext_lazy
+from django.utils.translation import gettext_lazy
 
 from anymail.backends.test import EmailBackend as TestBackend, TestPayload
 from anymail.exceptions import AnymailConfigurationError, AnymailInvalidAddress, AnymailUnsupportedFeature
@@ -29,15 +28,15 @@ class SettingsTestBackend(TestBackend):
                                             default=None, allow_bare=True)
         self.password = get_anymail_setting('password', esp_name=esp_name, kwargs=kwargs,
                                             default=None, allow_bare=True)
-        super(SettingsTestBackend, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 @override_settings(EMAIL_BACKEND='anymail.backends.test.EmailBackend')
-class TestBackendTestCase(SimpleTestCase, AnymailTestMixin):
+class TestBackendTestCase(AnymailTestMixin, SimpleTestCase):
     """Base TestCase using Anymail's Test EmailBackend"""
 
     def setUp(self):
-        super(TestBackendTestCase, self).setUp()
+        super().setUp()
         # Simple message useful for many tests
         self.message = AnymailMessage('Subject', 'Text Body', 'from@example.com', ['to@example.com'])
 
@@ -237,7 +236,7 @@ class SendDefaultsTests(TestBackendTestCase):
 
 class LazyStringsTest(TestBackendTestCase):
     """
-    Tests ugettext_lazy strings forced real before passing to ESP transport.
+    Tests gettext_lazy strings forced real before passing to ESP transport.
 
     Docs notwithstanding, Django lazy strings *don't* work anywhere regular
     strings would. In particular, they aren't instances of unicode/str.
@@ -251,38 +250,38 @@ class LazyStringsTest(TestBackendTestCase):
 
     def assertNotLazy(self, s, msg=None):
         self.assertNotIsInstance(s, Promise,
-                                 msg=msg or "String %r is lazy" % six.text_type(s))
+                                 msg=msg or "String %r is lazy" % str(s))
 
     def test_lazy_from(self):
         # This sometimes ends up lazy when settings.DEFAULT_FROM_EMAIL is meant to be localized
-        self.message.from_email = ugettext_lazy(u'"Global Sales" <sales@example.com>')
+        self.message.from_email = gettext_lazy('"Global Sales" <sales@example.com>')
         self.message.send()
         params = self.get_send_params()
         self.assertNotLazy(params['from'].address)
 
     def test_lazy_subject(self):
-        self.message.subject = ugettext_lazy("subject")
+        self.message.subject = gettext_lazy("subject")
         self.message.send()
         params = self.get_send_params()
         self.assertNotLazy(params['subject'])
 
     def test_lazy_body(self):
-        self.message.body = ugettext_lazy("text body")
-        self.message.attach_alternative(ugettext_lazy("html body"), "text/html")
+        self.message.body = gettext_lazy("text body")
+        self.message.attach_alternative(gettext_lazy("html body"), "text/html")
         self.message.send()
         params = self.get_send_params()
         self.assertNotLazy(params['text_body'])
         self.assertNotLazy(params['html_body'])
 
     def test_lazy_headers(self):
-        self.message.extra_headers['X-Test'] = ugettext_lazy("Test Header")
+        self.message.extra_headers['X-Test'] = gettext_lazy("Test Header")
         self.message.send()
         params = self.get_send_params()
         self.assertNotLazy(params['extra_headers']['X-Test'])
 
     def test_lazy_attachments(self):
-        self.message.attach(ugettext_lazy("test.csv"), ugettext_lazy("test,csv,data"), "text/csv")
-        self.message.attach(MIMEText(ugettext_lazy("contact info")))
+        self.message.attach(gettext_lazy("test.csv"), gettext_lazy("test,csv,data"), "text/csv")
+        self.message.attach(MIMEText(gettext_lazy("contact info")))
         self.message.send()
         params = self.get_send_params()
         self.assertNotLazy(params['attachments'][0].name)
@@ -290,22 +289,22 @@ class LazyStringsTest(TestBackendTestCase):
         self.assertNotLazy(params['attachments'][1].content)
 
     def test_lazy_tags(self):
-        self.message.tags = [ugettext_lazy("Shipping"), ugettext_lazy("Sales")]
+        self.message.tags = [gettext_lazy("Shipping"), gettext_lazy("Sales")]
         self.message.send()
         params = self.get_send_params()
         self.assertNotLazy(params['tags'][0])
         self.assertNotLazy(params['tags'][1])
 
     def test_lazy_metadata(self):
-        self.message.metadata = {'order_type': ugettext_lazy("Subscription")}
+        self.message.metadata = {'order_type': gettext_lazy("Subscription")}
         self.message.send()
         params = self.get_send_params()
         self.assertNotLazy(params['metadata']['order_type'])
 
     def test_lazy_merge_data(self):
         self.message.merge_data = {
-            'to@example.com': {'duration': ugettext_lazy("One Month")}}
-        self.message.merge_global_data = {'order_type': ugettext_lazy("Subscription")}
+            'to@example.com': {'duration': gettext_lazy("One Month")}}
+        self.message.merge_global_data = {'order_type': gettext_lazy("Subscription")}
         self.message.send()
         params = self.get_send_params()
         self.assertNotLazy(params['merge_data']['to@example.com']['duration'])
@@ -329,7 +328,7 @@ class CatchCommonErrorsTests(TestBackendTestCase):
     def test_explains_reply_to_must_be_list_lazy(self):
         """Same as previous tests, with lazy strings"""
         # Lazy strings can fool string/iterable detection
-        self.message.reply_to = ugettext_lazy("single-reply-to@example.com")
+        self.message.reply_to = gettext_lazy("single-reply-to@example.com")
         with self.assertRaisesMessage(TypeError, '"reply_to" attribute must be a list or other iterable'):
             self.message.send()
 
@@ -431,7 +430,7 @@ class BatchSendDetectionTestCase(TestBackendTestCase):
     """Tests shared code to consistently determine whether to use batch send"""
 
     def setUp(self):
-        super(BatchSendDetectionTestCase, self).setUp()
+        super().setUp()
         self.backend = TestBackend()
 
     def test_default_is_not_batch(self):
@@ -460,7 +459,7 @@ class BatchSendDetectionTestCase(TestBackendTestCase):
             def set_cc(self, emails):
                 if self.is_batch():  # this won't work here!
                     self.unsupported_feature("cc with batch send")
-                super(ImproperlyImplementedPayload, self).set_cc(emails)
+                super().set_cc(emails)
 
         connection = mail.get_connection('anymail.backends.test.EmailBackend',
                                          payload_class=ImproperlyImplementedPayload)

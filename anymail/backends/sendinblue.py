@@ -30,7 +30,7 @@ class EmailBackend(AnymailRequestsBackend):
         )
         if not api_url.endswith("/"):
             api_url += "/"
-        super(EmailBackend, self).__init__(api_url, **kwargs)
+        super().__init__(api_url, **kwargs)
 
     def build_message_payload(self, message, defaults):
         return SendinBluePayload(message, defaults, self)
@@ -53,10 +53,10 @@ class EmailBackend(AnymailRequestsBackend):
             parsed_response = self.deserialize_json_response(response, payload, message)
             try:
                 message_id = parsed_response['messageId']
-            except (KeyError, TypeError):
+            except (KeyError, TypeError) as err:
                 raise AnymailRequestsAPIError("Invalid SendinBlue API response format",
                                               email_message=message, payload=payload, response=response,
-                                              backend=self)
+                                              backend=self) from err
 
         status = AnymailRecipientStatus(message_id=message_id, status="queued")
         return {recipient.addr_spec: status for recipient in payload.all_recipients}
@@ -71,7 +71,7 @@ class SendinBluePayload(RequestsPayload):
         http_headers['api-key'] = backend.api_key
         http_headers['Content-Type'] = 'application/json'
 
-        super(SendinBluePayload, self).__init__(message, defaults, backend, headers=http_headers, *args, **kwargs)
+        super().__init__(message, defaults, backend, headers=http_headers, *args, **kwargs)
 
     def get_api_endpoint(self):
         return "smtp/email"

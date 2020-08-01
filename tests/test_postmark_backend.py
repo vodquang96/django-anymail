@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import json
 from base64 import b64encode
 from decimal import Decimal
@@ -14,7 +13,7 @@ from anymail.exceptions import (
     AnymailUnsupportedFeature, AnymailRecipientsRefused, AnymailInvalidAddress)
 from anymail.message import attach_inline_image_file, AnymailMessage
 
-from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
+from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCases
 from .utils import sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME, AnymailTestMixin, decode_att
 
 
@@ -31,7 +30,7 @@ class PostmarkBackendMockAPITestCase(RequestsBackendMockAPITestCase):
     }"""
 
     def setUp(self):
-        super(PostmarkBackendMockAPITestCase, self).setUp()
+        super().setUp()
         # Simple message useful for many tests
         self.message = mail.EmailMultiAlternatives('Subject', 'Text Body', 'from@example.com', ['to@example.com'])
 
@@ -182,13 +181,13 @@ class PostmarkBackendStandardEmailTests(PostmarkBackendMockAPITestCase):
         self.assertNotIn('ContentID', attachments[2])
 
     def test_unicode_attachment_correctly_decoded(self):
-        self.message.attach(u"Une pièce jointe.html", u'<p>\u2019</p>', mimetype='text/html')
+        self.message.attach("Une pièce jointe.html", '<p>\u2019</p>', mimetype='text/html')
         self.message.send()
         data = self.get_api_call_json()
         self.assertEqual(data['Attachments'], [{
-            'Name': u'Une pièce jointe.html',
+            'Name': 'Une pièce jointe.html',
             'ContentType': 'text/html',
-            'Content': b64encode(u'<p>\u2019</p>'.encode('utf-8')).decode('ascii')
+            'Content': b64encode('<p>\u2019</p>'.encode('utf-8')).decode('ascii')
         }])
 
     def test_embedded_images(self):
@@ -758,14 +757,14 @@ class PostmarkBackendRecipientsRefusedTests(PostmarkBackendMockAPITestCase):
 
 
 @tag('postmark')
-class PostmarkBackendSessionSharingTestCase(SessionSharingTestCasesMixin, PostmarkBackendMockAPITestCase):
+class PostmarkBackendSessionSharingTestCase(SessionSharingTestCases, PostmarkBackendMockAPITestCase):
     """Requests session sharing tests"""
-    pass  # tests are defined in the mixin
+    pass  # tests are defined in SessionSharingTestCases
 
 
 @tag('postmark')
 @override_settings(EMAIL_BACKEND="anymail.backends.postmark.EmailBackend")
-class PostmarkBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin):
+class PostmarkBackendImproperlyConfiguredTests(AnymailTestMixin, SimpleTestCase):
     """Test ESP backend without required settings in place"""
 
     def test_missing_api_key(self):

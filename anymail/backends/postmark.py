@@ -22,7 +22,7 @@ class EmailBackend(AnymailRequestsBackend):
                                       default="https://api.postmarkapp.com/")
         if not api_url.endswith("/"):
             api_url += "/"
-        super(EmailBackend, self).__init__(api_url, **kwargs)
+        super().__init__(api_url, **kwargs)
 
     def build_message_payload(self, message, defaults):
         return PostmarkPayload(message, defaults, self)
@@ -30,7 +30,7 @@ class EmailBackend(AnymailRequestsBackend):
     def raise_for_status(self, response, payload, message):
         # We need to handle 422 responses in parse_recipient_status
         if response.status_code != 422:
-            super(EmailBackend, self).raise_for_status(response, payload, message)
+            super().raise_for_status(response, payload, message)
 
     def parse_recipient_status(self, response, payload, message):
         # Default to "unknown" status for each recipient, unless/until we find otherwise.
@@ -51,19 +51,19 @@ class EmailBackend(AnymailRequestsBackend):
                 # these fields should always be present
                 error_code = one_response["ErrorCode"]
                 msg = one_response["Message"]
-            except (KeyError, TypeError):
+            except (KeyError, TypeError) as err:
                 raise AnymailRequestsAPIError("Invalid Postmark API response format",
                                               email_message=message, payload=payload, response=response,
-                                              backend=self)
+                                              backend=self) from err
 
             if error_code == 0:
                 # At least partial success, and (some) email was sent.
                 try:
                     message_id = one_response["MessageID"]
-                except KeyError:
+                except KeyError as err:
                     raise AnymailRequestsAPIError("Invalid Postmark API success response format",
                                                   email_message=message, payload=payload,
-                                                  response=response, backend=self)
+                                                  response=response, backend=self) from err
 
                 # Assume all To recipients are "sent" unless proven otherwise below.
                 # (Must use "To" from API response to get correct individual MessageIDs in batch send.)
@@ -157,7 +157,7 @@ class PostmarkPayload(RequestsPayload):
         self.cc_and_bcc_emails = []  # need to track (separately) for parse_recipient_status
         self.merge_data = None
         self.merge_metadata = None
-        super(PostmarkPayload, self).__init__(message, defaults, backend, headers=headers, *args, **kwargs)
+        super().__init__(message, defaults, backend, headers=headers, *args, **kwargs)
 
     def get_api_endpoint(self):
         batch_send = self.is_batch() and len(self.to_emails) > 1
@@ -174,7 +174,7 @@ class PostmarkPayload(RequestsPayload):
                 return "email"
 
     def get_request_params(self, api_url):
-        params = super(PostmarkPayload, self).get_request_params(api_url)
+        params = super().get_request_params(api_url)
         params['headers']['X-Postmark-Server-Token'] = self.server_token
         return params
 

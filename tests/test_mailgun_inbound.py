@@ -1,8 +1,8 @@
 import json
 from datetime import datetime
+from io import BytesIO
 from textwrap import dedent
 
-import six
 from django.test import override_settings, tag
 from django.utils.timezone import utc
 from mock import ANY
@@ -97,13 +97,13 @@ class MailgunInboundTestCase(WebhookTestCase):
         ])
 
     def test_attachments(self):
-        att1 = six.BytesIO('test attachment'.encode('utf-8'))
+        att1 = BytesIO('test attachment'.encode('utf-8'))
         att1.name = 'test.txt'
         image_content = sample_image_content()
-        att2 = six.BytesIO(image_content)
+        att2 = BytesIO(image_content)
         att2.name = 'image.png'
         email_content = sample_email_content()
-        att3 = six.BytesIO(email_content)
+        att3 = BytesIO(email_content)
         att3.content_type = 'message/rfc822; charset="us-ascii"'
         raw_event = mailgun_sign_legacy_payload({
             'message-headers': '[]',
@@ -124,7 +124,7 @@ class MailgunInboundTestCase(WebhookTestCase):
         self.assertEqual(len(attachments), 2)
         self.assertEqual(attachments[0].get_filename(), 'test.txt')
         self.assertEqual(attachments[0].get_content_type(), 'text/plain')
-        self.assertEqual(attachments[0].get_content_text(), u'test attachment')
+        self.assertEqual(attachments[0].get_content_text(), 'test attachment')
         self.assertEqual(attachments[1].get_content_type(), 'message/rfc822')
         self.assertEqualIgnoringHeaderFolding(attachments[1].get_content_bytes(), email_content)
 
@@ -176,8 +176,8 @@ class MailgunInboundTestCase(WebhookTestCase):
         self.assertEqual(message.envelope_sender, 'envelope-from@example.org')
         self.assertEqual(message.envelope_recipient, 'test@inbound.example.com')
         self.assertEqual(message.subject, 'Raw MIME test')
-        self.assertEqual(message.text, u"It's a body\N{HORIZONTAL ELLIPSIS}\n")
-        self.assertEqual(message.html, u"""<div dir="ltr">It's a body\N{HORIZONTAL ELLIPSIS}</div>\n""")
+        self.assertEqual(message.text, "It's a body\N{HORIZONTAL ELLIPSIS}\n")
+        self.assertEqual(message.html, """<div dir="ltr">It's a body\N{HORIZONTAL ELLIPSIS}</div>\n""")
 
     def test_misconfigured_tracking(self):
         raw_event = mailgun_sign_payload({

@@ -1,32 +1,30 @@
-# -*- coding: utf-8 -*-
-
-from datetime import datetime, date
+import os
+from datetime import date, datetime
 from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
-import os
+from io import BytesIO
 
 import requests
-import six
 from django.core import mail
 from django.test import SimpleTestCase, override_settings, tag
 from django.utils.timezone import get_fixed_timezone, override as override_current_timezone, utc
 from mock import patch
 
-from anymail.exceptions import (AnymailAPIError, AnymailUnsupportedFeature, AnymailRecipientsRefused,
-                                AnymailConfigurationError, AnymailInvalidAddress)
+from anymail.exceptions import (
+    AnymailAPIError, AnymailConfigurationError, AnymailInvalidAddress, AnymailRecipientsRefused,
+    AnymailUnsupportedFeature)
 from anymail.message import attach_inline_image_file
-
-from .utils import AnymailTestMixin, decode_att, SAMPLE_IMAGE_FILENAME, sample_image_path, sample_image_content
+from .utils import AnymailTestMixin, SAMPLE_IMAGE_FILENAME, decode_att, sample_image_content, sample_image_path
 
 
 @tag('sparkpost')
 @override_settings(EMAIL_BACKEND='anymail.backends.sparkpost.EmailBackend',
                    ANYMAIL={'SPARKPOST_API_KEY': 'test_api_key'})
-class SparkPostBackendMockAPITestCase(SimpleTestCase, AnymailTestMixin):
+class SparkPostBackendMockAPITestCase(AnymailTestMixin, SimpleTestCase):
     """TestCase that uses SparkPostEmailBackend with a mocked transmissions.send API"""
 
     def setUp(self):
-        super(SparkPostBackendMockAPITestCase, self).setUp()
+        super().setUp()
         self.patch_send = patch('sparkpost.Transmissions.send', autospec=True)
         self.mock_send = self.patch_send.start()
         self.addCleanup(self.patch_send.stop)
@@ -52,7 +50,7 @@ class SparkPostBackendMockAPITestCase(SimpleTestCase, AnymailTestMixin):
         response = requests.Response()
         response.status_code = status_code
         response.encoding = encoding
-        response.raw = six.BytesIO(raw)
+        response.raw = BytesIO(raw)
         response.url = "/mock/send"
         self.mock_send.side_effect = SparkPostAPIException(response)
 
@@ -205,7 +203,7 @@ class SparkPostBackendStandardEmailTests(SparkPostBackendMockAPITestCase):
     def test_unicode_attachment_correctly_decoded(self):
         # Slight modification from the Django unicode docs:
         # http://django.readthedocs.org/en/latest/ref/unicode.html#email
-        self.message.attach(u"Une pièce jointe.html", u'<p>\u2019</p>', mimetype='text/html')
+        self.message.attach("Une pièce jointe.html", '<p>\u2019</p>', mimetype='text/html')
         self.message.send()
         params = self.get_send_params()
         attachments = params['attachments']
@@ -609,7 +607,7 @@ class SparkPostBackendRecipientsRefusedTests(SparkPostBackendMockAPITestCase):
 
 @tag('sparkpost')
 @override_settings(EMAIL_BACKEND="anymail.backends.sparkpost.EmailBackend")
-class SparkPostBackendConfigurationTests(SimpleTestCase, AnymailTestMixin):
+class SparkPostBackendConfigurationTests(AnymailTestMixin, SimpleTestCase):
     """Test various SparkPost client options"""
 
     def test_missing_api_key(self):

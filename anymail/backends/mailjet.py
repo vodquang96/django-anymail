@@ -1,12 +1,10 @@
 from email.header import Header
-
-from six.moves.urllib.parse import quote
-
-from ..exceptions import AnymailRequestsAPIError
-from ..message import AnymailRecipientStatus, ANYMAIL_STATUSES
-from ..utils import get_anymail_setting, EmailAddress, parse_address_list
+from urllib.parse import quote
 
 from .base_requests import AnymailRequestsBackend, RequestsPayload
+from ..exceptions import AnymailRequestsAPIError
+from ..message import ANYMAIL_STATUSES, AnymailRecipientStatus
+from ..utils import EmailAddress, get_anymail_setting, parse_address_list
 
 
 class EmailBackend(AnymailRequestsBackend):
@@ -25,7 +23,7 @@ class EmailBackend(AnymailRequestsBackend):
                                       default="https://api.mailjet.com/v3")
         if not api_url.endswith("/"):
             api_url += "/"
-        super(EmailBackend, self).__init__(api_url, **kwargs)
+        super().__init__(api_url, **kwargs)
 
     def build_message_payload(self, message, defaults):
         return MailjetPayload(message, defaults, self)
@@ -36,7 +34,7 @@ class EmailBackend(AnymailRequestsBackend):
             raise AnymailRequestsAPIError(
                 "Invalid Mailjet API key or secret",
                 email_message=message, payload=payload, response=response, backend=self)
-        super(EmailBackend, self).raise_for_status(response, payload, message)
+        super().raise_for_status(response, payload, message)
 
     def parse_recipient_status(self, response, payload, message):
         # Mailjet's (v3.0) transactional send API is not covered in their reference docs.
@@ -61,10 +59,10 @@ class EmailBackend(AnymailRequestsBackend):
                     message_id = str(item['MessageID'])
                     email = item['Email']
                     recipient_status[email] = AnymailRecipientStatus(message_id=message_id, status=status)
-        except (KeyError, TypeError):
+        except (KeyError, TypeError) as err:
             raise AnymailRequestsAPIError("Invalid Mailjet API response format",
                                           email_message=message, payload=payload, response=response,
-                                          backend=self)
+                                          backend=self) from err
         # Make sure we ended up with a status for every original recipient
         # (Mailjet only communicates "Sent")
         for recipients in payload.recipients.values():
@@ -88,8 +86,7 @@ class MailjetPayload(RequestsPayload):
         self.metadata = None
         self.merge_data = {}
         self.merge_metadata = {}
-        super(MailjetPayload, self).__init__(message, defaults, backend,
-                                             auth=auth, headers=http_headers, *args, **kwargs)
+        super().__init__(message, defaults, backend, auth=auth, headers=http_headers, *args, **kwargs)
 
     def get_api_endpoint(self):
         return "send"
@@ -153,9 +150,10 @@ class MailjetPayload(RequestsPayload):
                                               parsed.addr_spec)
                 else:
                     parsed = EmailAddress(headers["SenderName"], headers["SenderEmail"])
-            except KeyError:
+            except KeyError as err:
                 raise AnymailRequestsAPIError("Invalid Mailjet template API response",
-                                              email_message=self.message, response=response, backend=self.backend)
+                                              email_message=self.message, response=response,
+                                              backend=self.backend) from err
             self.set_from_email(parsed)
 
     def _format_email_for_mailjet(self, email):

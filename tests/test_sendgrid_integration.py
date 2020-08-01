@@ -22,7 +22,7 @@ SENDGRID_TEST_TEMPLATE_ID = os.getenv('SENDGRID_TEST_TEMPLATE_ID')
                        "mail_settings": {"sandbox_mode": {"enable": True}},
                    }},
                    EMAIL_BACKEND="anymail.backends.sendgrid.EmailBackend")
-class SendGridBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
+class SendGridBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
     """SendGrid v3 API integration tests
 
     These tests run against the **live** SendGrid API, using the
@@ -38,7 +38,7 @@ class SendGridBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     """
 
     def setUp(self):
-        super(SendGridBackendIntegrationTests, self).setUp()
+        super().setUp()
         self.message = AnymailMessage('Anymail SendGrid integration test', 'Text content',
                                       'from@example.com', ['to@sink.sendgrid.net'])
         self.message.attach_alternative('<p>HTML content</p>', "text/html")

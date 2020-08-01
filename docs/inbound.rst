@@ -13,7 +13,7 @@ If you didn't set up webhooks when first installing Anymail, you'll need to
 (You should also review :ref:`securing-webhooks`.)
 
 Once you've enabled webhooks, Anymail will send a ``anymail.signals.inbound``
-custom Django :mod:`signal <django.dispatch>` for each ESP inbound message it receives.
+custom Django :doc:`signal <django:topics/signals>` for each ESP inbound message it receives.
 You can connect your own receiver function to this signal for further processing.
 (This is very much like how Anymail handles :ref:`status tracking <event-tracking>`
 events for sent messages. Inbound events just use a different signal receiver
@@ -73,7 +73,7 @@ invoke your signal receiver once, separately, for each message in the batch.
     :ref:`user-supplied content security <django:user-uploaded-content-security>`.
 
 .. _using python-magic:
-   http://blog.hayleyanderson.us/2015/07/18/validating-file-types-in-django/
+   https://blog.hayleyanderson.us/2015/07/18/validating-file-types-in-django/
 
 
 .. _inbound-event:
@@ -90,7 +90,7 @@ Normalized inbound event
     .. attribute:: message
 
         An :class:`~anymail.inbound.AnymailInboundMessage` representing the email
-        that was received. Most of what you're interested in will be on this `message`
+        that was received. Most of what you're interested in will be on this :attr:`!message`
         attribute. See the full details :ref:`below <inbound-message>`.
 
     .. attribute:: event_type
@@ -290,8 +290,6 @@ Handling Inbound Attachments
 
 Anymail converts each inbound attachment to a specialized MIME object with
 additional methods for handling attachments and integrating with Django.
-It also backports some helpful MIME methods from newer versions of Python
-to all versions supported by Anymail.
 
 The attachment objects in an AnymailInboundMessage's
 :attr:`~AnymailInboundMessage.attachments` list and
@@ -346,8 +344,6 @@ have these methods:
     .. method:: is_attachment()
 
         Returns `True` for a (non-inline) attachment, `False` otherwise.
-        (Anymail back-ports Python 3.4.2's :meth:`~email.message.EmailMessage.is_attachment` method
-        to all supported versions.)
 
     .. method:: is_inline_attachment()
 
@@ -359,9 +355,6 @@ have these methods:
         Returns the lowercased value (without parameters) of the attachment's
         :mailheader:`Content-Disposition` header. The return value should be either "inline"
         or "attachment", or `None` if the attachment is somehow missing that header.
-
-        (Anymail back-ports Python 3.5's :meth:`~email.message.Message.get_content_disposition`
-        method to all supported versions.)
 
     .. method:: get_content_text(charset=None, errors='replace')
 
@@ -453,7 +446,7 @@ And they may then retry sending these "failed" events, which could
 cause duplicate processing in your code.
 If your signal receiver code might be slow, you should instead
 queue the event for later, asynchronous processing (e.g., using
-something like `Celery`_).
+something like :pypi:`celery`).
 
 If your signal receiver function is defined within some other
 function or instance method, you *must* use the `weak=False`
@@ -461,5 +454,3 @@ option when connecting it. Otherwise, it might seem to work at first,
 but will unpredictably stop being called at some point---typically
 on your production server, in a hard-to-debug way. See Django's
 docs on :doc:`signals <django:topics/signals>` for more information.
-
-.. _Celery: http://www.celeryproject.org/

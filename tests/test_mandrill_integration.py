@@ -17,7 +17,7 @@ MANDRILL_TEST_API_KEY = os.getenv('MANDRILL_TEST_API_KEY')
                      "Set MANDRILL_TEST_API_KEY environment variable to run integration tests")
 @override_settings(MANDRILL_API_KEY=MANDRILL_TEST_API_KEY,
                    EMAIL_BACKEND="anymail.backends.mandrill.EmailBackend")
-class MandrillBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
+class MandrillBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
     """Mandrill API integration tests
 
     These tests run against the **live** Mandrill API, using the
@@ -30,7 +30,7 @@ class MandrillBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     """
 
     def setUp(self):
-        super(MandrillBackendIntegrationTests, self).setUp()
+        super().setUp()
         self.message = mail.EmailMultiAlternatives('Anymail Mandrill integration test', 'Text content',
                                                    'from@example.com', ['test+to1@anymail.info'])
         self.message.attach_alternative('<p>HTML content</p>', "text/html")

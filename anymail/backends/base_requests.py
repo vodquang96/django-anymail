@@ -1,13 +1,11 @@
-from __future__ import print_function
+from urllib.parse import urljoin
 
 import requests
-import six
-from six.moves.urllib.parse import urljoin
 
 from anymail.utils import get_anymail_setting
 from .base import AnymailBaseBackend, BasePayload
-from ..exceptions import AnymailRequestsAPIError
 from .._version import __version__
+from ..exceptions import AnymailRequestsAPIError
 
 
 class AnymailRequestsBackend(AnymailBaseBackend):
@@ -19,7 +17,7 @@ class AnymailRequestsBackend(AnymailBaseBackend):
         """Init options from Django settings"""
         self.api_url = api_url
         self.timeout = get_anymail_setting('requests_timeout', kwargs=kwargs, default=30)
-        super(AnymailRequestsBackend, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.session = None
 
     def open(self):
@@ -57,7 +55,7 @@ class AnymailRequestsBackend(AnymailBaseBackend):
                 "Session has not been opened in {class_name}._send. "
                 "(This is either an implementation error in {class_name}, "
                 "or you are incorrectly calling _send directly.)".format(class_name=class_name))
-        return super(AnymailRequestsBackend, self)._send(message)
+        return super()._send(message)
 
     def post_to_esp(self, payload, message):
         """Post payload to ESP send API endpoint, and return the raw response.
@@ -78,7 +76,7 @@ class AnymailRequestsBackend(AnymailBaseBackend):
             exc_class = type('AnymailRequestsAPIError', (AnymailRequestsAPIError, type(err)), {})
             raise exc_class(
                 "Error posting to %s:" % params.get('url', '<missing url>'),
-                raised_from=err, email_message=message, payload=payload)
+                email_message=message, payload=payload) from err
         self.raise_for_status(response, payload, message)
         return response
 
@@ -100,10 +98,10 @@ class AnymailRequestsBackend(AnymailBaseBackend):
         """
         try:
             return response.json()
-        except ValueError:
+        except ValueError as err:
             raise AnymailRequestsAPIError("Invalid JSON in %s API response" % self.esp_name,
                                           email_message=message, payload=payload, response=response,
-                                          backend=self)
+                                          backend=self) from err
 
     @staticmethod
     def _dump_api_request(response, **kwargs):
@@ -113,22 +111,22 @@ class AnymailRequestsBackend(AnymailBaseBackend):
         # If you need the raw bytes, configure HTTPConnection logging as shown
         # in http://docs.python-requests.org/en/v3.0.0/api/#api-changes)
         request = response.request  # a PreparedRequest
-        print(u"\n===== Anymail API request")
-        print(u"{method} {url}\n{headers}".format(
+        print("\n===== Anymail API request")
+        print("{method} {url}\n{headers}".format(
             method=request.method, url=request.url,
-            headers=u"".join(u"{header}: {value}\n".format(header=header, value=value)
-                             for (header, value) in request.headers.items()),
+            headers="".join("{header}: {value}\n".format(header=header, value=value)
+                            for (header, value) in request.headers.items()),
         ))
         if request.body is not None:
-            body_text = (request.body if isinstance(request.body, six.text_type)
+            body_text = (request.body if isinstance(request.body, str)
                          else request.body.decode("utf-8", errors="replace")
                          ).replace("\r\n", "\n")
             print(body_text)
-        print(u"\n----- Response")
-        print(u"HTTP {status} {reason}\n{headers}\n{body}".format(
+        print("\n----- Response")
+        print("HTTP {status} {reason}\n{headers}\n{body}".format(
             status=response.status_code, reason=response.reason,
-            headers=u"".join(u"{header}: {value}\n".format(header=header, value=value)
-                             for (header, value) in response.headers.items()),
+            headers="".join("{header}: {value}\n".format(header=header, value=value)
+                            for (header, value) in response.headers.items()),
             body=response.text,  # Let Requests decode body content for us
         ))
 
@@ -145,7 +143,7 @@ class RequestsPayload(BasePayload):
         self.headers = headers
         self.files = files
         self.auth = auth
-        super(RequestsPayload, self).__init__(message, defaults, backend)
+        super().__init__(message, defaults, backend)
 
     def get_request_params(self, api_url):
         """Returns a dict of requests.request params that will send payload to the ESP.

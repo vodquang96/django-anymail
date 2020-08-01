@@ -1,33 +1,20 @@
 import base64
 import mimetypes
 from base64 import b64encode
-from datetime import datetime
+from collections.abc import Mapping, MutableMapping
 from email.mime.base import MIMEBase
-from email.utils import formatdate, getaddresses, unquote
-from time import mktime
+from email.utils import formatdate, getaddresses, parsedate_to_datetime, unquote
+from urllib.parse import urlsplit, urlunsplit
 
-import six
 from django.conf import settings
 from django.core.mail.message import DEFAULT_ATTACHMENT_MIME_TYPE, sanitize_address
+from django.utils.encoding import force_str
 from django.utils.functional import Promise
-from django.utils.timezone import get_fixed_timezone, utc
 from requests.structures import CaseInsensitiveDict
-from six.moves.urllib.parse import urlsplit, urlunsplit
 
 from .exceptions import AnymailConfigurationError, AnymailInvalidAddress
 
-if six.PY2:
-    from django.utils.encoding import force_text as force_str
-else:
-    from django.utils.encoding import force_str
-
-try:
-    from collections.abc import Mapping, MutableMapping  # Python 3.3+
-except ImportError:
-    from collections import Mapping, MutableMapping
-
-
-BASIC_NUMERIC_TYPES = six.integer_types + (float,)  # int, float, and (on Python 2) long
+BASIC_NUMERIC_TYPES = (int, float)
 
 
 UNSET = type('UNSET', (object,), {})  # Used as non-None default value
@@ -141,7 +128,7 @@ def parse_address_list(address_list, field=None):
     :return list[:class:`EmailAddress`]:
     :raises :exc:`AnymailInvalidAddress`:
     """
-    if isinstance(address_list, six.string_types) or is_lazy(address_list):
+    if isinstance(address_list, str) or is_lazy(address_list):
         address_list = [address_list]
 
     if address_list is None or address_list == [None]:
@@ -162,13 +149,13 @@ def parse_address_list(address_list, field=None):
     for address in parsed:
         if address.username == '' or address.domain == '':
             # Django SMTP allows username-only emails, but they're not meaningful with an ESP
-            errmsg = u"Invalid email address '{problem}' parsed from '{source}'{where}.".format(
+            errmsg = "Invalid email address '{problem}' parsed from '{source}'{where}.".format(
                 problem=address.addr_spec,
-                source=u", ".join(address_list_strings),
-                where=u" in `%s`" % field if field else "",
+                source=", ".join(address_list_strings),
+                where=" in `%s`" % field if field else "",
             )
             if len(parsed) > len(address_list):
-                errmsg += u" (Maybe missing quotes around a display-name?)"
+                errmsg += " (Maybe missing quotes around a display-name?)"
             raise AnymailInvalidAddress(errmsg)
 
     return parsed
@@ -192,7 +179,7 @@ def parse_single_address(address, field=None):
         return parsed[0]
 
 
-class EmailAddress(object):
+class EmailAddress:
     """A sanitized, complete email address with easy access
     to display-name, addr-spec (email), etc.
 
@@ -249,9 +236,8 @@ class EmailAddress(object):
         This is essentially the same as :func:`email.utils.formataddr`
         on the EmailAddress's name and email properties, but uses
         Django's :func:`~django.core.mail.message.sanitize_address`
-        for improved PY2/3 compatibility, consistent handling of
-        encoding (a.k.a. charset), and proper handling of IDN
-        domain portions.
+        for consistent handling of encoding (a.k.a. charset) and
+        proper handling of IDN domain portions.
 
         :param str|None encoding:
             the charset to use for the display-name portion;
@@ -264,7 +250,7 @@ class EmailAddress(object):
         return self.address
 
 
-class Attachment(object):
+class Attachment:
     """A normalized EmailMessage.attachments item with additional functionality
 
     Normalized to have these properties:
@@ -289,14 +275,10 @@ class Attachment(object):
             self.name = attachment.get_filename()
             self.content = attachment.get_payload(decode=True)
             if self.content is None:
-                if hasattr(attachment, 'as_bytes'):
-                    self.content = attachment.as_bytes()
-                else:
-                    # Python 2.7 fallback
-                    self.content = attachment.as_string().encode(self.encoding)
+                self.content = attachment.as_bytes()
             self.mimetype = attachment.get_content_type()
 
-            content_disposition = get_content_disposition(attachment)
+            content_disposition = attachment.get_content_disposition()
             if content_disposition == 'inline' or (not content_disposition and 'Content-ID' in attachment):
                 self.inline = True
                 self.content_id = attachment["Content-ID"]  # probably including the <...>
@@ -319,21 +301,9 @@ class Attachment(object):
     def b64content(self):
         """Content encoded as a base64 ascii string"""
         content = self.content
-        if isinstance(content, six.text_type):
+        if isinstance(content, str):
             content = content.encode(self.encoding)
         return b64encode(content).decode("ascii")
-
-
-def get_content_disposition(mimeobj):
-    """Return the message's content-disposition if it exists, or None.
-
-    Backport of py3.5 :func:`~email.message.Message.get_content_disposition`
-    """
-    value = mimeobj.get('content-disposition')
-    if value is None:
-        return None
-    # _splitparam(value)[0].lower() :
-    return str(value).partition(';')[0].strip().lower()
 
 
 def get_anymail_setting(name, default=UNSET, esp_name=None, kwargs=None, allow_bare=False):
@@ -388,7 +358,7 @@ def get_anymail_setting(name, default=UNSET, esp_name=None, kwargs=None, allow_b
                 if allow_bare:
                     message += " or %s" % setting
                 message += " in your Django settings"
-                raise AnymailConfigurationError(message)
+                raise AnymailConfigurationError(message) from None
             else:
                 return default
 
@@ -442,26 +412,11 @@ def querydict_getfirst(qdict, field, default=UNSET):
         return qdict[field]  # raise appropriate KeyError
 
 
-EPOCH = datetime(1970, 1, 1, tzinfo=utc)
-
-
-def timestamp(dt):
-    """Return the unix timestamp (seconds past the epoch) for datetime dt"""
-    # This is the equivalent of Python 3.3's datetime.timestamp
-    try:
-        return dt.timestamp()
-    except AttributeError:
-        if dt.tzinfo is None:
-            return mktime(dt.timetuple())
-        else:
-            return (dt - EPOCH).total_seconds()
-
-
 def rfc2822date(dt):
     """Turn a datetime into a date string as specified in RFC 2822."""
-    # This is almost the equivalent of Python 3.3's email.utils.format_datetime,
+    # This is almost the equivalent of Python's email.utils.format_datetime,
     # but treats naive datetimes as local rather than "UTC with no information ..."
-    timeval = timestamp(dt)
+    timeval = dt.timestamp()
     return formatdate(timeval, usegmt=True)
 
 
@@ -480,7 +435,7 @@ def angle_wrap(s):
 def is_lazy(obj):
     """Return True if obj is a Django lazy object."""
     # See django.utils.functional.lazy. (This appears to be preferred
-    # to checking for `not isinstance(obj, six.text_type)`.)
+    # to checking for `not isinstance(obj, str)`.)
     return isinstance(obj, Promise)
 
 
@@ -490,7 +445,7 @@ def force_non_lazy(obj):
     (Similar to django.utils.encoding.force_text, but doesn't alter non-text objects.)
     """
     if is_lazy(obj):
-        return six.text_type(obj)
+        return str(obj)
 
     return obj
 
@@ -539,27 +494,6 @@ def get_request_uri(request):
         url = urlunsplit((parts.scheme, basic_auth + '@' + parts.netloc,
                           parts.path, parts.query, parts.fragment))
     return url
-
-
-try:
-    from email.utils import parsedate_to_datetime  # Python 3.3+
-except ImportError:
-    from email.utils import parsedate_tz
-
-    # Backport Python 3.3+ email.utils.parsedate_to_datetime
-    def parsedate_to_datetime(s):
-        # *dtuple, tz = _parsedate_tz(data)
-        dtuple = parsedate_tz(s)
-        tz = dtuple[-1]
-        # if tz is None:  # parsedate_tz returns 0 for "-0000"
-        if tz is None or (tz == 0 and "-0000" in s):
-            # "... indicates that the date-time contains no information
-            # about the local time zone" (RFC 2822 #3.3)
-            return datetime(*dtuple[:6])
-        else:
-            # tzinfo = datetime.timezone(datetime.timedelta(seconds=tz))  # Python 3.2+ only
-            tzinfo = get_fixed_timezone(tz // 60)  # don't use timedelta (avoid Django bug #28739)
-            return datetime(*dtuple[:6], tzinfo=tzinfo)
 
 
 def parse_rfc2822date(s):

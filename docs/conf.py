@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # Anymail documentation build configuration file, created by
 # sphinx-quickstart
 #
@@ -50,9 +48,9 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Anymail'
+project = 'Anymail'
 # noinspection PyShadowingBuiltins
-copyright = u'Anymail contributors (see AUTHORS.txt)'
+copyright = 'Anymail contributors (see AUTHORS.txt)'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -203,8 +201,8 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'Anymail.tex', u'Anymail Documentation',
-   u'Anymail contributors (see AUTHORS.txt)', 'manual'),
+  ('index', 'Anymail.tex', 'Anymail Documentation',
+   'Anymail contributors (see AUTHORS.txt)', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -233,8 +231,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'anymail', u'Anymail Documentation',
-     [u'Anymail contributors (see AUTHORS.txt)'], 1)
+    ('index', 'anymail', 'Anymail Documentation',
+     ['Anymail contributors (see AUTHORS.txt)'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -247,8 +245,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'Anymail', u'Anymail Documentation',
-   u'Anymail contributors (see AUTHORS.txt)', 'Anymail', 'Multi-ESP transactional email for Django.',
+  ('index', 'Anymail', 'Anymail Documentation',
+   'Anymail contributors (see AUTHORS.txt)', 'Anymail', 'Multi-ESP transactional email for Django.',
    'Miscellaneous'),
 ]
 
@@ -270,14 +268,9 @@ extlinks = {
 # -- Options for Intersphinx ------------------------------------------------
 
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3.6', None),
+    'python': ('https://docs.python.org/3.7', None),
     'django': ('https://docs.djangoproject.com/en/stable/', 'https://docs.djangoproject.com/en/stable/_objects/'),
-    # Requests docs may be moving (Sep 2019):
-    #   see https://github.com/psf/requests/issues/5212
-    #   and https://github.com/psf/requests/issues/5214
-    'requests': ('https://docs.python-requests.org/en/latest/',
-                 ('https://docs.python-requests.org/en/latest/objects.inv',
-                  'https://requests.kennethreitz.org/en/latest/objects.inv')),
+    'requests': ('https://requests.readthedocs.io/en/stable/', None),
 }
 
 

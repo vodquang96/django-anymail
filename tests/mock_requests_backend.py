@@ -1,9 +1,9 @@
 import json
+from io import BytesIO
 
 from django.core import mail
 from django.test import SimpleTestCase
 import requests
-import six
 from mock import patch
 
 from anymail.exceptions import AnymailAPIError
@@ -13,7 +13,7 @@ from .utils import AnymailTestMixin
 UNSET = object()
 
 
-class RequestsBackendMockAPITestCase(SimpleTestCase, AnymailTestMixin):
+class RequestsBackendMockAPITestCase(AnymailTestMixin, SimpleTestCase):
     """TestCase that mocks API calls through requests"""
 
     DEFAULT_RAW_RESPONSE = b"""{"subclass": "should override"}"""
@@ -22,15 +22,14 @@ class RequestsBackendMockAPITestCase(SimpleTestCase, AnymailTestMixin):
     class MockResponse(requests.Response):
         """requests.request return value mock sufficient for testing"""
         def __init__(self, status_code=200, raw=b"RESPONSE", encoding='utf-8', reason=None):
-            super(RequestsBackendMockAPITestCase.MockResponse, self).__init__()
+            super().__init__()
             self.status_code = status_code
             self.encoding = encoding
             self.reason = reason or ("OK" if 200 <= status_code < 300 else "ERROR")
-            # six.BytesIO(None) returns b'None' in PY2 (rather than b'')
-            self.raw = six.BytesIO(raw) if raw is not None else six.BytesIO()
+            self.raw = BytesIO(raw)
 
     def setUp(self):
-        super(RequestsBackendMockAPITestCase, self).setUp()
+        super().setUp()
         self.patch_request = patch('requests.Session.request', autospec=True)
         self.mock_request = self.patch_request.start()
         self.addCleanup(self.patch_request.stop)
@@ -127,17 +126,25 @@ class RequestsBackendMockAPITestCase(SimpleTestCase, AnymailTestMixin):
             raise AssertionError(msg or "ESP API was called and shouldn't have been")
 
 
-# noinspection PyUnresolvedReferences
-class SessionSharingTestCasesMixin(object):
-    """Mixin that tests connection sharing in any RequestsBackendMockAPITestCase
+class SessionSharingTestCases(RequestsBackendMockAPITestCase):
+    """Common test cases for requests backend connection sharing.
 
-    (Contains actual test cases, so can't be included in RequestsBackendMockAPITestCase
-    itself, as that would re-run these tests several times for each backend, in
-    each TestCase for the backend.)
+    Instantiate for each ESP by:
+    - subclassing
+    - adding or overriding any tests as appropriate
     """
 
+    def __init__(self, methodName='runTest'):
+        if self.__class__ is SessionSharingTestCases:
+            # don't run these tests on the abstract base implementation
+            methodName = 'runNoTestsInBaseClass'
+        super().__init__(methodName)
+
+    def runNoTestsInBaseClass(self):
+        pass
+
     def setUp(self):
-        super(SessionSharingTestCasesMixin, self).setUp()
+        super().setUp()
         self.patch_close = patch('requests.Session.close', autospec=True)
         self.mock_close = self.patch_close.start()
         self.addCleanup(self.patch_close.stop)

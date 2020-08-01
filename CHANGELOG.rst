@@ -25,6 +25,30 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
+vNext
+-----
+
+*Unreleased changes in development*
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+* Drop support for Django versions older than Django 2.0, and for Python 2.7.
+  (For compatibility with Django 1.11, stay on the Anymail `v7.2 LTS`_
+  extended support branch by setting your requirements to `django-anymail~=7.2`.)
+
+* Remove Anymail internal code related to supporting Python 2 and older Django
+  versions. This does not change the documented API, but may affect you if your
+  code borrowed from Anymail's undocumented internals. (You should be able to switch
+  to the Python standard library equivalents, as Anymail has done.)
+
+* AnymailMessageMixin now correctly subclasses Django's EmailMessage. If you use it
+  as part of your own custom EmailMessage-derived class, and you start getting errors
+  about "consistent method resolution order," you probably need to change your class's
+  inheritance. (For some helpful background, see this comment about
+  `mixin superclass ordering <https://nedbatchelder.com/blog/201210/multiple_inheritance_is_hard.html#comment_13805>`__.)
+
+
 v7.2 LTS
 --------
 

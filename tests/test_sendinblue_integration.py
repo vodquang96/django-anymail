@@ -18,7 +18,7 @@ SENDINBLUE_TEST_API_KEY = os.getenv('SENDINBLUE_TEST_API_KEY')
 @override_settings(ANYMAIL_SENDINBLUE_API_KEY=SENDINBLUE_TEST_API_KEY,
                    ANYMAIL_SENDINBLUE_SEND_DEFAULTS=dict(),
                    EMAIL_BACKEND="anymail.backends.sendinblue.EmailBackend")
-class SendinBlueBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
+class SendinBlueBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
     """SendinBlue v3 API integration tests
 
     SendinBlue doesn't have sandbox so these tests run
@@ -31,7 +31,7 @@ class SendinBlueBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     """
 
     def setUp(self):
-        super(SendinBlueBackendIntegrationTests, self).setUp()
+        super().setUp()
 
         self.message = AnymailMessage('Anymail SendinBlue integration test', 'Text content',
                                       'from@test-sb.anymail.info', ['test+to1@anymail.info'])

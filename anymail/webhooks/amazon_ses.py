@@ -11,7 +11,7 @@ from ..exceptions import (
     _LazyError)
 from ..inbound import AnymailInboundMessage
 from ..signals import AnymailInboundEvent, AnymailTrackingEvent, EventType, RejectReason, inbound, tracking
-from ..utils import combine, get_anymail_setting, getfirst
+from ..utils import get_anymail_setting, getfirst
 
 try:
     import boto3
@@ -37,7 +37,7 @@ class AmazonSESBaseWebhookView(AnymailBaseWebhookView):
             "auto_confirm_sns_subscriptions", esp_name=self.esp_name, kwargs=kwargs, default=True)
         # boto3 params for connecting to S3 (inbound downloads) and SNS (auto-confirm subscriptions):
         self.session_params, self.client_params = _get_anymail_boto3_params(kwargs=kwargs)
-        super(AmazonSESBaseWebhookView, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     @staticmethod
     def _parse_sns_message(request):
@@ -47,7 +47,7 @@ class AmazonSESBaseWebhookView(AnymailBaseWebhookView):
                 body = request.body.decode(request.encoding or 'utf-8')
                 request._sns_message = json.loads(body)
             except (TypeError, ValueError, UnicodeDecodeError) as err:
-                raise AnymailAPIError("Malformed SNS message body %r" % request.body, raised_from=err)
+                raise AnymailAPIError("Malformed SNS message body %r" % request.body) from err
         return request._sns_message
 
     def validate_request(self, request):
@@ -80,7 +80,7 @@ class AmazonSESBaseWebhookView(AnymailBaseWebhookView):
             response = HttpResponse(status=401)
             response["WWW-Authenticate"] = 'Basic realm="Anymail WEBHOOK_SECRET"'
             return response
-        return super(AmazonSESBaseWebhookView, self).post(request, *args, **kwargs)
+        return super().post(request, *args, **kwargs)
 
     def parse_events(self, request):
         # request *has* been validated by now
@@ -91,11 +91,11 @@ class AmazonSESBaseWebhookView(AnymailBaseWebhookView):
             message_string = sns_message.get("Message")
             try:
                 ses_event = json.loads(message_string)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as err:
                 if message_string == "Successfully validated SNS topic for Amazon SES event publishing.":
                     pass  # this Notification is generated after SubscriptionConfirmation
                 else:
-                    raise AnymailAPIError("Unparsable SNS Message %r" % message_string)
+                    raise AnymailAPIError("Unparsable SNS Message %r" % message_string) from err
             else:
                 events = self.esp_to_anymail_events(ses_event, sns_message)
         elif sns_type == "SubscriptionConfirmation":
@@ -258,8 +258,7 @@ class AmazonSESTrackingWebhookView(AmazonSESBaseWebhookView):
             )
 
         return [
-            # AnymailTrackingEvent(**common_props, **recipient_props)  # Python 3.5+ (PEP-448 syntax)
-            AnymailTrackingEvent(**combine(common_props, recipient_props))
+            AnymailTrackingEvent(**common_props, **recipient_props)
             for recipient_props in per_recipient_props
         ]
 
@@ -306,7 +305,7 @@ class AmazonSESInboundWebhookView(AmazonSESBaseWebhookView):
                 raise AnymailBotoClientAPIError(
                     "Anymail AmazonSESInboundWebhookView couldn't download S3 object '{bucket_name}:{object_key}'"
                     "".format(bucket_name=bucket_name, object_key=object_key),
-                    raised_from=err)
+                    client_error=err) from err
             finally:
                 content.close()
         else:
@@ -341,13 +340,9 @@ class AmazonSESInboundWebhookView(AmazonSESBaseWebhookView):
 
 class AnymailBotoClientAPIError(AnymailAPIError, ClientError):
     """An AnymailAPIError that is also a Boto ClientError"""
-    def __init__(self, *args, **kwargs):
-        raised_from = kwargs.pop('raised_from')
-        assert isinstance(raised_from, ClientError)
-        assert len(kwargs) == 0  # can't support other kwargs
+    def __init__(self, *args, client_error):
+        assert isinstance(client_error, ClientError)
         # init self as boto ClientError (which doesn't cooperatively subclass):
-        super(AnymailBotoClientAPIError, self).__init__(
-            error_response=raised_from.response, operation_name=raised_from.operation_name)
+        super().__init__(error_response=client_error.response, operation_name=client_error.operation_name)
         # emulate AnymailError init:
         self.args = args
-        self.raised_from = raised_from

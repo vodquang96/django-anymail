@@ -4,7 +4,6 @@
 #   or
 # runtests.py [tests.test_x tests.test_y.SomeTestCase ...]
 
-from __future__ import print_function
 import sys
 from distutils.util import strtobool
 
@@ -33,7 +32,6 @@ def setup_and_run_tests(test_labels=None):
 
     warnings.simplefilter('default')  # show DeprecationWarning and other default-ignored warnings
 
-    # noinspection PyStringFormat
     os.environ['DJANGO_SETTINGS_MODULE'] = \
         'tests.test_settings.settings_%d_%d' % django.VERSION[:2]
     django.setup()

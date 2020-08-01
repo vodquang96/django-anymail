@@ -2,19 +2,23 @@ from django.dispatch import Signal
 
 
 # Outbound message, before sending
-pre_send = Signal(providing_args=['message', 'esp_name'])
+# provides args: message, esp_name
+pre_send = Signal()
 
 # Outbound message, after sending
-post_send = Signal(providing_args=['message', 'status', 'esp_name'])
+# provides args: message, status, esp_name
+post_send = Signal()
 
 # Delivery and tracking events for sent messages
-tracking = Signal(providing_args=['event', 'esp_name'])
+# provides args: event, esp_name
+tracking = Signal()
 
 # Event for receiving inbound messages
-inbound = Signal(providing_args=['event', 'esp_name'])
+# provides args: event, esp_name
+inbound = Signal()
 
 
-class AnymailEvent(object):
+class AnymailEvent:
     """Base class for normalized Anymail webhook events"""
 
     def __init__(self, event_type, timestamp=None, event_id=None, esp_event=None, **kwargs):
@@ -28,7 +32,7 @@ class AnymailTrackingEvent(AnymailEvent):
     """Normalized delivery and tracking event for sent messages"""
 
     def __init__(self, **kwargs):
-        super(AnymailTrackingEvent, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.click_url = kwargs.pop('click_url', None)  # str
         self.description = kwargs.pop('description', None)  # str, usually human-readable, not normalized
         self.message_id = kwargs.pop('message_id', None)  # str, format may vary
@@ -44,7 +48,7 @@ class AnymailInboundEvent(AnymailEvent):
     """Normalized inbound message event"""
 
     def __init__(self, **kwargs):
-        super(AnymailInboundEvent, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.message = kwargs.pop('message', None)  # anymail.inbound.AnymailInboundMessage
 
 

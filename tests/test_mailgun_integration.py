@@ -1,20 +1,16 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import unicode_literals
-
-import os
 import logging
+import os
 import unittest
 from datetime import datetime, timedelta
-from time import mktime, sleep
+from time import sleep
 
 import requests
 from django.test import SimpleTestCase, override_settings, tag
 
 from anymail.exceptions import AnymailAPIError
 from anymail.message import AnymailMessage
-
 from .utils import AnymailTestMixin, sample_image_path
+
 
 MAILGUN_TEST_API_KEY = os.getenv('MAILGUN_TEST_API_KEY')
 MAILGUN_TEST_DOMAIN = os.getenv('MAILGUN_TEST_DOMAIN')
@@ -28,7 +24,7 @@ MAILGUN_TEST_DOMAIN = os.getenv('MAILGUN_TEST_DOMAIN')
                             'MAILGUN_SENDER_DOMAIN': MAILGUN_TEST_DOMAIN,
                             'MAILGUN_SEND_DEFAULTS': {'esp_extra': {'o:testmode': 'yes'}}},
                    EMAIL_BACKEND="anymail.backends.mailgun.EmailBackend")
-class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
+class MailgunBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
     """Mailgun API integration tests
 
     These tests run against the **live** Mailgun API, using the
@@ -39,7 +35,7 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     """
 
     def setUp(self):
-        super(MailgunBackendIntegrationTests, self).setUp()
+        super().setUp()
         self.message = AnymailMessage('Anymail Mailgun integration test', 'Text content',
                                       'from@example.com', ['test+to1@anymail.info'])
         self.message.attach_alternative('<p>HTML content</p>', "text/html")
@@ -101,7 +97,7 @@ class MailgunBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
 
     def test_all_options(self):
         send_at = datetime.now().replace(microsecond=0) + timedelta(minutes=2)
-        send_at_timestamp = mktime(send_at.timetuple())  # python3: send_at.timestamp()
+        send_at_timestamp = send_at.timestamp()
         message = AnymailMessage(
             subject="Anymail Mailgun all-options integration test",
             body="This is the text body",

@@ -25,7 +25,7 @@ class EmailBackend(AnymailBaseBackend):
         # Allow replacing the payload, for testing.
         # (Real backends would generally not implement this option.)
         self._payload_class = kwargs.pop('payload_class', TestPayload)
-        super(EmailBackend, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if not hasattr(mail, 'outbox'):
             mail.outbox = []  # see django.core.mail.backends.locmem
 
@@ -60,8 +60,8 @@ class EmailBackend(AnymailBaseBackend):
     def parse_recipient_status(self, response, payload, message):
         try:
             return response['recipient_status']
-        except KeyError:
-            raise AnymailAPIError('Unparsable test response')
+        except KeyError as err:
+            raise AnymailAPIError('Unparsable test response') from err
 
 
 class TestPayload(BasePayload):

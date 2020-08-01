@@ -30,11 +30,11 @@ class MailgunBaseWebhookView(AnymailBaseWebhookView):
                                       kwargs=kwargs, allow_bare=True, default=None)
         webhook_signing_key = get_anymail_setting('webhook_signing_key', esp_name=self.esp_name,
                                                   kwargs=kwargs, default=UNSET if api_key is None else api_key)
-        self.webhook_signing_key = webhook_signing_key.encode('ascii')  # hmac.new requires bytes key in python 3
-        super(MailgunBaseWebhookView, self).__init__(**kwargs)
+        self.webhook_signing_key = webhook_signing_key.encode('ascii')  # hmac.new requires bytes key
+        super().__init__(**kwargs)
 
     def validate_request(self, request):
-        super(MailgunBaseWebhookView, self).validate_request(request)  # first check basic auth if enabled
+        super().validate_request(request)  # first check basic auth if enabled
         if request.content_type == "application/json":
             # New-style webhook: json payload with separate signature block
             try:
@@ -45,8 +45,7 @@ class MailgunBaseWebhookView(AnymailBaseWebhookView):
                 signature = signature_block['signature']
             except (KeyError, ValueError, UnicodeDecodeError) as err:
                 raise AnymailWebhookValidationFailure(
-                    "Mailgun webhook called with invalid payload format",
-                    raised_from=err)
+                    "Mailgun webhook called with invalid payload format") from err
         else:
             # Legacy webhook: signature fields are interspersed with other POST data
             try:
@@ -54,9 +53,10 @@ class MailgunBaseWebhookView(AnymailBaseWebhookView):
                 # (Fortunately, Django QueryDict is specced to return the last value.)
                 token = request.POST['token']
                 timestamp = request.POST['timestamp']
-                signature = str(request.POST['signature'])  # force to same type as hexdigest() (for python2)
-            except KeyError:
-                raise AnymailWebhookValidationFailure("Mailgun webhook called without required security fields")
+                signature = request.POST['signature']
+            except KeyError as err:
+                raise AnymailWebhookValidationFailure(
+                    "Mailgun webhook called without required security fields") from err
 
         expected_signature = hmac.new(key=self.webhook_signing_key, msg='{}{}'.format(timestamp, token).encode('ascii'),
                                       digestmod=hashlib.sha256).hexdigest()

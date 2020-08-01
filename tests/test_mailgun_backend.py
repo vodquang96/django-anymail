@@ -1,16 +1,7 @@
-# -*- coding: utf-8 -*-
-
 from datetime import date, datetime
 from textwrap import dedent
 
-try:
-    from email import message_from_bytes
-except ImportError:
-    from email import message_from_string
-
-    def message_from_bytes(s):
-        return message_from_string(s.decode('utf-8'))
-
+from email import message_from_bytes
 from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
 
@@ -24,7 +15,7 @@ from anymail.exceptions import (
     AnymailRequestsAPIError, AnymailUnsupportedFeature)
 from anymail.message import attach_inline_image_file
 
-from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
+from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCases
 from .utils import (AnymailTestMixin, sample_email_content,
                     sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME)
 
@@ -39,7 +30,7 @@ class MailgunBackendMockAPITestCase(RequestsBackendMockAPITestCase):
     }"""
 
     def setUp(self):
-        super(MailgunBackendMockAPITestCase, self).setUp()
+        super().setUp()
         # Simple message useful for many tests
         self.message = mail.EmailMultiAlternatives('Subject', 'Text Body', 'from@example.com', ['to@example.com'])
 
@@ -178,7 +169,7 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
         self.assertEqual(len(inlines), 0)
 
     def test_unicode_attachment_correctly_decoded(self):
-        self.message.attach(u"Une pièce jointe.html", u'<p>\u2019</p>', mimetype='text/html')
+        self.message.attach("Une pièce jointe.html", '<p>\u2019</p>', mimetype='text/html')
         self.message.send()
 
         # Verify the RFC 7578 compliance workaround has kicked in:
@@ -191,7 +182,7 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
             workaround = True
         data = data.decode("utf-8").replace("\r\n", "\n")
         self.assertNotIn("filename*=", data)  # No RFC 2231 encoding
-        self.assertIn(u'Content-Disposition: form-data; name="attachment"; filename="Une pièce jointe.html"', data)
+        self.assertIn('Content-Disposition: form-data; name="attachment"; filename="Une pièce jointe.html"', data)
 
         if workaround:
             files = self.get_api_call_files(required=False)
@@ -199,8 +190,8 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
 
     def test_rfc_7578_compliance(self):
         # Check some corner cases in the workaround that undoes RFC 2231 multipart/form-data encoding...
-        self.message.subject = u"Testing for filename*=utf-8''problems"
-        self.message.body = u"The attached message should have an attachment named 'vedhæftet fil.txt'"
+        self.message.subject = "Testing for filename*=utf-8''problems"
+        self.message.body = "The attached message should have an attachment named 'vedhæftet fil.txt'"
         # A forwarded message with its own attachment:
         forwarded_message = dedent("""\
             MIME-Version: 1.0
@@ -219,7 +210,7 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
             This is an attachment.
             --boundary--
             """)
-        self.message.attach(u"besked med vedhæftede filer", forwarded_message, "message/rfc822")
+        self.message.attach("besked med vedhæftede filer", forwarded_message, "message/rfc822")
         self.message.send()
 
         data = self.get_api_call_data()
@@ -230,13 +221,13 @@ class MailgunBackendStandardEmailTests(MailgunBackendMockAPITestCase):
 
         # Top-level attachment (in form-data) should have RFC 7578 filename (raw Unicode):
         self.assertIn(
-            u'Content-Disposition: form-data; name="attachment"; filename="besked med vedhæftede filer"', data)
+            'Content-Disposition: form-data; name="attachment"; filename="besked med vedhæftede filer"', data)
         # Embedded message/rfc822 attachment should retain its RFC 2231 encoded filename:
         self.assertIn("Content-Type: text/plain; name*=utf-8''vedh%C3%A6ftet%20fil.txt", data)
         self.assertIn("Content-Disposition: attachment; filename*=utf-8''vedh%C3%A6ftet%20fil.txt", data)
         # References to RFC 2231 in message text should remain intact:
         self.assertIn("Testing for filename*=utf-8''problems", data)
-        self.assertIn(u"The attached message should have an attachment named 'vedhæftet fil.txt'", data)
+        self.assertIn("The attached message should have an attachment named 'vedhæftet fil.txt'", data)
 
     def test_attachment_missing_filename(self):
         """Mailgun silently drops attachments without filenames, so warn the caller"""
@@ -767,14 +758,14 @@ class MailgunBackendRecipientsRefusedTests(MailgunBackendMockAPITestCase):
 
 
 @tag('mailgun')
-class MailgunBackendSessionSharingTestCase(SessionSharingTestCasesMixin, MailgunBackendMockAPITestCase):
+class MailgunBackendSessionSharingTestCase(SessionSharingTestCases, MailgunBackendMockAPITestCase):
     """Requests session sharing tests"""
-    pass  # tests are defined in the mixin
+    pass  # tests are defined in SessionSharingTestCases
 
 
 @tag('mailgun')
 @override_settings(EMAIL_BACKEND="anymail.backends.mailgun.EmailBackend")
-class MailgunBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin):
+class MailgunBackendImproperlyConfiguredTests(AnymailTestMixin, SimpleTestCase):
     """Test ESP backend without required settings in place"""
 
     def test_missing_api_key(self):

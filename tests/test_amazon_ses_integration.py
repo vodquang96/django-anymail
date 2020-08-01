@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-
 import os
 import unittest
 import warnings
@@ -11,11 +8,6 @@ from anymail.exceptions import AnymailAPIError
 from anymail.message import AnymailMessage
 
 from .utils import AnymailTestMixin, sample_image_path
-
-try:
-    ResourceWarning
-except NameError:
-    ResourceWarning = Warning  # Python 2
 
 
 AMAZON_SES_TEST_ACCESS_KEY_ID = os.getenv("AMAZON_SES_TEST_ACCESS_KEY_ID")
@@ -42,7 +34,7 @@ AMAZON_SES_TEST_REGION_NAME = os.getenv("AMAZON_SES_TEST_REGION_NAME", "us-east-
         "AMAZON_SES_CONFIGURATION_SET_NAME": "TestConfigurationSet",  # actual config set in Anymail test account
     })
 @tag('amazon_ses', 'live')
-class AmazonSESBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
+class AmazonSESBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
     """Amazon SES API integration tests
 
     These tests run against the **live** Amazon SES API, using the environment
@@ -63,14 +55,14 @@ class AmazonSESBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
     """
 
     def setUp(self):
-        super(AmazonSESBackendIntegrationTests, self).setUp()
+        super().setUp()
         self.message = AnymailMessage('Anymail Amazon SES integration test', 'Text content',
                                       'test@test-ses.anymail.info', ['success@simulator.amazonses.com'])
         self.message.attach_alternative('<p>HTML content</p>', "text/html")
 
         # boto3 relies on GC to close connections. Python 3 warns about unclosed ssl.SSLSocket during cleanup.
-        # We don't care. (It might not be a real problem worth warning, but in any case it's not our problem.)
-        # https://www.google.com/search?q=unittest+boto3+ResourceWarning+unclosed+ssl.SSLSocket
+        # We don't care. (It may be a false positive, or it may be a botocore problem, but it's not *our* problem.)
+        # https://github.com/boto/boto3/issues/454#issuecomment-586033745
         # Filter in TestCase.setUp because unittest resets the warning filters for each test.
         # https://stackoverflow.com/a/26620811/647002
         warnings.filterwarnings("ignore", message=r"unclosed <ssl\.SSLSocket", category=ResourceWarning)
@@ -154,8 +146,9 @@ class AmazonSESBackendIntegrationTests(SimpleTestCase, AnymailTestMixin):
         }
     })
     def test_invalid_aws_credentials(self):
-        with self.assertRaises(AnymailAPIError) as cm:
-            self.message.send()
-        err = cm.exception
         # Make sure the exception message includes AWS's response:
-        self.assertIn("The security token included in the request is invalid", str(err))
+        with self.assertRaisesMessage(
+            AnymailAPIError,
+            "The security token included in the request is invalid"
+        ):
+            self.message.send()

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import json
 from base64 import b64encode, b64decode
 from datetime import datetime
@@ -7,7 +5,6 @@ from decimal import Decimal
 from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
 
-import six
 from django.core import mail
 from django.test import SimpleTestCase, override_settings, tag
 from django.utils.timezone import get_fixed_timezone, override as override_current_timezone
@@ -15,11 +12,8 @@ from django.utils.timezone import get_fixed_timezone, override as override_curre
 from anymail.exceptions import (AnymailAPIError, AnymailConfigurationError, AnymailSerializationError,
                                 AnymailUnsupportedFeature)
 from anymail.message import attach_inline_image_file
-from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCasesMixin
+from .mock_requests_backend import RequestsBackendMockAPITestCase, SessionSharingTestCases
 from .utils import sample_image_content, sample_image_path, SAMPLE_IMAGE_FILENAME, AnymailTestMixin
-
-# noinspection PyUnresolvedReferences
-longtype = int if six.PY3 else long  # NOQA: F821
 
 
 @tag('sendinblue')
@@ -31,7 +25,7 @@ class SendinBlueBackendMockAPITestCase(RequestsBackendMockAPITestCase):
     DEFAULT_STATUS_CODE = 201  # SendinBlue v3 uses '201 Created' for success (in most cases)
 
     def setUp(self):
-        super(SendinBlueBackendMockAPITestCase, self).setUp()
+        super().setUp()
         # Simple message useful for many tests
         self.message = mail.EmailMultiAlternatives('Subject', 'Text Body', 'from@example.com', ['to@example.com'])
 
@@ -119,13 +113,12 @@ class SendinBlueBackendStandardEmailTests(SendinBlueBackendMockAPITestCase):
         self.assertNotIn('textContent', data)
 
     def test_extra_headers(self):
-        self.message.extra_headers = {'X-Custom': 'string', 'X-Num': 123, 'X-Long': longtype(123),
+        self.message.extra_headers = {'X-Custom': 'string', 'X-Num': 123,
                                       'Reply-To': '"Do Not Reply" <noreply@example.com>'}
         self.message.send()
         data = self.get_api_call_json()
         self.assertEqual(data['headers']['X-Custom'], 'string')
         self.assertEqual(data['headers']['X-Num'], 123)
-        self.assertEqual(data['headers']['X-Long'], 123)
         # Reply-To must be moved to separate param
         self.assertNotIn('Reply-To', data['headers'])
         self.assertEqual(data['replyTo'], {'name': "Do Not Reply", 'email': "noreply@example.com"})
@@ -185,11 +178,11 @@ class SendinBlueBackendStandardEmailTests(SendinBlueBackendMockAPITestCase):
             'content': b64encode(pdf_content).decode('ascii')})
 
     def test_unicode_attachment_correctly_decoded(self):
-        self.message.attach(u"Une pièce jointe.html", u'<p>\u2019</p>', mimetype='text/html')
+        self.message.attach("Une pièce jointe.html", '<p>\u2019</p>', mimetype='text/html')
         self.message.send()
         attachment = self.get_api_call_json()['attachment'][0]
-        self.assertEqual(attachment['name'], u'Une pièce jointe.html')
-        self.assertEqual(b64decode(attachment['content']).decode('utf-8'), u'<p>\u2019</p>')
+        self.assertEqual(attachment['name'], 'Une pièce jointe.html')
+        self.assertEqual(b64decode(attachment['content']).decode('utf-8'), '<p>\u2019</p>')
 
     def test_embedded_images(self):
         # SendinBlue doesn't support inline image
@@ -284,7 +277,7 @@ class SendinBlueBackendAnymailFeatureTests(SendinBlueBackendMockAPITestCase):
             self.message.send()
 
     def test_metadata(self):
-        self.message.metadata = {'user_id': "12345", 'items': 6, 'float': 98.6, 'long': longtype(123)}
+        self.message.metadata = {'user_id': "12345", 'items': 6, 'float': 98.6}
         self.message.send()
 
         data = self.get_api_call_json()
@@ -293,7 +286,6 @@ class SendinBlueBackendAnymailFeatureTests(SendinBlueBackendMockAPITestCase):
         self.assertEqual(metadata['user_id'], "12345")
         self.assertEqual(metadata['items'], 6)
         self.assertEqual(metadata['float'], 98.6)
-        self.assertEqual(metadata['long'], longtype(123))
 
     def test_send_at(self):
         utc_plus_6 = get_fixed_timezone(6 * 60)
@@ -451,14 +443,14 @@ class SendinBlueBackendRecipientsRefusedTests(SendinBlueBackendMockAPITestCase):
 
 
 @tag('sendinblue')
-class SendinBlueBackendSessionSharingTestCase(SessionSharingTestCasesMixin, SendinBlueBackendMockAPITestCase):
+class SendinBlueBackendSessionSharingTestCase(SessionSharingTestCases, SendinBlueBackendMockAPITestCase):
     """Requests session sharing tests"""
-    pass  # tests are defined in the mixin
+    pass  # tests are defined in SessionSharingTestCases
 
 
 @tag('sendinblue')
 @override_settings(EMAIL_BACKEND="anymail.backends.sendinblue.EmailBackend")
-class SendinBlueBackendImproperlyConfiguredTests(SimpleTestCase, AnymailTestMixin):
+class SendinBlueBackendImproperlyConfiguredTests(AnymailTestMixin, SimpleTestCase):
     """Test ESP backend without required settings in place"""
 
     def test_missing_auth(self):

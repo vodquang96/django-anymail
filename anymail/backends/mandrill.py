@@ -23,7 +23,7 @@ class EmailBackend(AnymailRequestsBackend):
                                       default="https://mandrillapp.com/api/1.0")
         if not api_url.endswith("/"):
             api_url += "/"
-        super(EmailBackend, self).__init__(api_url, **kwargs)
+        super().__init__(api_url, **kwargs)
 
     def build_message_payload(self, message, defaults):
         return MandrillPayload(message, defaults, self)
@@ -40,10 +40,10 @@ class EmailBackend(AnymailRequestsBackend):
                     status = 'unknown'
                 message_id = item.get('_id', None)  # can be missing for invalid/rejected recipients
                 recipient_status[email] = AnymailRecipientStatus(message_id=message_id, status=status)
-        except (KeyError, TypeError):
+        except (KeyError, TypeError) as err:
             raise AnymailRequestsAPIError("Invalid Mandrill API response format",
                                           email_message=message, payload=payload, response=response,
-                                          backend=self)
+                                          backend=self) from err
         return recipient_status
 
 
@@ -69,7 +69,7 @@ class MandrillPayload(RequestsPayload):
 
     def __init__(self, *args, **kwargs):
         self.esp_extra = {}  # late-bound in serialize_data
-        super(MandrillPayload, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def get_api_endpoint(self):
         if 'template_name' in self.data:

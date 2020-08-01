@@ -1,9 +1,6 @@
-from __future__ import unicode_literals
-
 import json
 from traceback import format_exception_only
 
-import six
 from django.core.exceptions import ImproperlyConfigured, SuspiciousOperation
 from requests import HTTPError
 
@@ -23,14 +20,12 @@ class AnymailError(Exception):
           backend: the backend instance involved
           payload: data arg (*not* json-stringified) for the ESP send call
           response: requests.Response from the send call
-          raised_from: original/wrapped Exception
           esp_name: what to call the ESP (read from backend if provided)
         """
         self.backend = kwargs.pop('backend', None)
         self.email_message = kwargs.pop('email_message', None)
         self.payload = kwargs.pop('payload', None)
         self.status_code = kwargs.pop('status_code', None)
-        self.raised_from = kwargs.pop('raised_from', None)
         self.esp_name = kwargs.pop('esp_name',
                                    self.backend.esp_name if self.backend else None)
         if isinstance(self, HTTPError):
@@ -38,12 +33,12 @@ class AnymailError(Exception):
             self.response = kwargs.get('response', None)
         else:
             self.response = kwargs.pop('response', None)
-        super(AnymailError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def __str__(self):
         parts = [
-            " ".join([six.text_type(arg) for arg in self.args]),
-            self.describe_raised_from(),
+            " ".join([str(arg) for arg in self.args]),
+            self.describe_cause(),
             self.describe_send(),
             self.describe_response(),
         ]
@@ -71,7 +66,7 @@ class AnymailError(Exception):
 
         # Decode response.reason to text -- borrowed from requests.Response.raise_for_status:
         reason = self.response.reason
-        if isinstance(reason, six.binary_type):
+        if isinstance(reason, bytes):
             try:
                 reason = reason.decode('utf-8')
             except UnicodeDecodeError:
@@ -88,11 +83,11 @@ class AnymailError(Exception):
                 pass
         return description
 
-    def describe_raised_from(self):
-        """Return the original exception"""
-        if self.raised_from is None:
+    def describe_cause(self):
+        """Describe the original exception"""
+        if self.__cause__ is None:
             return None
-        return ''.join(format_exception_only(type(self.raised_from), self.raised_from)).strip()
+        return ''.join(format_exception_only(type(self.__cause__), self.__cause__)).strip()
 
 
 class AnymailAPIError(AnymailError):
@@ -103,7 +98,7 @@ class AnymailRequestsAPIError(AnymailAPIError, HTTPError):
     """Exception for unsuccessful response from a requests API."""
 
     def __init__(self, *args, **kwargs):
-        super(AnymailRequestsAPIError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if self.response is not None:
             self.status_code = self.response.status_code
 
@@ -114,7 +109,7 @@ class AnymailRecipientsRefused(AnymailError):
     def __init__(self, message=None, *args, **kwargs):
         if message is None:
             message = "All message recipients were rejected or invalid"
-        super(AnymailRecipientsRefused, self).__init__(message, *args, **kwargs)
+        super().__init__(message, *args, **kwargs)
 
 
 class AnymailInvalidAddress(AnymailError, ValueError):
@@ -154,7 +149,7 @@ class AnymailSerializationError(AnymailError, TypeError):
                       "Try converting it to a string or number first." % esp_name
         if orig_err is not None:
             message += "\n%s" % str(orig_err)
-        super(AnymailSerializationError, self).__init__(message, *args, **kwargs)
+        super().__init__(message, *args, **kwargs)
 
 
 class AnymailCancelSend(AnymailError):
@@ -182,7 +177,7 @@ class AnymailImproperlyInstalled(AnymailConfigurationError, ImportError):
         message = "The %s package is required to use this ESP, but isn't installed.\n" \
                   "(Be sure to use `pip install django-anymail[%s]` " \
                   "with your desired ESPs.)" % (missing_package, backend)
-        super(AnymailImproperlyInstalled, self).__init__(message)
+        super().__init__(message)
 
 
 # Warnings
@@ -201,7 +196,7 @@ class AnymailDeprecationWarning(AnymailWarning, DeprecationWarning):
 
 # Helpers
 
-class _LazyError(object):
+class _LazyError:
     """An object that sits inert unless/until used, then raises an error"""
     def __init__(self, error):
         self._error = error

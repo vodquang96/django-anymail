@@ -1,5 +1,3 @@
-from __future__ import absolute_import  # we want the sparkpost package, not our own module
-
 from .base import AnymailBaseBackend, BasePayload
 from ..exceptions import AnymailAPIError, AnymailImproperlyInstalled, AnymailConfigurationError
 from ..message import AnymailRecipientStatus
@@ -7,8 +5,8 @@ from ..utils import get_anymail_setting
 
 try:
     from sparkpost import SparkPost, SparkPostException
-except ImportError:
-    raise AnymailImproperlyInstalled(missing_package='sparkpost', backend='sparkpost')
+except ImportError as err:
+    raise AnymailImproperlyInstalled(missing_package='sparkpost', backend='sparkpost') from err
 
 
 class EmailBackend(AnymailBaseBackend):
@@ -20,7 +18,7 @@ class EmailBackend(AnymailBaseBackend):
 
     def __init__(self, **kwargs):
         """Init options from Django settings"""
-        super(EmailBackend, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         # SPARKPOST_API_KEY is optional - library reads from env by default
         self.api_key = get_anymail_setting('api_key', esp_name=self.esp_name,
                                            kwargs=kwargs, allow_bare=True, default=None)
@@ -43,7 +41,7 @@ class EmailBackend(AnymailBaseBackend):
                 "You may need to set ANYMAIL = {'SPARKPOST_API_KEY': ...} "
                 "or ANYMAIL_SPARKPOST_API_KEY in your Django settings, "
                 "or SPARKPOST_API_KEY in your environment." % str(err)
-            )
+            ) from err
 
     # Note: SparkPost python API doesn't expose requests session sharing
     # (so there's no need to implement open/close connection management here)
@@ -60,7 +58,7 @@ class EmailBackend(AnymailBaseBackend):
                 str(err), backend=self, email_message=message, payload=payload,
                 response=getattr(err, 'response', None),  # SparkPostAPIException requests.Response
                 status_code=getattr(err, 'status', None),  # SparkPostAPIException HTTP status_code
-            )
+            ) from err
         return response
 
     def parse_recipient_status(self, response, payload, message):
@@ -72,7 +70,7 @@ class EmailBackend(AnymailBaseBackend):
             raise AnymailAPIError(
                 "%s in SparkPost.transmissions.send result %r" % (str(err), response),
                 backend=self, email_message=message, payload=payload,
-            )
+            ) from err
 
         # SparkPost doesn't (yet*) tell us *which* recipients were accepted or rejected.
         # (* looks like undocumented 'rcpt_to_errors' might provide this info.)

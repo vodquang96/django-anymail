@@ -1,7 +1,6 @@
 import json
 from datetime import date, datetime
 
-import six
 from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
 from django.utils.timezone import is_naive, get_current_timezone, make_aware, utc
@@ -23,7 +22,7 @@ class AnymailBaseBackend(BaseEmailBackend):
     """
 
     def __init__(self, *args, **kwargs):
-        super(AnymailBaseBackend, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.ignore_unsupported_features = get_anymail_setting('ignore_unsupported_features',
                                                                kwargs=kwargs, default=False)
@@ -207,7 +206,7 @@ class AnymailBaseBackend(BaseEmailBackend):
                                   (self.__class__.__module__, self.__class__.__name__))
 
 
-class BasePayload(object):
+class BasePayload:
     # Listing of EmailMessage/EmailMultiAlternatives attributes
     # to process into Payload. Each item is in the form:
     #   (attr, combiner, converter)
@@ -365,7 +364,7 @@ class BasePayload(object):
         #   TypeError: must be str, not list
         #   TypeError: can only concatenate list (not "str") to list
         #   TypeError: Can't convert 'list' object to str implicitly
-        if isinstance(value, six.string_types) or is_lazy(value):
+        if isinstance(value, str) or is_lazy(value):
             raise TypeError('"{attr}" attribute must be a list or other iterable'.format(attr=attr))
 
     #
@@ -538,7 +537,7 @@ class BasePayload(object):
         except TypeError as err:
             # Add some context to the "not JSON serializable" message
             raise AnymailSerializationError(orig_err=err, email_message=self.message,
-                                            backend=self.backend, payload=self)
+                                            backend=self.backend, payload=self) from None
 
     @staticmethod
     def _json_default(o):

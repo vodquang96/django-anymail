@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-
 import json
 from datetime import datetime
 from email.mime.application import MIMEApplication
 
-import six
 from django.core import mail
 from django.core.mail import BadHeaderError
 from django.test import SimpleTestCase, override_settings, tag
@@ -19,11 +15,11 @@ from .utils import AnymailTestMixin, SAMPLE_IMAGE_FILENAME, sample_image_content
 
 @tag('amazon_ses')
 @override_settings(EMAIL_BACKEND='anymail.backends.amazon_ses.EmailBackend')
-class AmazonSESBackendMockAPITestCase(SimpleTestCase, AnymailTestMixin):
+class AmazonSESBackendMockAPITestCase(AnymailTestMixin, SimpleTestCase):
     """TestCase that uses the Amazon SES EmailBackend with a mocked boto3 client"""
 
     def setUp(self):
-        super(AmazonSESBackendMockAPITestCase, self).setUp()
+        super().setUp()
 
         # Mock boto3.session.Session().client('ses').send_raw_email (and any other client operations)
         # (We could also use botocore.stub.Stubber, but mock works well with our test structure)
@@ -122,7 +118,7 @@ class AmazonSESBackendStandardEmailTests(AmazonSESBackendMockAPITestCase):
         # send_raw_email takes a fully-formatted MIME message.
         # This is a simple (if inexact) way to check for expected headers and body:
         raw_mime = params['RawMessage']['Data']
-        self.assertIsInstance(raw_mime, six.binary_type)  # SendRawEmail expects Data as bytes
+        self.assertIsInstance(raw_mime, bytes)  # SendRawEmail expects Data as bytes
         self.assertIn(b"\nFrom: from@example.com\n", raw_mime)
         self.assertIn(b"\nTo: to@example.com\n", raw_mime)
         self.assertIn(b"\nSubject: Subject here\n", raw_mime)
@@ -259,7 +255,7 @@ class AmazonSESBackendStandardEmailTests(AmazonSESBackendMockAPITestCase):
         self.assertEqual(params['Source'], "from1@example.com")
 
     def test_commas_in_subject(self):
-        """Anymail works around a Python 2 email header bug that adds unwanted spaces after commas in long subjects"""
+        """There used to be a Python email header bug that added unwanted spaces after commas in long subjects"""
         self.message.subject = "100,000,000 isn't a number you'd really want to break up in this email subject, right?"
         self.message.send()
         sent_message = self.get_sent_message()
