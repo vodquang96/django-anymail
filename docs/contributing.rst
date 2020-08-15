@@ -26,7 +26,7 @@ improve Anymail.
 Anymail evolved from the `Djrill`_ project. Special thanks to the
 folks from `brack3t`_ who developed the original version of Djrill.
 
-.. _AUTHORS.txt: https://github.com/anymail/django-anymail/blob/master/AUTHORS.txt
+.. _AUTHORS.txt: https://github.com/anymail/django-anymail/blob/main/AUTHORS.txt
 .. _brack3t: http://brack3t.com/
 .. _Djrill: https://github.com/brack3t/Djrill
 
@@ -133,8 +133,8 @@ for all 20+ supported combinations of Python and Django, sending hundreds of mes
 
 .. _pyenv: https://github.com/pyenv/pyenv
 .. _tested on Travis CI: https://travis-ci.org/anymail/django-anymail
-.. _tests source: https://github.com/anymail/django-anymail/blob/master/tests
-.. _.travis.yml: https://github.com/anymail/django-anymail/blob/master/.travis.yml
+.. _tests source: https://github.com/anymail/django-anymail/blob/main/tests
+.. _.travis.yml: https://github.com/anymail/django-anymail/blob/main/.travis.yml
 
 
 Documentation

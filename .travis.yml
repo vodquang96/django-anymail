@@ -7,7 +7,7 @@ branches:
   # (Builds will *also* still run on pull requests;
   # this avoids duplicate builds on the PR *branches*, too.)
   only:
-    - master
+    - main
     - /^v\d+\.\d+(\.(\d|x)+)?(-\S*)?$/
 
 env:

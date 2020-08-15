@@ -1,7 +1,7 @@
 "use strict";
 
-// Similar to https://github.com/rtfd/readthedocs.org/blob/master/readthedocs/core/static-src/core/js/doc-embed/version-compare.js
-// but adds admonition for the "latest" version -- which is (unreleased) master branch.
+// Similar to https://github.com/readthedocs/readthedocs.org/blob/5.2.3/readthedocs/core/static-src/core/js/doc-embed/version-compare.js
+// but adds admonition for the "latest" version -- which is (unreleased) main branch.
 
 function warnOnLatestVersion() {
 

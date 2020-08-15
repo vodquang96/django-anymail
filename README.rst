@@ -51,7 +51,7 @@ The package is released under the BSD license.
 
 .. END shared-intro
 
-.. image:: https://travis-ci.org/anymail/django-anymail.svg?branch=master
+.. image:: https://travis-ci.org/anymail/django-anymail.svg?branch=main
        :target: https://travis-ci.org/anymail/django-anymail
        :alt:    build status on Travis-CI
 

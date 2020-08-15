@@ -55,7 +55,7 @@ under `API Key Management`_. (Mailjet's documentation also sometimes uses
           "MAILJET_SECRET_KEY": "<your API secret>",
       }
 
-You can use either a master or sub-account API key.
+You can use either the main account or a sub-account API key.
 
 Anymail will also look for ``MAILJET_API_KEY`` and ``MAILJET_SECRET_KEY`` at the
 root of the settings file if neither ``ANYMAIL["MAILJET_API_KEY"]``
