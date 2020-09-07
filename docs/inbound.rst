@@ -3,8 +3,6 @@
 Receiving mail
 ==============
 
-.. versionadded:: 1.3
-
 For ESPs that support receiving inbound email, Anymail offers normalized handling
 of inbound events.
 
@@ -168,7 +166,7 @@ Normalized inbound message
         :class:`~anymail.utils.EmailAddress` object, which makes it easier to access
         the parsed address fields:
 
-        .. code-block:: python
+        .. code-block:: pycon
 
             >>> str(message.from_email)  # the fully-formatted address
             '"Dr. Justin Customer, CPA" <jcustomer@example.com>'
@@ -366,11 +364,6 @@ have these methods:
 
         The errors param is as in :meth:`~bytes.decode`. The default "replace" substitutes the
         Unicode "replacement character" for any illegal characters in the text.
-
-        .. versionchanged:: 2.1
-
-            Changed to use attachment's declared charset by default,
-            and added errors option defaulting to replace.
 
     .. method:: get_content_bytes()
 
