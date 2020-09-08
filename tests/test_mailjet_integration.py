@@ -16,8 +16,10 @@ MAILJET_TEST_SECRET_KEY = os.getenv('MAILJET_TEST_SECRET_KEY')
 @unittest.skipUnless(MAILJET_TEST_API_KEY and MAILJET_TEST_SECRET_KEY,
                      "Set MAILJET_TEST_API_KEY and MAILJET_TEST_SECRET_KEY "
                      "environment variables to run Mailjet integration tests")
-@override_settings(ANYMAIL_MAILJET_API_KEY=MAILJET_TEST_API_KEY,
-                   ANYMAIL_MAILJET_SECRET_KEY=MAILJET_TEST_SECRET_KEY,
+@override_settings(ANYMAIL={"MAILJET_API_KEY": MAILJET_TEST_API_KEY,
+                            "MAILJET_SECRET_KEY": MAILJET_TEST_SECRET_KEY,
+                            "MAILJET_SEND_DEFAULTS": {"esp_extra": {"SandboxMode": True}},  # don't actually send mail
+                            },
                    EMAIL_BACKEND="anymail.backends.mailjet.EmailBackend")
 class MailjetBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
     """Mailjet API integration tests
@@ -27,12 +29,11 @@ class MailjetBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
     as the API key and API secret key, respectively.
     If those variables are not set, these tests won't run.
 
-    Mailjet doesn't (in v3.0) offer a test/sandbox mode -- it tries to send everything
-    you ask.
+    These tests enable Mailjet's SandboxMode to avoid sending any email;
+    remove the esp_extra setting above if you are trying to actually send test messages.
 
     Mailjet also doesn't support unverified senders (so no from@example.com).
     We've set up @test-mj.anymail.info as a validated sending domain for these tests.
-
     """
 
     def setUp(self):
@@ -63,7 +64,7 @@ class MailjetBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
             to=['test+to1@anymail.info', '"Recipient, 2nd" <test+to2@anymail.info>'],
             cc=['test+cc1@anymail.info', 'Copy 2 <test+cc1@anymail.info>'],
             bcc=['test+bcc1@anymail.info', 'Blind Copy 2 <test+bcc2@anymail.info>'],
-            reply_to=['reply1@example.com', '"Reply, 2nd" <reply2@example.com>'],
+            reply_to=['"Reply, To" <reply2@example.com>'],  # Mailjet only supports single reply_to
             headers={"X-Anymail-Test": "value"},
 
             metadata={"meta1": "simple string", "meta2": 2},
@@ -120,10 +121,11 @@ class MailjetBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
         recipient_status = message.anymail_status.recipients
         self.assertEqual(recipient_status['test+to1@anymail.info'].status, 'sent')
 
-    @override_settings(ANYMAIL_MAILJET_API_KEY="Hey, that's not an API key!")
+    @override_settings(ANYMAIL={"MAILJET_API_KEY": "Hey, that's not an API key!",
+                                "MAILJET_SECRET_KEY": "and this isn't the secret for it"})
     def test_invalid_api_key(self):
         with self.assertRaises(AnymailAPIError) as cm:
             self.message.send()
         err = cm.exception
         self.assertEqual(err.status_code, 401)
-        self.assertIn("Invalid Mailjet API key or secret", str(err))
+        self.assertIn("API key authentication/authorization failure", str(err))
