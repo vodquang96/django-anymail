@@ -43,6 +43,7 @@ setup(
     license="BSD License",
     packages=["anymail"],
     zip_safe=False,
+    python_requires='>=3.5',
     install_requires=["django>=2.0", "requests>=2.4.3"],
     extras_require={
         # This can be used if particular backends have unique dependencies.
