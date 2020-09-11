@@ -25,26 +25,26 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
------
+v8.0
+----
 
-*Unreleased changes in development*
+*2020-09-11*
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-* Drop support for Django versions older than Django 2.0, and for Python 2.7.
-  (For compatibility with Django 1.11, stay on the Anymail `v7.2 LTS`_
-  extended support branch by setting your requirements to `django-anymail~=7.2`.)
+* Require **Django 2.0 or later** and Python 3. (For compatibility with Django 1.11 and
+  Python 2.7, stay on the Anymail `v7.2 LTS`_ extended support branch by setting your
+  requirements to `django-anymail~=7.2`.)
 
 * **Mailjet:** Upgrade to Mailjet's newer v3.1 send API. Most Mailjet users will not
   be affected by this change, with two exceptions: (1) Mailjet's v3.1 API does not allow
   multiple reply-to addresses, and (2) if you are using Anymail's `esp_extra`, you will
   need to update it for compatibility with the new API. (See
-  `docs <https://anymail.readthedocs.io/en/latest/esps/mailjet/#esp-extra-support>`__.)
+  `docs <https://anymail.readthedocs.io/en/stable/esps/mailjet/#esp-extra-support>`__.)
 
-* **SparkPost:** Switch away from the (now unmaintained) Python SparkPost library to
-  calling the SparkPost API directly. The "sparkpost" package is no longer necessary and
+* **SparkPost:** Call the SparkPost API directly, without using the (now unmaintained)
+  Python SparkPost client library. The "sparkpost" package is no longer necessary and
   can be removed from your project requirements. Most SparkPost users will not be
   affected by this change, with two exceptions: (1) You must provide a
   ``SPARKPOST_API_KEY`` in your Anymail settings (Anymail does not check environment
@@ -53,7 +53,7 @@ Breaking changes
 
   As part of this change esp_extra now allows use of several SparkPost features, such
   as A/B testing, that were unavailable through the Python SparkPost library. (See
-  `docs <https://anymail.readthedocs.io/en/latest/esps/sparkpost/>`__.)
+  `docs <https://anymail.readthedocs.io/en/stable/esps/sparkpost/>`__.)
 
 * Remove Anymail internal code related to supporting Python 2 and older Django
   versions. This does not change the documented API, but may affect you if your
@@ -72,7 +72,7 @@ Features
 * **SparkPost:** Add support for subaccounts (new ``"SPARKPOST_SUBACCOUNT"`` Anymail
   setting), AMP for Email (via ``message.attach_alternative(..., "text/x-amp-html")``),
   and A/B testing and other SparkPost sending features (via ``esp_extra``). (See
-  `docs <https://anymail.readthedocs.io/en/latest/esps/sparkpost/>`__.)
+  `docs <https://anymail.readthedocs.io/en/stable/esps/sparkpost/>`__.)
 
 
 v7.2.1
