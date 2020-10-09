@@ -25,10 +25,10 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
------
+v8.1
+----
 
-*Unreleased changes*
+*2020-10-09*
 
 Features
 ~~~~~~~~
@@ -36,7 +36,7 @@ Features
 * **SparkPost:** Add option for event tracking webhooks to map SparkPost's "Initial Open"
   event to Anymail's normalized "opened" type. (By default, only SparkPost's "Open" is
   reported as Anymail "opened", and "Initial Open" maps to "unknown" to avoid duplicates.
-  See `docs <https://anymail.readthedocs.io/en/latest/esps/sparkpost/#sparkpost-webhooks>`__.
+  See `docs <https://anymail.readthedocs.io/en/stable/esps/sparkpost/#sparkpost-webhooks>`__.
   Thanks to `@slinkymanbyday`_.)
 
 * **SparkPost:** In event tracking webhooks, map AMP open and click events to the

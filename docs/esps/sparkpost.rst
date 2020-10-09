@@ -107,7 +107,7 @@ You must specify the full, versioned API endpoint as shown above (not just the b
 
 .. rubric:: SPARKPOST_TRACK_INITIAL_OPEN_AS_OPENED
 
-.. versionadded:: vNext
+.. versionadded:: 8.1
 
 Boolean, default ``False``. When using Anymail's tracking webhooks, whether to report
 SparkPost's "Initial Open" event as an Anymail normalized "opened" event.
@@ -296,14 +296,14 @@ By default, Anymail reports SparkPost's "Open"---but *not* its "Initial Open"---
 as Anymail's normalized "opened" :attr:`~anymail.signals.AnymailTrackingEvent.event_type`.
 This avoids duplicate "opened" events when both SparkPost types are enabled.
 
-.. versionadded:: vNext
+.. versionadded:: 8.1
 
     To receive SparkPost "Initial Open" events as Anymail's "opened", set
     :setting:`"SPARKPOST_TRACK_INITIAL_OPEN_AS_OPENED": True <ANYMAIL_SPARKPOST_TRACK_INITIAL_OPEN_AS_OPENED>`
     in your ANYMAIL settings dict. You will probably want to disable SparkPost "Open"
     events when using this setting.
 
-.. versionchanged:: vNext
+.. versionchanged:: 8.1
 
     SparkPost's "AMP Click" and "AMP Open" are reported as Anymail's "clicked" and
     "opened" events. If you enable the SPARKPOST_TRACK_INITIAL_OPEN_AS_OPENED setting,
