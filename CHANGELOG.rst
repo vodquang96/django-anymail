@@ -25,10 +25,10 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
+v8.2
 -----
 
-*Unreleased changes*
+*2021-01-27*
 
 Features
 ~~~~~~~~
@@ -51,6 +51,7 @@ Other
 * Test against Django 3.2 prerelease (including support for Python 3.9)
 
 * Document how to send AMP for Email with Django, and note which ESPs support it.
+  (See `docs <https://anymail.readthedocs.io/en/stable/sending/django_email/#amp-email>`__.)
 
 * Move CI testing to GitHub Actions (and stop using Travis-CI).
 
