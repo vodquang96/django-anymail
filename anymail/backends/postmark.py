@@ -94,22 +94,24 @@ class EmailBackend(AnymailRequestsBackend):
                         message_id=None, status='rejected')
 
             elif error_code == 300:  # Invalid email request
-                # Either the From address or at least one recipient was invalid. Email not sent.
+                # Various parse-time validation errors, which may include invalid recipients. Email not sent.
                 # response["To"] is not populated for this error; must examine response["Message"]:
-                #   "Invalid 'To' address: '{addr_spec}'."
-                #   "Error parsing 'To': Illegal email domain '{domain}' in address '{addr_spec}'."
-                #   "Error parsing 'To': Illegal email address '{addr_spec}'. It must contain the '@' symbol."
-                #   "Invalid 'From' address: '{email_address}'."
-                if "'From' address" in msg:
-                    # Normal error
-                    raise AnymailRequestsAPIError(email_message=message, payload=payload, response=response,
-                                                  backend=self)
-                else:
-                    # Use AnymailRecipientsRefused logic
+                if re.match(r"^(Invalid|Error\s+parsing)\s+'(To|Cc|Bcc)'", msg, re.IGNORECASE):
+                    # Recipient-related errors: use AnymailRecipientsRefused logic
+                    #   "Invalid 'To' address: '{addr_spec}'."
+                    #   "Error parsing 'Cc': Illegal email domain '{domain}' in address '{addr_spec}'."
+                    #   "Error parsing 'Bcc': Illegal email address '{addr_spec}'. It must contain the '@' symbol."
                     invalid_addr_specs = self._addr_specs_from_error_msg(msg, r"address:?\s*'(.*)'")
                     for invalid_addr_spec in invalid_addr_specs:
                         recipient_status[invalid_addr_spec] = AnymailRecipientStatus(
                             message_id=None, status='invalid')
+                else:
+                    # Non-recipient errors; handle as normal API error response
+                    #   "Invalid 'From' address: '{email_address}'."
+                    #   "Error parsing 'Reply-To': Illegal email domain '{domain}' in address '{addr_spec}'."
+                    #   "Invalid metadata content. ..."
+                    raise AnymailRequestsAPIError(email_message=message, payload=payload,
+                                                  response=response, backend=self)
 
             elif error_code == 406:  # Inactive recipient
                 # All recipients were rejected as hard-bounce or spam-complaint. Email not sent.

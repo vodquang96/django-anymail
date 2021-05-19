@@ -709,6 +709,19 @@ class PostmarkBackendRecipientsRefusedTests(PostmarkBackendMockAPITestCase):
         status = msg.anymail_status
         self.assertEqual(status.recipients['Invalid@LocalHost'].status, 'invalid')
 
+    def test_recipients_parse_error(self):
+        self.set_mock_response(
+            status_code=422,
+            raw=b"""{
+              "ErrorCode": 300,
+              "Message": "Error parsing 'Cc': Illegal email domain '+' in address 'user@+'."
+            }""")
+        msg = mail.EmailMessage('Subject', 'Body', 'from@example.com', cc=["user@+"])
+        with self.assertRaises(AnymailRecipientsRefused):
+            msg.send()
+        status = msg.anymail_status
+        self.assertEqual(status.recipients['user@+'].status, 'invalid')
+
     def test_from_email_invalid(self):
         # Invalid 'From' address generates same Postmark ErrorCode 300 as invalid 'To',
         # but should raise a different Anymail error
@@ -718,6 +731,33 @@ class PostmarkBackendRecipientsRefusedTests(PostmarkBackendMockAPITestCase):
         )
         msg = mail.EmailMessage('Subject', 'Body', 'invalid@localhost', ['to@example.com'])
         with self.assertRaises(AnymailAPIError):
+            msg.send()
+
+    def test_reply_to_invalid(self):
+        # Make sure 'Reply-To' error doesn't get caught in invalid 'To' logic:
+        self.set_mock_response(
+            status_code=422,
+            raw=b"""{
+                "ErrorCode": 300,
+                "Message": "Error parsing 'Reply-To': Illegal email domain '+' in address 'invalid@+'."}
+            """)
+        msg = mail.EmailMessage('Subject', 'Body', 'from@example.com', ['to@example.com'],
+                                reply_to=["invalid@+"])
+        with self.assertRaisesMessage(AnymailAPIError, "Error parsing 'Reply-To'"):
+            msg.send()
+
+    def test_errorcode_300(self):
+        # Various other problems generate same Postmark ErrorCode 300 as invalid 'To',
+        # but should raise ordinary API errors
+        self.set_mock_response(
+            status_code=422,
+            raw=b"""{
+                "ErrorCode": 300,
+                "Message": "Invalid metadata content. Field names are limited to 20 characters..."
+            }""")
+        msg = mail.EmailMessage('Subject', 'Body', 'from@example.com', ['to@example.com'])
+        msg.metadata = {"this-key-name-is-too-long": "data"}
+        with self.assertRaisesMessage(AnymailAPIError, "Invalid metadata content"):
             msg.send()
 
     def test_fail_silently(self):

@@ -41,6 +41,11 @@ Fixes
 * **Postmark:** Fix two different errors when sending with a template but no merge
   data. (Thanks to `@kareemcoding`_ and `@Tobeyforce`_ for reporting them.)
 
+* **Postmark:** Fix silent failure when sending with long metadata keys and some
+  other errors Postmark detects at send time. Report invalid 'cc' and 'bcc' addresses
+  detected at send time the same as 'to' recipients. (Thanks to `@chrisgrande`_ for
+  reporting the problem.)
+
 
 v8.2
 -----
@@ -1222,6 +1227,7 @@ Features
 .. _@alee: https://github.com/alee
 .. _@anstosa: https://github.com/anstosa
 .. _@calvin: https://github.com/calvin
+.. _@chrisgrande: https://github.com/chrisgrande
 .. _@costela: https://github.com/costela
 .. _@decibyte: https://github.com/decibyte
 .. _@dominik-lekse: https://github.com/dominik-lekse
