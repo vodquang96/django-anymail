@@ -38,7 +38,7 @@ requirements_dev = [
     "twine",
 ]
 
-requirements_test = ["mock", "boto3"]
+requirements_test = ["mock", "boto3", "cryptography"]
 
 
 setup(
@@ -67,6 +67,7 @@ setup(
         "sendgrid": [],
         "sendinblue": [],
         "sparkpost": [],
+        "postal": ["cryptography"],
         # Development/test-only requirements (install with python -m pip -e '.[dev,test]')
         "dev": requirements_dev,
         "test": requirements_test,
