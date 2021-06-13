@@ -30,15 +30,18 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = long_description_from_readme(f.read())
 
 
+# Additional requirements for development/build/release
 requirements_dev = [
     "flake8",
     "sphinx",
     "sphinx-rtd-theme",
     "tox",
     "twine",
+    "wheel",
 ]
 
-requirements_test = ["mock", "boto3", "cryptography"]
+# Additional requirements for running tests
+requirements_test = []
 
 
 setup(
