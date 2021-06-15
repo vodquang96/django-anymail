@@ -25,16 +25,18 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
------
+v8.4
+----
 
-*Unreleased changes on main branch*
+*2021-06-15*
 
 Features
 ~~~~~~~~
 
-* **Postal:** New ESP! See `docs <https://anymail.readthedocs.io/en/latest/esps/postal>`__.
-  (Thanks to `@tiltec`_ for researching, implementing, testing and documenting Postal support.)
+* **Postal:** Add support for this self-hosted ESP
+  (`docs <https://anymail.readthedocs.io/en/stable/esps/postal>`__).
+  Thanks to `@tiltec`_ for researching, implementing, testing and
+  documenting Postal support.
 
 v8.3
 ----
