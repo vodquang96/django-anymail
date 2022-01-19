@@ -25,10 +25,10 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
------
+v8.5
+----
 
-*Unreleased changes on main branch*
+*2022-01-19*
 
 Fixes
 ~~~~~
@@ -37,6 +37,7 @@ Fixes
   an EmailMessage's `body`, and generally improve alternative part
   handling for consistency with Django's SMTP EmailBackend.
   (Thanks to `@cjsoftuk`_ for reporting the issue.)
+
 * Remove "sending a message from *sender* to *recipient*" from `AnymailError`
   text, as this can unintentionally leak personal information into logs.
   [Note that `AnymailError` *does* still include any error description
@@ -51,9 +52,9 @@ Other
 
 * **Postmark:** Document limitation on `track_opens` overriding Postmark's
   server-level setting. (See
-  `docs <https://anymail.readthedocs.io/en/latest/esps/postmark/#limitations-and-quirks>`__.)
+  `docs <https://anymail.readthedocs.io/en/stable/esps/postmark/#limitations-and-quirks>`__.)
 
-* Expand `testing documentation <https://anymail.readthedocs.io/en/latest/tips/testing/>`__
+* Expand `testing documentation <https://anymail.readthedocs.io/en/stable/tips/testing/>`__
   to cover tracking events and inbound handling, and to clarify test EmailBackend behavior.
 
 * In Anymail's test EmailBackend, add `is_batch_send` boolean to `anymail_test_params`
