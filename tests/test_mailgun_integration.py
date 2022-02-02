@@ -2,6 +2,7 @@ import logging
 import os
 import unittest
 from datetime import datetime, timedelta
+from email.utils import formataddr
 from time import sleep
 
 import requests
@@ -36,8 +37,9 @@ class MailgunBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
 
     def setUp(self):
         super().setUp()
+        self.from_email = 'from@%s' % ANYMAIL_TEST_MAILGUN_DOMAIN
         self.message = AnymailMessage('Anymail Mailgun integration test', 'Text content',
-                                      'from@example.com', ['test+to1@anymail.info'])
+                                      self.from_email, ['test+to1@anymail.dev'])
         self.message.attach_alternative('<p>HTML content</p>', "text/html")
 
     def fetch_mailgun_events(self, message_id, event=None,
@@ -86,8 +88,8 @@ class MailgunBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
         self.assertEqual(sent_count, 1)
 
         anymail_status = self.message.anymail_status
-        sent_status = anymail_status.recipients['test+to1@anymail.info'].status
-        message_id = anymail_status.recipients['test+to1@anymail.info'].message_id
+        sent_status = anymail_status.recipients['test+to1@anymail.dev'].status
+        message_id = anymail_status.recipients['test+to1@anymail.dev'].message_id
 
         self.assertEqual(sent_status, 'queued')  # Mailgun always queues
         self.assertGreater(len(message_id), 0)  # don't know what it'll be, but it should exist
@@ -98,13 +100,14 @@ class MailgunBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
     def test_all_options(self):
         send_at = datetime.now().replace(microsecond=0) + timedelta(minutes=2)
         send_at_timestamp = send_at.timestamp()
+        from_email = formataddr(("Test From, with comma", self.from_email))
         message = AnymailMessage(
             subject="Anymail Mailgun all-options integration test",
             body="This is the text body",
-            from_email="Test From <from@example.com>, also-from@example.com",
-            to=["test+to1@anymail.info", "Recipient 2 <test+to2@anymail.info>"],
-            cc=["test+cc1@anymail.info", "Copy 2 <test+cc2@anymail.info>"],
-            bcc=["test+bcc1@anymail.info", "Blind Copy 2 <test+bcc2@anymail.info>"],
+            from_email=from_email,
+            to=["test+to1@anymail.dev", "Recipient 2 <test+to2@anymail.dev>"],
+            cc=["test+cc1@anymail.dev", "Copy 2 <test+cc2@anymail.dev>"],
+            bcc=["test+bcc1@anymail.dev", "Blind Copy 2 <test+bcc2@anymail.dev>"],
             reply_to=["reply1@example.com", "Reply 2 <reply2@example.com>"],
             headers={"X-Anymail-Test": "value"},
 
@@ -136,14 +139,14 @@ class MailgunBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
                          {"meta1": "simple string", "meta2": "2"})  # all metadata values become strings
 
         self.assertEqual(event["message"]["scheduled-for"], send_at_timestamp)
-        self.assertIn(event["recipient"], ['test+to1@anymail.info', 'test+to2@anymail.info',
-                                           'test+cc1@anymail.info', 'test+cc2@anymail.info',
-                                           'test+bcc1@anymail.info', 'test+bcc2@anymail.info'])
+        self.assertIn(event["recipient"], ['test+to1@anymail.dev', 'test+to2@anymail.dev',
+                                           'test+cc1@anymail.dev', 'test+cc2@anymail.dev',
+                                           'test+bcc1@anymail.dev', 'test+bcc2@anymail.dev'])
 
         headers = event["message"]["headers"]
-        self.assertEqual(headers["from"], "Test From <from@example.com>, also-from@example.com")
+        self.assertEqual(headers["from"], from_email)
         self.assertEqual(headers["to"],
-                         "test+to1@anymail.info, Recipient 2 <test+to2@anymail.info>")
+                         "test+to1@anymail.dev, Recipient 2 <test+to2@anymail.dev>")
         self.assertEqual(headers["subject"], "Anymail Mailgun all-options integration test")
 
         attachments = event["message"]["attachments"]
@@ -167,12 +170,12 @@ class MailgunBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
         message = AnymailMessage(
             template_id='test-template',  # name of a real template named in Anymail's Mailgun test account
             subject='Your order %recipient.order%',  # Mailgun templates don't define subject
-            from_email='Test From <from@example.com>',  # Mailgun templates don't define sender
-            to=["test+to1@anymail.info"],
+            from_email=formataddr(('Test From>', self.from_email)),  # Mailgun templates don't define sender
+            to=["test+to1@anymail.dev"],
             # metadata and merge_data must not have any conflicting keys when using template_id
             metadata={"meta1": "simple string", "meta2": 2},
             merge_data={
-                'test+to1@anymail.info': {
+                'test+to1@anymail.dev': {
                     'name': "Test Recipient",
                 }
             },
@@ -182,7 +185,7 @@ class MailgunBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
         )
         message.send()
         recipient_status = message.anymail_status.recipients
-        self.assertEqual(recipient_status['test+to1@anymail.info'].status, 'queued')
+        self.assertEqual(recipient_status['test+to1@anymail.dev'].status, 'queued')
 
     # As of Anymail 0.10, this test is no longer possible, because
     # Anymail now raises AnymailInvalidAddress without even calling Mailgun
