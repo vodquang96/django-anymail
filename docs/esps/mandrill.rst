@@ -135,10 +135,21 @@ as Mandrill's more complex list of name/content dicts.
 Limitations and quirks
 ----------------------
 
+**Non-ASCII attachment filenames will be garbled**
+  Mandrill's /messages/send API does not properly handle non-ASCII characters
+  in attachment filenames. As a result, some email clients will display
+  those characters incorrectly. The only workaround is to limit
+  attachment filenames to ASCII when sending through Mandrill.
+  (Verified and reported to MailChimp support 4/2022;
+  see `Anymail discussion #257`_ for more details.)
+
 **Envelope sender uses only domain**
   Anymail's :attr:`~anymail.message.AnymailMessage.envelope_sender` is used to
   populate Mandrill's `'return_path_domain'`---but only the domain portion.
   (Mandrill always generates its own encoded mailbox for the envelope sender.)
+
+.. _Anymail discussion #257:
+     https://github.com/anymail/django-anymail/discussions/257
 
 
 .. _mandrill-templates:

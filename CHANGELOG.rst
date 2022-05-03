@@ -25,6 +25,18 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
+vNext
+-----
+
+*Unreleased changes in main branch*
+
+Other
+~~~~~
+
+* **Mandrill:** Document Mandrill's incorrect handling of non-ASCII attachment filenames.
+  (Thanks to `@Thorbenl`_ for reporting the issue and following up with MailChimp.)
+
+
 v8.5
 ----
 
