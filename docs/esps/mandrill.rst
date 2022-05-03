@@ -3,24 +3,27 @@
 Mandrill
 ========
 
-Anymail integrates with the `Mandrill <https://mandrill.com/>`__
-transactional email service from MailChimp.
+Anymail integrates with the `Mandrill`_ transactional email service from MailChimp,
+using their `/messages/send`_ HTTP API.
 
-.. note:: **Limited Support for Mandrill**
+.. note:: **Limited Mandrill Testing**
 
     Anymail is developed to the public Mandrill documentation, but unlike
-    other supported ESPs, we are unable to test or debug against the live
-    Mandrill APIs. (MailChimp discourages use of Mandrill by "developers,"
-    and doesn't offer testing access for packages like Anymail.)
+    other supported ESPs, we are unable to regularly test against the live
+    Mandrill APIs. (MailChimp doesn't offer ongoing testing access for open source
+    packages like Anymail. We *do* have a limited use trial account, but we try to
+    save that for debugging specific issues reported by Anymail users.)
 
-    As a result, Anymail bugs with Mandrill will generally be discovered
-    by Anymail's users, in production; Anymail's maintainers often won't
-    be able to answer Mandrill-specific questions; and fixes and improvements
-    for Mandrill will tend to lag other ESPs.
+    If you are using only Mandrill, and unlikely to ever need a different ESP,
+    you might prefer using MailChimp's official `mailchimp-transactional-python`_
+    package instead of Anymail.
 
-    If you are integrating only Mandrill, and not considering one of Anymail's
-    other ESPs, you might prefer using MailChimp's official
-    :pypi:`mandrill` python package instead of Anymail.
+.. _Mandrill:
+    https://mandrill.com/
+.. _/messages/send:
+    https://mailchimp.com/developer/transactional/api/messages/send-new-message/
+.. _mailchimp-transactional-python:
+    https://github.com/mailchimp/mailchimp-transactional-python/
 
 
 Settings
@@ -60,10 +63,10 @@ nor ``ANYMAIL_MANDRILL_API_KEY`` is set.
 .. rubric:: MANDRILL_WEBHOOK_KEY
 
 Required if using Anymail's webhooks. The "webhook authentication key"
-issued by Mandrill.
-`More info <https://mandrill.zendesk.com/hc/en-us/articles/205583257>`_
-in Mandrill's KB.
+issued by Mandrill. See `Authenticating webhook requests`_ in the Mandrill docs.
 
+.. _Authenticating webhook requests:
+    https://mailchimp.com/developer/transactional/guides/track-respond-activity-webhooks/#authenticating-webhook-requests
 
 .. setting:: ANYMAIL_MANDRILL_WEBHOOK_URL
 
@@ -98,7 +101,7 @@ esp_extra support
 
 To use Mandrill features not directly supported by Anymail, you can
 set a message's :attr:`~anymail.message.AnymailMessage.esp_extra` to
-a `dict` of parameters to merge into Mandrill's `messages/send API`_ call.
+a `dict` of parameters to merge into Mandrill's `/messages/send`_ API call.
 Note that a few parameters go at the top level, but Mandrill expects
 most options within a `'message'` sub-dict---be sure to check their
 API docs:
@@ -121,13 +124,10 @@ rather than Mandrill's more complex list of rcpt/values dicts.
 You can use whichever style you prefer (but either way,
 recipient_metadata must be in `esp_extra['message']`).
 
-Similary, Anymail allows Mandrill's `'template_content'` in esp_extra
+Similarly, Anymail allows Mandrill's `'template_content'` in esp_extra
 (top level) either as a pythonic `dict` (similar to Anymail's
 :attr:`~anymail.message.AnymailMessage.merge_global_data`) or
 as Mandrill's more complex list of name/content dicts.
-
-.. _messages/send API:
-    https://mandrillapp.com/api/docs/messages.JSON.html#method=send
 
 
 .. _mandrill-quirks:
@@ -193,7 +193,7 @@ To use the subject or from address defined with a Mandrill template, set the mes
 See the `Mandrill's template docs`_ for more information.
 
 .. _Mandrill's template docs:
-    https://mandrill.zendesk.com/hc/en-us/articles/205582507-Getting-Started-with-Templates
+    https://mailchimp.com/developer/transactional/docs/templates-dynamic-content/
 
 
 .. _mandrill-webhooks:
@@ -252,9 +252,9 @@ webhooks with batches of events, Anymail will invoke your signal receiver separa
 for each event in the batch.)
 
 .. _tracking event webhooks:
-    https://mandrill.zendesk.com/hc/en-us/articles/205583217-Introduction-to-Webhooks
+    https://mailchimp.com/developer/transactional/docs/webhooks/#add-a-new-webhook
 .. _inbound route webhooks:
-    https://mandrill.zendesk.com/hc/en-us/articles/205583197-Inbound-Email-Processing-Overview
+    https://mailchimp.com/developer/transactional/guides/set-up-inbound-email-processing/
 
 
 .. _migrating-from-djrill:
