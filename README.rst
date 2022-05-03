@@ -19,19 +19,31 @@ Anymail: Django email integration for transactional ESPs
 
 .. This shared-intro section is also included in docs/index.rst
 
-Anymail integrates several transactional email service providers (ESPs) into Django,
-with a consistent API that lets you use ESP-added features without locking your code
-to a particular ESP.
+Anymail lets you send and receive email in Django using your choice
+of transactional email service providers (ESPs). It extends the
+standard `django.core.mail` with many common ESP-added features, providing
+a consistent API that avoids locking your code to one specific ESP
+(and making it easier to change ESPs later if needed).
 
-It currently fully supports **Amazon SES, Mailgun, Mailjet, Postmark, SendinBlue, SendGrid,**
-and **SparkPost,** and has limited support for **Mandrill.**
+Anymail currently supports these ESPs:
 
-Anymail normalizes ESP functionality so it "just works" with Django's
-built-in `django.core.mail` package. It includes:
+* **Amazon SES**
+* **Mailgun**
+* **Mailjet**
+* **Mandrill** (MailChimp transactional)
+* **Postal** (self-hosted ESP)
+* **Postmark**
+* **SendGrid**
+* **SendinBlue**
+* **SparkPost**
 
-* Support for HTML, attachments, extra headers, and other features of
+Anymail includes:
+
+* Integration of each ESP's sending APIs into
   `Django's built-in email <https://docs.djangoproject.com/en/stable/topics/email/>`_
-* Extensions that make it easy to use extra ESP functionality, like tags, metadata,
+  package, including support for HTML, attachments, extra headers,
+  and other standard email features
+* Extensions to expose common ESP-added functionality, like tags, metadata,
   and tracking, with code that's portable between ESPs
 * Simplified inline images for HTML email
 * Normalized sent-message status and tracking notification, by connecting
@@ -44,7 +56,7 @@ Anymail maintains compatibility with all Django versions that are in mainstream
 or extended support, plus (usually) a few older Django versions, and is extensively
 tested on all Python versions supported by Django. (Even-older Django versions
 may still be covered by an Anymail extended support release; consult the
-`changelog <https://anymail.readthedocs.io/en/stable/changelog/>`_ for details.)
+`changelog <https://anymail.dev/en/stable/changelog/>`_ for details.)
 
 Anymail releases follow `semantic versioning <https://semver.org/>`_.
 The package is released under the BSD license.
@@ -60,15 +72,15 @@ The package is released under the BSD license.
        :alt:    integration test status in GitHub Actions
 
 .. image:: https://readthedocs.org/projects/anymail/badge/?version=stable
-       :target: https://anymail.readthedocs.io/en/stable/
-       :alt:    documentation on ReadTheDocs
+       :target: https://anymail.dev/en/stable/
+       :alt:    documentation build status on ReadTheDocs
 
 **Resources**
 
-* Full documentation: https://anymail.readthedocs.io/en/stable/
+* Full documentation: https://anymail.dev/en/stable/
 * Package on PyPI: https://pypi.org/project/django-anymail/
 * Project on Github: https://github.com/anymail/django-anymail
-* Changelog: https://anymail.readthedocs.io/en/stable/changelog/
+* Changelog: https://anymail.dev/en/stable/changelog/
 
 
 Anymail 1-2-3
@@ -156,6 +168,6 @@ or SparkPost or any other supported ESP where you see "mailgun":
 .. END quickstart
 
 
-See the `full documentation <https://anymail.readthedocs.io/en/stable/>`_
+See the `full documentation <https://anymail.dev/en/stable/>`_
 for more features and options, including receiving messages and tracking
 sent message status.
