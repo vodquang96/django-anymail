@@ -33,6 +33,10 @@ vNext
 Other
 ~~~~~
 
+* **Mailgun:** Document Mailgun's incorrect handling of display names containing
+  both non-ASCII characters and punctuation. (Thanks to `@Flexonze`_ for spotting and
+  reporting the issue, and to Mailgun's `@b0d0nne11`_ for investigating.)
+
 * **Mandrill:** Document Mandrill's incorrect handling of non-ASCII attachment filenames.
   (Thanks to `@Thorbenl`_ for reporting the issue and following up with MailChimp.)
 
@@ -1287,6 +1291,7 @@ Features
 .. _@ailionx: https://github.com/ailionx
 .. _@alee: https://github.com/alee
 .. _@anstosa: https://github.com/anstosa
+.. _@b0d0nne11: https://github.com/b0d0nne11
 .. _@calvin: https://github.com/calvin
 .. _@chrisgrande: https://github.com/chrisgrande
 .. _@cjsoftuk: https://github.com/cjsoftuk
@@ -1296,6 +1301,7 @@ Features
 .. _@dominik-lekse: https://github.com/dominik-lekse
 .. _@ewingrj: https://github.com/ewingrj
 .. _@fdemmer: https://github.com/fdemmer
+.. _@Flexonze: https://github.com/Flexonze
 .. _@Honza-m: https://github.com/Honza-m
 .. _@janneThoft: https://github.com/janneThoft
 .. _@jc-ee: https://github.com/jc-ee

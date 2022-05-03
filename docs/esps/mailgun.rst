@@ -202,6 +202,15 @@ Limitations and quirks
       Earlier Anymail releases did not check for these cases, and attachments
       without filenames/Content-IDs would be ignored by Mailgun without notice.
 
+**Display name problems with punctuation and non-ASCII characters**
+  Mailgun does not correctly handle certain display names in :mailheader:`From`,
+  :mailheader:`To`, and other email headers. If a display name includes *both* non-ASCII characters
+  and certain punctuation (such as parentheses), the resulting email will
+  use a non-standard encoding that causes some email clients to display
+  additional `"` or `\\"` characters wrapping the display name. (Verified
+  and reported to Mailgun engineering 3/2022. See `Anymail issue #270`_
+  for examples and specific details.)
+
 **Envelope sender uses only domain**
   Anymail's :attr:`~anymail.message.AnymailMessage.envelope_sender` is used to
   select your Mailgun :ref:`sender domain <mailgun-sender-domain>`. For
@@ -244,7 +253,8 @@ Limitations and quirks
 
   .. versionadded:: 8.2
 
-
+.. _Anymail issue #270:
+    https://github.com/anymail/django-anymail/issues/270
 .. _undocumented API requirement:
     https://mailgun.uservoice.com/forums/156243-feature-requests/suggestions/35668606
 
