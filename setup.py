@@ -47,10 +47,10 @@ requirements_test = []
 setup(
     name="django-anymail",
     version=version,
-    description='Django email integration for Amazon SES, Mailgun, Mailjet, Postmark, '
-                'SendGrid, SendinBlue, SparkPost and other transactional ESPs',
+    description='Django email backends and webhooks for Amazon SES, Mailgun, Mailjet, Mandrill, '
+                'Postal, Postmark, SendGrid, SendinBlue, and SparkPost',
     keywords="Django, email, email backend, ESP, transactional mail, "
-             "Amazon SES, Mailgun, Mailjet, Mandrill, Postmark, SendinBlue, SendGrid, SparkPost",
+             "Amazon SES, Mailgun, Mailjet, Mandrill, Postal, Postmark, SendGrid, SendinBlue, SparkPost",
     author="Mike Edmunds and Anymail contributors",
     author_email="medmunds@gmail.com",
     url="https://github.com/anymail/django-anymail",
