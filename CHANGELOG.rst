@@ -25,10 +25,13 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
------
+v8.6 LTS
+--------
 
-*Unreleased changes in main branch*
+*2022-05-15*
+
+This is an extended support release. Anymail v8.6 will receive security updates
+and fixes for any breaking ESP API changes through at least May, 2023.
 
 Fixes
 ~~~~~
@@ -42,10 +45,9 @@ Fixes
   Anymail documentation now recommends using Mailgun's and SendGrid's "raw MIME"
   inbound options, which avoid the problem and preserve all attachments.
 
-  See `Mailgun inbound <https://anymail.readthedocs.io/en/latest/esps/mailgun/#mailgun-inbound>`__
-  and `SendGrid inbound <https://anymail.readthedocs.io/en/latest/esps/sendgrid/#sendgrid-inbound>`__
+  See `Mailgun inbound <https://anymail.readthedocs.io/en/stable/esps/mailgun/#mailgun-inbound>`__
+  and `SendGrid inbound <https://anymail.readthedocs.io/en/stable/esps/sendgrid/#sendgrid-inbound>`__
   for details. (Thanks to `@erikdrums`_ for reporting and helping investigate the problem.)
-
 
 Other
 ~~~~~
@@ -56,6 +58,16 @@ Other
 
 * **Mandrill:** Document Mandrill's incorrect handling of non-ASCII attachment filenames.
   (Thanks to `@Thorbenl`_ for reporting the issue and following up with MailChimp.)
+
+* Documentation (for all releases) is now hosted at anymail.dev (moved from anymail.info).
+
+Deprecations
+~~~~~~~~~~~~
+
+*  This will be the last Anymail release to support Django 2.0--2.2 and Python 3.5.
+
+If these deprecations affect you and you cannot upgrade, set your requirements to
+`django-anymail~=8.6` (a "compatible release" specifier, equivalent to `>=8.6,==8.*`).
 
 
 v8.5

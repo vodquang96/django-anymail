@@ -443,7 +443,7 @@ incoming emails for spam" checkbox.
     Using raw MIME also avoids a limitation in Django's :mimetype:`multipart/form-data` handling
     that can strip attachments with certain filenames.
 
-    .. versionchanged:: vNext
+    .. versionchanged:: 8.6
        Leaving SendGrid's "full MIME" checkbox disabled is no longer recommended.
 
 

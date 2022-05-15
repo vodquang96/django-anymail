@@ -529,7 +529,7 @@ forwarding url) with Mailgun inbound routing.
     To use Mailgun's fully-parsed format, change :samp:`.../inbound_mime/` to just
     :samp:`.../inbound/` at the end of the route forwarding url.
 
-    .. versionchanged:: vNext
+    .. versionchanged:: 8.6
        Using Mailgun's full-parsed (not raw MIME) inbound message format is no longer recommended.
 
 
