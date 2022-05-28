@@ -275,7 +275,7 @@ extlinks = {
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3.10', None),
     'django': ('https://docs.djangoproject.com/en/stable/', 'https://docs.djangoproject.com/en/stable/_objects/'),
-    'requests': ('https://docs.python-requests.org/en/stable/', None),
+    'requests': ('https://requests.readthedocs.io/en/stable/', None),
 }
 
 
