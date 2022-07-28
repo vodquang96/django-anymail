@@ -129,4 +129,4 @@ class SparkPostBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
         err = cm.exception
         self.assertEqual(err.status_code, 401)
         # Make sure the exception message includes SparkPost's response:
-        self.assertIn("Forbidden", str(err))
+        self.assertIn("Unauthorized", str(err))
