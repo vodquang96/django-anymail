@@ -1,9 +1,8 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import ANY
 
 from django.test import tag
-from django.utils.timezone import utc
 
 from anymail.signals import AnymailTrackingEvent
 from anymail.webhooks.sendgrid import SendGridTrackingWebhookView
@@ -43,7 +42,7 @@ class SendGridDeliveryTestCase(WebhookTestCase):
         event = kwargs['event']
         self.assertIsInstance(event, AnymailTrackingEvent)
         self.assertEqual(event.event_type, "queued")
-        self.assertEqual(event.timestamp, datetime(2016, 4, 19, 19, 47, 26, tzinfo=utc))
+        self.assertEqual(event.timestamp, datetime(2016, 4, 19, 19, 47, 26, tzinfo=timezone.utc))
         self.assertEqual(event.esp_event, raw_events[0])
         self.assertEqual(event.message_id, "3c2f4df8-c6dd-4cd2-9b91-6582b81a0349")
         self.assertEqual(event.event_id, "ZyjAM5rnQmuI1KFInHQ3Nw")
@@ -72,7 +71,7 @@ class SendGridDeliveryTestCase(WebhookTestCase):
         event = kwargs['event']
         self.assertIsInstance(event, AnymailTrackingEvent)
         self.assertEqual(event.event_type, "delivered")
-        self.assertEqual(event.timestamp, datetime(2016, 4, 19, 19, 47, 30, tzinfo=utc))
+        self.assertEqual(event.timestamp, datetime(2016, 4, 19, 19, 47, 30, tzinfo=timezone.utc))
         self.assertEqual(event.esp_event, raw_events[0])
         self.assertEqual(event.message_id, "4ab185c2-0171-492f-9ce0-27de258efc99")
         self.assertEqual(event.event_id, "nOSv8m0eTQ-vxvwNwt3fZQ")

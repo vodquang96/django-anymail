@@ -1,9 +1,9 @@
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
-from django.utils.timezone import is_naive, get_current_timezone, make_aware, utc
+from django.utils.timezone import is_naive, get_current_timezone, make_aware
 from requests.structures import CaseInsensitiveDict
 
 from ..exceptions import (
@@ -394,7 +394,7 @@ class BasePayload:
                 dt = datetime(value.year, value.month, value.day)  # naive, midnight
             else:
                 try:
-                    dt = datetime.utcfromtimestamp(value).replace(tzinfo=utc)
+                    dt = datetime.utcfromtimestamp(value).replace(tzinfo=timezone.utc)
                 except (TypeError, ValueError):
                     return value
         if is_naive(dt):

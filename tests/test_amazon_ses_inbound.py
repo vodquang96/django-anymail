@@ -1,11 +1,10 @@
 import json
 from base64 import b64encode
-from datetime import datetime
+from datetime import datetime, timezone
 from textwrap import dedent
 from unittest.mock import ANY, patch
 
 from django.test import tag
-from django.utils.timezone import utc
 
 from anymail.exceptions import AnymailAPIError, AnymailConfigurationError
 from anymail.inbound import AnymailInboundMessage
@@ -131,7 +130,7 @@ class AmazonSESInboundTests(WebhookTestCase, AmazonSESWebhookTestsMixin):
         event = kwargs['event']
         self.assertIsInstance(event, AnymailInboundEvent)
         self.assertEqual(event.event_type, 'inbound')
-        self.assertEqual(event.timestamp, datetime(2018, 3, 30, 17, 21, 51, microsecond=636000, tzinfo=utc))
+        self.assertEqual(event.timestamp, datetime(2018, 3, 30, 17, 21, 51, microsecond=636000, tzinfo=timezone.utc))
         self.assertEqual(event.event_id, "jili9m351il3gkburn7o2f0u6788stij94c8ld01")
         self.assertIsInstance(event.message, AnymailInboundMessage)
         self.assertEqual(event.esp_event, raw_ses_event)
@@ -185,7 +184,7 @@ class AmazonSESInboundTests(WebhookTestCase, AmazonSESWebhookTestsMixin):
         event = kwargs['event']
         self.assertIsInstance(event, AnymailInboundEvent)
         self.assertEqual(event.event_type, 'inbound')
-        self.assertEqual(event.timestamp, datetime(2018, 3, 30, 17, 21, 51, microsecond=636000, tzinfo=utc))
+        self.assertEqual(event.timestamp, datetime(2018, 3, 30, 17, 21, 51, microsecond=636000, tzinfo=timezone.utc))
         self.assertEqual(event.event_id, "jili9m351il3gkburn7o2f0u6788stij94c8ld01")
         self.assertIsInstance(event.message, AnymailInboundMessage)
         self.assertEqual(event.esp_event, raw_ses_event)
@@ -248,7 +247,7 @@ class AmazonSESInboundTests(WebhookTestCase, AmazonSESWebhookTestsMixin):
         event = kwargs['event']
         self.assertIsInstance(event, AnymailInboundEvent)
         self.assertEqual(event.event_type, 'inbound')
-        self.assertEqual(event.timestamp, datetime(2018, 3, 30, 17, 21, 51, microsecond=636000, tzinfo=utc))
+        self.assertEqual(event.timestamp, datetime(2018, 3, 30, 17, 21, 51, microsecond=636000, tzinfo=timezone.utc))
         self.assertEqual(event.event_id, "fqef5sop459utgdf4o9lqbsv7jeo73pejig34301")
         self.assertIsInstance(event.message, AnymailInboundMessage)
         self.assertEqual(event.esp_event, raw_ses_event)

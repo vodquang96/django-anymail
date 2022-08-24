@@ -1,7 +1,6 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
-from django.utils.timezone import utc
 
 from .base import AnymailBaseWebhookView
 from ..inbound import AnymailInboundMessage
@@ -68,7 +67,7 @@ class MailjetTrackingWebhookView(AnymailBaseWebhookView):
             event_type = EventType.DEFERRED
 
         try:
-            timestamp = datetime.fromtimestamp(esp_event['time'], tz=utc)
+            timestamp = datetime.fromtimestamp(esp_event['time'], tz=timezone.utc)
         except (KeyError, ValueError):
             timestamp = None
 

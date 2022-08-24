@@ -1,11 +1,10 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 import hashlib
 import hmac
 from base64 import b64encode
 from django.utils.crypto import constant_time_compare
-from django.utils.timezone import utc
 
 from .base import AnymailBaseWebhookView, AnymailCoreWebhookView
 from ..exceptions import AnymailWebhookValidationFailure
@@ -109,7 +108,7 @@ class MandrillCombinedWebhookView(MandrillSignatureMixin, AnymailBaseWebhookView
         event_type = self.event_types.get(esp_type, EventType.UNKNOWN)
 
         try:
-            timestamp = datetime.fromtimestamp(esp_event['ts'], tz=utc)
+            timestamp = datetime.fromtimestamp(esp_event['ts'], tz=timezone.utc)
         except (KeyError, ValueError):
             timestamp = None
 
@@ -170,7 +169,7 @@ class MandrillCombinedWebhookView(MandrillSignatureMixin, AnymailBaseWebhookView
         message.spam_score = esp_event['msg'].get('spam_report', {}).get('score', None)
 
         try:
-            timestamp = datetime.fromtimestamp(esp_event['ts'], tz=utc)
+            timestamp = datetime.fromtimestamp(esp_event['ts'], tz=timezone.utc)
         except (KeyError, ValueError):
             timestamp = None
 

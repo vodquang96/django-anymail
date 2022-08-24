@@ -1,5 +1,5 @@
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
@@ -7,7 +7,7 @@ from email.mime.text import MIMEText
 
 from django.core import mail
 from django.test import override_settings, tag
-from django.utils.timezone import get_fixed_timezone, override as override_current_timezone, utc
+from django.utils.timezone import get_fixed_timezone, override as override_current_timezone
 
 from anymail.exceptions import (
     AnymailAPIError, AnymailConfigurationError, AnymailRecipientsRefused,
@@ -370,7 +370,7 @@ class SparkPostBackendAnymailFeatureTests(SparkPostBackendMockAPITestCase):
             self.assertEqual(data["options"]["start_time"], "2016-03-04T05:06:07-08:00")
 
             # Explicit UTC:
-            self.message.send_at = datetime(2016, 3, 4, 5, 6, 7, tzinfo=utc)
+            self.message.send_at = datetime(2016, 3, 4, 5, 6, 7, tzinfo=timezone.utc)
             self.message.send()
             data = self.get_api_call_json()
             self.assertEqual(data["options"]["start_time"], "2016-03-04T05:06:07+00:00")

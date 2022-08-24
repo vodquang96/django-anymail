@@ -1,10 +1,8 @@
 import binascii
 import json
 from base64 import b64decode
-from datetime import datetime
+from datetime import datetime, timezone
 
-
-from django.utils.timezone import utc
 
 from .base import AnymailBaseWebhookView
 from ..exceptions import (
@@ -94,7 +92,7 @@ class PostalTrackingWebhookView(PostalBaseWebhookView):
 
         raw_timestamp = esp_event.get("timestamp")
         timestamp = (
-            datetime.fromtimestamp(int(raw_timestamp), tz=utc)
+            datetime.fromtimestamp(int(raw_timestamp), tz=timezone.utc)
             if raw_timestamp
             else None
         )
