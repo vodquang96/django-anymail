@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Install tox-gh-matrix
         run: |
-          python -m pip install tox tox-gh-matrix
+          python -m pip install 'tox<4' 'tox-gh-matrix<0.2'
           python -m tox --version
       - name: Generate tox envlist
         id: generate-envlist
