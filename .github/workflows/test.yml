@@ -63,7 +63,7 @@ jobs:
         run: |
           set -x
           python -VV
-          python -m pip install tox
+          python -m pip install 'tox<4'
           python -m tox --version
       - name: Test ${{ matrix.tox.name }}
         run: |
