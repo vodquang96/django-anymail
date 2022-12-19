@@ -25,10 +25,10 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
------
+v9.0
+----
 
-*Unreleased v9.0 changes*
+*2022-12-18*
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -47,7 +47,7 @@ Features
   and document how this can be used to mount an adapter that simplifies
   automatic retry logic. (Thanks to `@dgilmanAIDENTIFIED`_.)
 * Confirm support for Django 4.1 and resolve deprecation warning regarding
-  ``django.utils.timezone.utc``.
+  ``django.utils.timezone.utc``. (Thanks to `@tim-schilling`_.)
 
 Fixes
 ~~~~~
@@ -1396,6 +1396,7 @@ Features
 .. _@tcourtqtm: https://github.com/tcourtqtm
 .. _@Thorbenl: https://github.com/Thorbenl
 .. _@tiltec:  https://github.com/tiltec
+.. _@tim-schilling: https://github.com/tim-schilling
 .. _@Tobeyforce: https://github.com/Tobeyforce
 .. _@varche1: https://github.com/varche1
 .. _@vgrebenschikov: https://github.com/vgrebenschikov
