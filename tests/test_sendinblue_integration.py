@@ -97,7 +97,7 @@ class SendinBlueBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
             # There is a *new-style* template with this id in the Anymail test account:
             template_id=5,
             # Override template sender:
-            from_email=formataddr("Sender", self.from_email),
+            from_email=formataddr(("Sender", self.from_email)),
             # No batch send (so max one recipient suggested):
             to=["Recipient <test+to1@anymail.dev>"],
             reply_to=["Do not reply <reply@example.dev>"],
