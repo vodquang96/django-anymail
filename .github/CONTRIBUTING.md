@@ -20,7 +20,7 @@ new features or breaking changes, it's always a good idea to
 propose the idea in the [discussions] forum before writing
 a lot of code.
 
-[contributing]: https://anymail.readthedocs.io/en/stable/contributing/
+[contributing]: https://anymail.dev/en/stable/contributing/
 [discussions]: https://github.com/anymail/django-anymail/discussions
-[support]: https://anymail.readthedocs.io/en/stable/help/#support
-[troubleshooting]: https://anymail.readthedocs.io/en/stable/help/#troubleshooting
+[support]: https://anymail.dev/en/stable/help/#support
+[troubleshooting]: https://anymail.dev/en/stable/help/#troubleshooting

@@ -12,7 +12,7 @@ always increment the major version number (1.x to 2.0).
 ..  This changelog is designed to be readable standalone on GitHub,
     as well as included in the Sphinx docs. Do *not* use Sphinx
     references; links into the docs must use absolute urls to
-    https://anymail.readthedocs.io/ (generally to en/stable/, though
+    https://anymail.dev/ (generally to en/stable/, though
     linking to a specific older version may be appropriate for features
     that have been retired).
 
@@ -99,8 +99,8 @@ Fixes
   Anymail documentation now recommends using Mailgun's and SendGrid's "raw MIME"
   inbound options, which avoid the problem and preserve all attachments.
 
-  See `Mailgun inbound <https://anymail.readthedocs.io/en/stable/esps/mailgun/#mailgun-inbound>`__
-  and `SendGrid inbound <https://anymail.readthedocs.io/en/stable/esps/sendgrid/#sendgrid-inbound>`__
+  See `Mailgun inbound <https://anymail.dev/en/stable/esps/mailgun/#mailgun-inbound>`__
+  and `SendGrid inbound <https://anymail.dev/en/stable/esps/sendgrid/#sendgrid-inbound>`__
   for details. (Thanks to `@erikdrums`_ for reporting and helping investigate the problem.)
 
 Other
@@ -151,9 +151,9 @@ Other
 
 * **Postmark:** Document limitation on `track_opens` overriding Postmark's
   server-level setting. (See
-  `docs <https://anymail.readthedocs.io/en/stable/esps/postmark/#limitations-and-quirks>`__.)
+  `docs <https://anymail.dev/en/stable/esps/postmark/#limitations-and-quirks>`__.)
 
-* Expand `testing documentation <https://anymail.readthedocs.io/en/stable/tips/testing/>`__
+* Expand `testing documentation <https://anymail.dev/en/stable/tips/testing/>`__
   to cover tracking events and inbound handling, and to clarify test EmailBackend behavior.
 
 * In Anymail's test EmailBackend, add `is_batch_send` boolean to `anymail_test_params`
@@ -169,7 +169,7 @@ Features
 ~~~~~~~~
 
 * **Postal:** Add support for this self-hosted ESP
-  (`docs <https://anymail.readthedocs.io/en/stable/esps/postal>`__).
+  (`docs <https://anymail.dev/en/stable/esps/postal>`__).
   Thanks to `@tiltec`_ for researching, implementing, testing and
   documenting Postal support.
 
@@ -221,7 +221,7 @@ Other
 * Test against Django 3.2 prerelease (including support for Python 3.9)
 
 * Document how to send AMP for Email with Django, and note which ESPs support it.
-  (See `docs <https://anymail.readthedocs.io/en/stable/sending/django_email/#amp-email>`__.)
+  (See `docs <https://anymail.dev/en/stable/sending/django_email/#amp-email>`__.)
 
 * Move CI testing to GitHub Actions (and stop using Travis-CI).
 
@@ -240,7 +240,7 @@ Features
 * **SparkPost:** Add option for event tracking webhooks to map SparkPost's "Initial Open"
   event to Anymail's normalized "opened" type. (By default, only SparkPost's "Open" is
   reported as Anymail "opened", and "Initial Open" maps to "unknown" to avoid duplicates.
-  See `docs <https://anymail.readthedocs.io/en/stable/esps/sparkpost/#sparkpost-webhooks>`__.
+  See `docs <https://anymail.dev/en/stable/esps/sparkpost/#sparkpost-webhooks>`__.
   Thanks to `@slinkymanbyday`_.)
 
 * **SparkPost:** In event tracking webhooks, map AMP open and click events to the
@@ -264,7 +264,7 @@ Breaking changes
   be affected by this change, with two exceptions: (1) Mailjet's v3.1 API does not allow
   multiple reply-to addresses, and (2) if you are using Anymail's `esp_extra`, you will
   need to update it for compatibility with the new API. (See
-  `docs <https://anymail.readthedocs.io/en/stable/esps/mailjet/#esp-extra-support>`__.)
+  `docs <https://anymail.dev/en/stable/esps/mailjet/#esp-extra-support>`__.)
 
 * **SparkPost:** Call the SparkPost API directly, without using the (now unmaintained)
   Python SparkPost client library. The "sparkpost" package is no longer necessary and
@@ -276,7 +276,7 @@ Breaking changes
 
   As part of this change esp_extra now allows use of several SparkPost features, such
   as A/B testing, that were unavailable through the Python SparkPost library. (See
-  `docs <https://anymail.readthedocs.io/en/stable/esps/sparkpost/>`__.)
+  `docs <https://anymail.dev/en/stable/esps/sparkpost/>`__.)
 
 * Remove Anymail internal code related to supporting Python 2 and older Django
   versions. This does not change the documented API, but may affect you if your
@@ -295,7 +295,7 @@ Features
 * **SparkPost:** Add support for subaccounts (new ``"SPARKPOST_SUBACCOUNT"`` Anymail
   setting), AMP for Email (via ``message.attach_alternative(..., "text/x-amp-html")``),
   and A/B testing and other SparkPost sending features (via ``esp_extra``). (See
-  `docs <https://anymail.readthedocs.io/en/stable/esps/sparkpost/>`__.)
+  `docs <https://anymail.dev/en/stable/esps/sparkpost/>`__.)
 
 
 v7.2.1
@@ -368,7 +368,7 @@ Features
 
 * Add `DEBUG_API_REQUESTS` setting to dump raw ESP API requests, which can assist
   in debugging or reporting problems to ESPs.
-  (See `docs <https://anymail.readthedocs.io/en/stable/installation/#std:setting-ANYMAIL_DEBUG_API_REQUESTS>`__.
+  (See `docs <https://anymail.dev/en/stable/installation/#std:setting-ANYMAIL_DEBUG_API_REQUESTS>`__.
   This setting has was quietly added in Anymail v4.3, and is now officially documented.)
 
 * **Sendinblue:** Now supports file attachments on template sends, when using their
@@ -383,7 +383,7 @@ Other
 
 * **SendGrid:** Document unpredictable behavior in the SendGrid API that can cause
   text attachments to be sent with the wrong character set.
-  (See `docs <https://anymail.readthedocs.io/en/stable/esps/sendgrid/#limitations-and-quirks>`__
+  (See `docs <https://anymail.dev/en/stable/esps/sendgrid/#limitations-and-quirks>`__
   under "Wrong character set on text attachments." Thanks to `@nuschk`_ and `@swrobel`_
   for helping track down the issue and reporting it to SendGrid.)
 
@@ -412,14 +412,14 @@ Breaking changes
     [Note: Sendinblue removed this API limitation on 2020-02-18.]
 
   Ordinary, non-template sending is not affected by these changes. See
-  `docs <https://anymail.readthedocs.io/en/stable/esps/sendinblue/#batch-sending-merge-and-esp-templates>`__
+  `docs <https://anymail.dev/en/stable/esps/sendinblue/#batch-sending-merge-and-esp-templates>`__
   for more info and alternatives. (Thanks `@Thorbenl`_.)
 
 Features
 ~~~~~~~~
 
 * **Mailgun:** Support Mailgun's new (ESP stored) handlebars templates via `template_id`.
-  See `docs <https://anymail.readthedocs.io/en/stable/esps/mailgun/#batch-sending-merge-and-esp-templates>`__.
+  See `docs <https://anymail.dev/en/stable/esps/mailgun/#batch-sending-merge-and-esp-templates>`__.
   (Thanks `@anstosa`_.)
 
 * **Sendinblue:** Support multiple `tags`. (Thanks `@Thorbenl`_.)
@@ -444,7 +444,7 @@ Features
 * **Mailgun:** Add new `MAILGUN_WEBHOOK_SIGNING_KEY` setting for verifying tracking and
   inbound webhook calls. Mailgun's webhook signing key can become different from your
   `MAILGUN_API_KEY` if you have ever rotated either key.
-  See `docs <https://anymail.readthedocs.io/en/stable/esps/mailgun/#std:setting-ANYMAIL_MAILGUN_WEBHOOK_SIGNING_KEY>`__.
+  See `docs <https://anymail.dev/en/stable/esps/mailgun/#std:setting-ANYMAIL_MAILGUN_WEBHOOK_SIGNING_KEY>`__.
   (More in `#153`_. Thanks to `@dominik-lekse`_ for reporting the problem and Mailgun's
   `@mbk-ok`_ for identifying the cause.)
 
@@ -487,14 +487,14 @@ Breaking changes
   `message.anymail_status.message_id` after sending, that value will now be a *set* of
   ids. You can obtain each recipient's individual message_id with
   `message.anymail_status.recipients[to_email].message_id`.
-  See `docs <https://anymail.readthedocs.io/en/stable/esps/sendgrid/#sendgrid-message-id>`__.
+  See `docs <https://anymail.dev/en/stable/esps/sendgrid/#sendgrid-message-id>`__.
 
 Features
 ~~~~~~~~
 
 * Add new `merge_metadata` option for providing per-recipient metadata in batch
   sends. Available for all supported ESPs *except* Amazon SES and SendinBlue.
-  See `docs <https://anymail.readthedocs.io/en/stable/sending/anymail_additions/#anymail.message.AnymailMessage.merge_metadata>`__.
+  See `docs <https://anymail.dev/en/stable/sending/anymail_additions/#anymail.message.AnymailMessage.merge_metadata>`__.
   (Thanks `@janneThoft`_ for the idea and SendGrid implementation.)
 
 * **Mailjet:** Remove limitation on using `cc` or `bcc` together with `merge_data`.
@@ -561,7 +561,7 @@ Fixes
 *  **Mailgun:** Raise `AnymailUnsupportedFeature` error when attempting to send an
    attachment without a filename (or inline attachment without a *Content-ID*), because
    Mailgun silently drops these attachments from the sent message. (See
-   `docs <https://anymail.readthedocs.io/en/stable/esps/mailgun/#limitations-and-quirks>`__.
+   `docs <https://anymail.dev/en/stable/esps/mailgun/#limitations-and-quirks>`__.
    Thanks `@costela`_ for identifying this undocumented Mailgun API limitation.)
 *  **Mailgun:** Fix problem where attachments with non-ASCII filenames would be lost.
    (Works around Requests/urllib3 issue encoding multipart/form-data filenames in a way
@@ -585,7 +585,7 @@ Features
 
 *  **Postmark:** Support per-recipient template `merge_data` and batch sending. (Batch
    sending can be used with or without a template. See
-   `docs <https://anymail.readthedocs.io/en/stable/esps/postmark/#postmark-templates>`__.)
+   `docs <https://anymail.dev/en/stable/esps/postmark/#postmark-templates>`__.)
 
 Fixes
 ~~~~~
@@ -604,10 +604,10 @@ Features
 
 *  **SendGrid:** Support both new "dynamic" and original "legacy" transactional
    templates. (See
-   `docs <https://anymail.readthedocs.io/en/stable/esps/sendgrid/#sendgrid-templates>`__.)
+   `docs <https://anymail.dev/en/stable/esps/sendgrid/#sendgrid-templates>`__.)
 *  **SendGrid:** Allow merging `esp_extra["personalizations"]` dict into other message-derived
    personalizations. (See
-   `docs <https://anymail.readthedocs.io/en/stable/esps/sendgrid/#sendgrid-esp-extra>`__.)
+   `docs <https://anymail.dev/en/stable/esps/sendgrid/#sendgrid-esp-extra>`__.)
 
 
 v4.0
@@ -624,14 +624,14 @@ Breaking changes
 *  **SendGrid:** Remove the legacy SendGrid *v2* EmailBackend.
    (Anymail's default since v0.8 has been SendGrid's newer v3 API.)
    If your settings.py `EMAIL_BACKEND` still references "sendgrid_v2," you must
-   `upgrade to v3 <https://anymail.readthedocs.io/en/v3.0/esps/sendgrid/#upgrading-to-sendgrid-s-v3-api>`__.
+   `upgrade to v3 <https://anymail.dev/en/v3.0/esps/sendgrid/#upgrading-to-sendgrid-s-v3-api>`__.
 
 Features
 ~~~~~~~~
 
 *  **Mailgun:** Add support for new Mailgun webhooks. (Mailgun's original "legacy
    webhook" format is also still supported. See
-   `docs <https://anymail.readthedocs.io/en/stable/esps/mailgun/#mailgun-webhooks>`__.)
+   `docs <https://anymail.dev/en/stable/esps/mailgun/#mailgun-webhooks>`__.)
 *  **Mailgun:** Document how to use new European region. (This works in earlier
    Anymail versions, too.)
 *  **Postmark:** Add support for Anymail's normalized `metadata` in sending
@@ -678,7 +678,7 @@ Breaking changes
    users, this change should be transparent. But it could be a breaking change if you
    are relying on a specific message_id format, or relying on message_id matching the
    *Message-ID* mail header or SendGrid's "smtp-id" event field. (More details in the
-   `docs <https://anymail.readthedocs.io/en/stable/esps/sendgrid/#sendgrid-message-id>`__;
+   `docs <https://anymail.dev/en/stable/esps/sendgrid/#sendgrid-message-id>`__;
    also see `#108`_.) Thanks to `@joshkersey`_ for the report and the fix.
 
 Features
@@ -729,10 +729,10 @@ Features
 ~~~~~~~~
 
 *  **Amazon SES:** Add support for this ESP
-   (`docs <https://anymail.readthedocs.io/en/stable/esps/amazon_ses/>`__).
+   (`docs <https://anymail.dev/en/stable/esps/amazon_ses/>`__).
 *  **SparkPost:** Add SPARKPOST_API_URL setting to support SparkPost EU and SparkPost
    Enterprise
-   (`docs <https://anymail.readthedocs.io/en/stable/esps/sparkpost/#std:setting-ANYMAIL_SPARKPOST_API_URL>`__).
+   (`docs <https://anymail.dev/en/stable/esps/sparkpost/#std:setting-ANYMAIL_SPARKPOST_API_URL>`__).
 *  **Postmark:** Update for Postmark "modular webhooks." This should not impact client
    code. (Also, older versions of Anymail will still work correctly with Postmark's
    webhook changes.)
@@ -748,7 +748,7 @@ Other
 ~~~~~
 
 *  Use tox to manage Anymail test environments (see contributor
-   `docs <https://anymail.readthedocs.io/en/stable/contributing/#testing>`__).
+   `docs <https://anymail.dev/en/stable/contributing/#testing>`__).
 
 Deprecations
 ~~~~~~~~~~~~
@@ -774,22 +774,22 @@ Breaking changes
    both `headers["Reply-To"]` and `reply_to` are set on the same message. If you are
    setting a message's `headers["From"]` or `headers["To"]` (neither is common), the
    new behavior is likely a breaking change. See
-   `docs <https://anymail.readthedocs.io/en/stable/sending/django_email/#additional-headers>`__
+   `docs <https://anymail.dev/en/stable/sending/django_email/#additional-headers>`__
    and `#91`_.
 *  Treat EmailMessage `extra_headers` keys as case-\ *insensitive* in all backends, for
    consistency with each other (and email specs). If you are specifying duplicate
    headers whose names differ only in case, this may be a breaking change. See
-   `docs <https://anymail.readthedocs.io/en/stable/sending/django_email/#additional-headers>`__.
+   `docs <https://anymail.dev/en/stable/sending/django_email/#additional-headers>`__.
 
 Features
 ~~~~~~~~
 
 *  **SendinBlue:** Add support for this ESP
-   (`docs <https://anymail.readthedocs.io/en/stable/esps/sendinblue/>`__).
+   (`docs <https://anymail.dev/en/stable/esps/sendinblue/>`__).
    Thanks to `@RignonNoel`_ for the implementation.
 *  Add EmailMessage `envelope_sender` attribute, which can adjust the message's
    *Return-Path* if supported by your ESP
-   (`docs <https://anymail.readthedocs.io/en/stable/sending/anymail_additions/#anymail.message.AnymailMessage.envelope_sender>`__).
+   (`docs <https://anymail.dev/en/stable/sending/anymail_additions/#anymail.message.AnymailMessage.envelope_sender>`__).
 *  Add universal wheel to PyPI releases for faster installation.
 
 Other
@@ -830,7 +830,7 @@ reporting mechanism will
 If you are using Anymail's event tracking and/or inbound webhooks, you should upgrade
 to this release and change "WEBHOOK_AUTHORIZATION" to "WEBHOOK_SECRET" in the ANYMAIL
 section of your settings.py. You may also want to
-`rotate the shared secret <https://anymail.readthedocs.io/en/stable/tips/securing_webhooks/#use-a-shared-authorization-secret>`__
+`rotate the shared secret <https://anymail.dev/en/stable/tips/securing_webhooks/#use-a-shared-authorization-secret>`__
 value, particularly if you have ever exposed your Django error reports to untrusted
 individuals.
 
@@ -861,14 +861,14 @@ Features
 
 *  **Inbound handling:** Add normalized inbound message event, signal, and webhooks
    for all supported ESPs. (See new
-   `Receiving mail <https://anymail.readthedocs.io/en/stable/inbound/>`__ docs.)
+   `Receiving mail <https://anymail.dev/en/stable/inbound/>`__ docs.)
    This hasn't been through much real-world testing yet; bug reports and feedback
    are very welcome.
 *  **API network timeouts:** For Requests-based backends (all but SparkPost), use a
    default timeout of 30 seconds for all ESP API calls, to avoid stalling forever on
    a bad connection. Add a REQUESTS_TIMEOUT Anymail setting to override. (See `#80`_.)
 *  **Test backend improvements:** Generate unique tracking `message_id` when using the
-   `test backend <https://anymail.readthedocs.io/en/stable/tips/test_backend/>`__;
+   `test backend <https://anymail.dev/en/stable/tips/test_backend/>`__;
    add console backend for use in development. (See `#85`_.)
 
 
@@ -890,7 +890,7 @@ Security
 
 If you are using Anymail's tracking webhooks, you should upgrade to this release,
 and you may want to rotate to a new WEBHOOK_AUTHORIZATION shared secret (see
-`docs <https://anymail.readthedocs.io/en/stable/tips/securing_webhooks/#use-a-shared-authorization-secret>`__).
+`docs <https://anymail.dev/en/stable/tips/securing_webhooks/#use-a-shared-authorization-secret>`__).
 You should definitely change your webhook auth if your logs indicate attempted exploit.
 
 (If you are only sending email using an Anymail EmailBackend, and have not set up
@@ -962,11 +962,11 @@ Features
 ~~~~~~~~
 
 *  Clean up and document Anymail's
-   `Test EmailBackend <https://anymail.readthedocs.io/en/stable/tips/test_backend/>`__
+   `Test EmailBackend <https://anymail.dev/en/stable/tips/test_backend/>`__
 *  Add notes on
-   `handling transient ESP errors <https://anymail.readthedocs.io/en/stable/tips/transient_errors/>`__
+   `handling transient ESP errors <https://anymail.dev/en/stable/tips/transient_errors/>`__
    and improving
-   `batch send performance <https://anymail.readthedocs.io/en/stable/tips/performance/>`__
+   `batch send performance <https://anymail.dev/en/stable/tips/performance/>`__
 *  **SendGrid:** handle Python 2 `long` integers in metadata and extra headers
 
 
@@ -986,7 +986,7 @@ Features
 ~~~~~~~~
 
 *  Anymail's Test EmailBackend is now
-   `documented <https://anymail.readthedocs.io/en/stable/tips/test_backend/>`__
+   `documented <https://anymail.dev/en/stable/tips/test_backend/>`__
    (and cleaned up)
 
 
@@ -1010,7 +1010,7 @@ Features
 ~~~~~~~~
 
 *  **Mailjet:** Add support for this ESP. Thanks to `@Lekensteyn`_ and `@calvin`_.
-   (`Docs <https://anymail.readthedocs.io/en/stable/esps/mailjet/>`__)
+   (`Docs <https://anymail.dev/en/stable/esps/mailjet/>`__)
 *  In webhook handlers, AnymailTrackingEvent.metadata now defaults to `{}`, and
    .tags defaults to `[]`, if the ESP does not supply these fields with the event.
    (See `#67`_.)
@@ -1082,10 +1082,10 @@ Breaking changes
    transparent change for most projects. Exceptions: if you use SendGrid
    username/password auth, Anymail's `esp_extra` with "x-smtpapi", or multiple Reply-To
    addresses, please review the
-   `porting notes <https://anymail.readthedocs.io/en/v3.0/esps/sendgrid/#sendgrid-v3-upgrade>`__.
+   `porting notes <https://anymail.dev/en/v3.0/esps/sendgrid/#sendgrid-v3-upgrade>`__.
 
    The SendGrid v2 EmailBackend
-   `remains available <https://anymail.readthedocs.io/en/v3.0/esps/sendgrid/#sendgrid-v2-backend>`__
+   `remains available <https://anymail.dev/en/v3.0/esps/sendgrid/#sendgrid-v2-backend>`__
    if you prefer it, but is no longer the default.
 
    .. SendGrid v2 backend removed after Anymail v3.0; links frozen to that doc version
@@ -1125,13 +1125,13 @@ Features
 
 *  **Postmark:** Support Postmark's new message delivery event in Anymail normalized
    tracking webhook. (Update your Postmark config to enable the new event. See
-   `docs <https://anymail.readthedocs.io/en/stable/esps/postmark/#status-tracking-webhooks>`__.)
+   `docs <https://anymail.dev/en/stable/esps/postmark/#status-tracking-webhooks>`__.)
 *  Handle virtually all uses of Django lazy translation strings as EmailMessage
    properties. (In earlier releases, these could sometimes lead to obscure exceptions
    or unexpected behavior with some ESPs. See `#34`_.)
 *  **Mandrill:** Simplify and document two-phase process for setting up
    Mandrill webhooks
-   (`docs <https://anymail.readthedocs.io/en/stable/esps/mandrill/#status-tracking-webhooks>`__).
+   (`docs <https://anymail.dev/en/stable/esps/mandrill/#status-tracking-webhooks>`__).
 
 
 v0.6.1
@@ -1159,17 +1159,17 @@ Breaking changes
    an empty Django EmailMessage body. In the (extremely-unlikely) case you were relying
    on the earlier quirky behavior to *not* send your saved html or text template, you
    may want to verify that your SendGrid templates have matching html and text.
-   (`docs <https://anymail.readthedocs.io/en/stable/esps/sendgrid/#batch-sending-merge-and-esp-templates>`__
+   (`docs <https://anymail.dev/en/stable/esps/sendgrid/#batch-sending-merge-and-esp-templates>`__
    -- also see `#32`_.)
 
 Features
 ~~~~~~~~
 
 *  **Postmark:** Add support for `track_clicks`
-   (`docs <https://anymail.readthedocs.io/en/stable/esps/postmark/#limitations-and-quirks>`__)
+   (`docs <https://anymail.dev/en/stable/esps/postmark/#limitations-and-quirks>`__)
 *  Initialize AnymailMessage.anymail_status to empty status, rather than None;
    clarify docs around `anymail_status` availability
-   (`docs <https://anymail.readthedocs.io/en/stable/sending/anymail_additions/#esp-send-status>`__)
+   (`docs <https://anymail.dev/en/stable/sending/anymail_additions/#esp-send-status>`__)
 
 
 v0.5
@@ -1181,7 +1181,7 @@ Features
 ~~~~~~~~
 
 *  **Mailgun:** Add MAILGUN_SENDER_DOMAIN setting.
-   (`docs <https://anymail.readthedocs.io/en/stable/esps/mailgun/#mailgun-sender-domain>`__)
+   (`docs <https://anymail.dev/en/stable/esps/mailgun/#mailgun-sender-domain>`__)
 
 
 v0.4.2
@@ -1205,7 +1205,7 @@ Features
 ~~~~~~~~
 
 *  **SparkPost:** Add support for this ESP.
-   (`docs <https://anymail.readthedocs.io/en/stable/esps/sparkpost/>`__)
+   (`docs <https://anymail.dev/en/stable/esps/sparkpost/>`__)
 *  Test with Django 1.10 beta
 *  Requests-based backends (all but SparkPost) now raise AnymailRequestsAPIError
    for any requests.RequestException, for consistency and proper fail_silently behavior.
@@ -1241,12 +1241,12 @@ Features
 
 *  Add support for ESP stored templates and batch sending/merge. Exact capabilities
    vary widely by ESP -- be sure to read the notes for your ESP.
-   (`docs <https://anymail.readthedocs.io/en/stable/sending/templates/>`__)
+   (`docs <https://anymail.dev/en/stable/sending/templates/>`__)
 *  Add pre_send and post_send signals.
-   `docs <https://anymail.readthedocs.io/en/stable/sending/signals/>`__
+   `docs <https://anymail.dev/en/stable/sending/signals/>`__
 *  **Mandrill:** add support for esp_extra; deprecate Mandrill-specific message
    attributes left over from Djrill. See
-   `migrating from Djrill <https://anymail.readthedocs.io/en/stable/esps/mandrill/#migrating-from-djrill>`__.
+   `migrating from Djrill <https://anymail.dev/en/stable/esps/mandrill/#migrating-from-djrill>`__.
 
 
 v0.2
@@ -1261,7 +1261,7 @@ Breaking changes
    and dicts. (Was based on misreading of Mailgun docs; behavior now matches metadata
    handling for all other ESPs.)
 *  **Mandrill:** remove obsolete wehook views and signal inherited from Djrill. See
-   `Djrill migration notes <https://anymail.readthedocs.io/en/stable/esps/mandrill/#changes-to-webhooks>`__
+   `Djrill migration notes <https://anymail.dev/en/stable/esps/mandrill/#changes-to-webhooks>`__
    if you were relying on that code.
 
 Features
@@ -1269,13 +1269,13 @@ Features
 
 *  Add support for ESP event-tracking webhooks, including normalized
    AnymailTrackingEvent.
-   (`docs <https://anymail.readthedocs.io/en/stable/sending/tracking/>`__)
+   (`docs <https://anymail.dev/en/stable/sending/tracking/>`__)
 *  Allow get_connection kwargs overrides of most settings for individual backend
    instances. Can be useful for, e.g., working with multiple SendGrid subusers.
-   (`docs <https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference>`__)
+   (`docs <https://anymail.dev/en/stable/installation/#anymail-settings-reference>`__)
 *  **SendGrid:** Add SENDGRID_GENERATE_MESSAGE_ID setting to control workarounds for
    ensuring unique tracking ID on SendGrid messages/events (default enabled).
-   `docs <https://anymail.readthedocs.io/en/stable/esps/sendgrid/#sendgrid-message-id>`__
+   `docs <https://anymail.dev/en/stable/esps/sendgrid/#sendgrid-message-id>`__
 *  **SendGrid:** improve handling of 'filters' in esp_extra, making it easier to mix
    custom SendGrid app filter settings with Anymail normalized message options.
 

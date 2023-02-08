@@ -121,12 +121,9 @@ setup(
     long_description_content_type="text/x-rst",
     project_urls=OrderedDict(
         [
-            ("Documentation", "https://anymail.readthedocs.io/en/%s/" % release_tag),
+            ("Documentation", "https://anymail.dev/en/%s/" % release_tag),
             ("Source", "https://github.com/anymail/django-anymail"),
-            (
-                "Changelog",
-                "https://anymail.readthedocs.io/en/%s/changelog/" % release_tag,
-            ),
+            ("Changelog", "https://anymail.dev/en/%s/changelog/" % release_tag),
             ("Tracker", "https://github.com/anymail/django-anymail/issues"),
         ]
     ),
