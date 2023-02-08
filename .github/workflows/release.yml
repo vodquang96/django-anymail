@@ -40,9 +40,9 @@ jobs:
             echo "::error ::package version '$TAG' does not match git tag '$GIT_TAG'"
             exit 1
           fi
-          echo "::set-output name=version::$VERSION"
-          echo "::set-output name=tag::$TAG"
-          echo "::set-output name=anchor::${TAG//[^[:alnum:]]/-}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "anchor=${TAG//[^[:alnum:]]/-}" >> $GITHUB_OUTPUT
 
       - name: Install build requirements
         run: |
