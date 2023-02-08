@@ -78,6 +78,7 @@ The package is released under the BSD license.
 **Resources**
 
 * Full documentation: https://anymail.dev/en/stable/
+* Help and troubleshooting: https://anymail.dev/en/stable/help/
 * Package on PyPI: https://pypi.org/project/django-anymail/
 * Project on Github: https://github.com/anymail/django-anymail
 * Changelog: https://anymail.dev/en/stable/changelog/
