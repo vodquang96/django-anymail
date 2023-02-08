@@ -32,6 +32,8 @@ vNext
 
 Other
 ~~~~~
+* Test against Django 4.2 prerelease, Python 3.11 (with Django 4.2),
+  and PyPy 3.9.
 * Use black, isort and doc8 to format code,
   enforced via pre-commit. (Thanks to `@tim-schilling`_.)
 
