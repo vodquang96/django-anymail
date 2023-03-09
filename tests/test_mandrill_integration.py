@@ -171,10 +171,9 @@ class MandrillBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
 
     @override_settings(MANDRILL_API_KEY="Hey, that's not an API key!")
     def test_invalid_api_key(self):
-        # Example of trying to send with an invalid MANDRILL_API_KEY
-        with self.assertRaises(AnymailAPIError) as cm:
+        # Example of trying to send with an invalid MANDRILL_API_KEY.
+        # Mandrill responds either 401 or 500 status for this case (it varies),
+        # but always seems to include the message "Invalid API key".
+        # Either response should result in an AnymailAPIError.
+        with self.assertRaisesMessage(AnymailAPIError, "Invalid API key"):
             self.message.send()
-        err = cm.exception
-        self.assertEqual(err.status_code, 500)
-        # Make sure the exception message includes Mandrill's response:
-        self.assertIn("Invalid API key", str(err))
