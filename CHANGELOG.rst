@@ -25,28 +25,36 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
------
+v9.1
+----
 
-*Unreleased changes*
-
-Deprecations
-~~~~~~~~~~~~
-* **Amazon SES:** Anymail is switching to the Amazon SES v2 API for sending mail.
-  Support for the original SES v1 API is now deprecated, and will be dropped in a
-  future Anymail release (likely in late 2023). Many projects will not
-  require code changes, but you will need to update your IAM permissions. See
-  `Migrating to the SES v2 API <https://anymail.dev/en/latest/esps/amazon_ses/#amazon-ses-v2>`__.
+*2023-03-11*
 
 Features
 ~~~~~~~~
+
+* **Amazon SES:** Add support for sending through the Amazon SES v2 API
+  (not yet enabled by default; see Deprecations below;
+  `docs <https://anymail.dev/en/stable/esps/amazon_ses/#amazon-ses-v2>`__).
+
 * **MailerSend:** Add support for this ESP
-  (`docs <https://anymail.dev/en/latest/esps/mailersend/>`__).
+  (`docs <https://anymail.dev/en/stable/esps/mailersend/>`__).
+
+Deprecations
+~~~~~~~~~~~~
+
+* **Amazon SES:** Anymail will be switching to the Amazon SES v2 API.
+  Support for the original SES v1 API is now deprecated, and will be dropped in a
+  future Anymail release (likely in late 2023). Many projects will not
+  require code changes, but you may need to update your IAM permissions. See
+  `Migrating to the SES v2 API <https://anymail.dev/en/stable/esps/amazon_ses/#amazon-ses-v2>`__.
 
 Other
 ~~~~~
+
 * Test against Django 4.2 prerelease, Python 3.11 (with Django 4.2),
   and PyPy 3.9.
+
 * Use black, isort and doc8 to format code,
   enforced via pre-commit. (Thanks to `@tim-schilling`_.)
 
