@@ -115,7 +115,7 @@ setup(
         "Framework :: Django :: 3.2",
         "Framework :: Django :: 4.0",
         "Framework :: Django :: 4.1",
-        # not yet registered: "Framework :: Django :: 4.2",
+        "Framework :: Django :: 4.2",
         "Environment :: Web Environment",
     ],
     long_description=long_description,

@@ -25,6 +25,17 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
+vNext
+-----
+
+*Unreleased changes*
+
+Other
+~~~~~
+
+* Test against Django 4.2 release.
+
+
 v9.1
 ----
 
