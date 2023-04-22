@@ -4,7 +4,7 @@ from unittest.mock import ANY
 
 from django.test import tag
 
-from anymail.exceptions import AnymailConfigurationError
+from anymail.exceptions import AnymailConfigurationError, AnymailWarning
 from anymail.inbound import AnymailInboundMessage
 from anymail.signals import AnymailInboundEvent
 from anymail.webhooks.postmark import PostmarkInboundWebhookView
@@ -165,14 +165,27 @@ class PostmarkInboundTestCase(WebhookTestCase):
                     "ContentType": 'message/rfc822; charset="us-ascii"',
                     "ContentLength": len(email_content),
                 },
+                # This is an attachement like send by the test webhook
+                # A workaround is implemented to handle it.
+                # Once Postmark solves the bug on their side this workaround
+                # can be reverted.
+                {
+                    "Name": "test.txt",
+                    "ContentType": "text/plain",
+                    "Data": "VGhpcyBpcyBhdHRhY2htZW50IGNvbnRlbnRzLCBiYXNlLTY0IGVuY29kZWQu",
+                    "ContentLength": 45,
+                },
             ]
         }
 
-        response = self.client.post(
-            "/anymail/postmark/inbound/",
-            content_type="application/json",
-            data=json.dumps(raw_event),
-        )
+        with self.assertWarnsRegex(
+            AnymailWarning, r"Received a test webhook attachment. "
+        ):
+            response = self.client.post(
+                "/anymail/postmark/inbound/",
+                content_type="application/json",
+                data=json.dumps(raw_event),
+            )
         self.assertEqual(response.status_code, 200)
         kwargs = self.assert_handler_called_once_with(
             self.inbound_handler,
@@ -183,13 +196,21 @@ class PostmarkInboundTestCase(WebhookTestCase):
         event = kwargs["event"]
         message = event.message
         attachments = message.attachments  # AnymailInboundMessage convenience accessor
-        self.assertEqual(len(attachments), 2)
+        self.assertEqual(len(attachments), 3)
         self.assertEqual(attachments[0].get_filename(), "test.txt")
         self.assertEqual(attachments[0].get_content_type(), "text/plain")
         self.assertEqual(attachments[0].get_content_text(), "test attachment")
         self.assertEqual(attachments[1].get_content_type(), "message/rfc822")
         self.assertEqualIgnoringHeaderFolding(
             attachments[1].get_content_bytes(), email_content
+        )
+
+        # Attachment of test webhook
+        self.assertEqual(attachments[2].get_filename(), "test.txt")
+        self.assertEqual(attachments[2].get_content_type(), "text/plain")
+        self.assertEqual(
+            attachments[2].get_content_text(),
+            "This is attachment contents, base-64 encoded.",
         )
 
         inlines = message.inline_attachments
