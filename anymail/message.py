@@ -1,8 +1,8 @@
 from email.mime.image import MIMEImage
-from email.utils import unquote
+from email.utils import make_msgid, unquote
 from pathlib import Path
 
-from django.core.mail import EmailMessage, EmailMultiAlternatives, make_msgid
+from django.core.mail import EmailMessage, EmailMultiAlternatives
 
 from .utils import UNSET
 
