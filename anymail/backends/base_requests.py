@@ -47,7 +47,12 @@ class AnymailRequestsBackend(AnymailBaseBackend):
             self.session = None
 
     def _send(self, message):
-        if self.session is None:
+        if self.session:
+            return super()._send(message)
+        elif self.fail_silently:
+            # create_session failed
+            return False
+        else:
             class_name = self.__class__.__name__
             raise RuntimeError(
                 "Session has not been opened in {class_name}._send. "
@@ -56,7 +61,6 @@ class AnymailRequestsBackend(AnymailBaseBackend):
                     class_name=class_name
                 )
             )
-        return super()._send(message)
 
     def create_session(self):
         """Create the requests.Session object used by this instance of the backend.

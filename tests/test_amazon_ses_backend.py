@@ -393,6 +393,16 @@ class AmazonSESBackendStandardEmailTests(AmazonSESBackendMockAPITestCase):
         sent = self.message.send(fail_silently=True)
         self.assertEqual(sent, 0)
 
+    def test_session_failure_fail_silently(self):
+        # Make sure fail_silently is respected if boto3.Session creation fails
+        # (e.g., due to invalid or missing credentials)
+        from botocore.exceptions import NoCredentialsError
+
+        self.mock_session.side_effect = NoCredentialsError()
+
+        sent = self.message.send(fail_silently=True)
+        self.assertEqual(sent, 0)
+
     def test_prevents_header_injection(self):
         # Since we build the raw MIME message, we're responsible for preventing header
         # injection. django.core.mail.EmailMessage.message() implements most of that

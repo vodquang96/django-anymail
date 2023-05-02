@@ -1,3 +1,5 @@
+from unittest import mock
+
 from django.test import SimpleTestCase, override_settings, tag
 
 from anymail.backends.base_requests import AnymailRequestsBackend, RequestsPayload
@@ -68,6 +70,14 @@ class RequestsBackendBaseTestCase(RequestsBackendMockAPITestCase):
         self.message.send()
         timeout = self.get_api_call_arg("timeout")
         self.assertEqual(timeout, 5)
+
+    @mock.patch(f"{__name__}.MinimalRequestsBackend.create_session")
+    def test_create_session_error_fail_silently(self, mock_create_session):
+        # If create_session fails and fail_silently is True,
+        # make sure _send doesn't raise a misleading error.
+        mock_create_session.side_effect = ValueError("couldn't create session")
+        sent = self.message.send(fail_silently=True)
+        self.assertEqual(sent, 0)
 
 
 @tag("live")

@@ -63,7 +63,7 @@ class EmailBackend(AnymailBaseBackend):
             self.client = boto3.session.Session(**self.session_params).client(
                 "sesv2", **self.client_params
             )
-        except BOTO_BASE_ERRORS:
+        except Exception:
             if not self.fail_silently:
                 raise
         else:
@@ -74,6 +74,22 @@ class EmailBackend(AnymailBaseBackend):
             return
         self.client.close()
         self.client = None
+
+    def _send(self, message):
+        if self.client:
+            return super()._send(message)
+        elif self.fail_silently:
+            # (Probably missing boto3 credentials in open().)
+            return False
+        else:
+            class_name = self.__class__.__name__
+            raise RuntimeError(
+                "boto3 Session has not been opened in {class_name}._send. "
+                "(This is either an implementation error in {class_name}, "
+                "or you are incorrectly calling _send directly.)".format(
+                    class_name=class_name
+                )
+            )
 
     def build_message_payload(self, message, defaults):
         if getattr(message, "template_id", UNSET) is not UNSET:

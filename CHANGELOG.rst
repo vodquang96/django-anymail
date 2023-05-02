@@ -33,6 +33,10 @@ vNext
 Fixes
 ~~~~~
 
+* Fix misleading error messages when sending with ``fail_silently=True``
+  and session creation fails (e.g., with Amazon SES backend and missing
+  credentials). (Thanks to `@technolingo`_.)
+
 * **Postmark:** Fix spurious AnymailInvalidAddress in ``message.cc`` when
   inbound message has no Cc recipients. (Thanks to `@Ecno92`_.)
 
@@ -1455,6 +1459,7 @@ Features
 .. _@slinkymanbyday: https://github.com/slinkymanbyday
 .. _@swrobel: https://github.com/swrobel
 .. _@tcourtqtm: https://github.com/tcourtqtm
+.. _@technolingo: https://github.com/technolingo
 .. _@Thorbenl: https://github.com/Thorbenl
 .. _@tiltec:  https://github.com/tiltec
 .. _@tim-schilling: https://github.com/tim-schilling
