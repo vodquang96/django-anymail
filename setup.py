@@ -45,7 +45,6 @@ requirements_dev = [
     "sphinx-rtd-theme",
     "tox",
     "twine",
-    "virtualenv<20.22.0",  # tox dependency, pinned for Python 3.6 tox testenv
     "wheel",
 ]
 
@@ -71,8 +70,12 @@ setup(
     license="BSD License",
     packages=["anymail"],
     zip_safe=False,
-    python_requires=">=3.6",
-    install_requires=["django>=2.0", "requests>=2.4.3"],
+    python_requires=">=3.7",
+    install_requires=[
+        "django>=2.0",
+        "requests>=2.4.3",
+        "urllib3>=1.25.0",  # requests dependency: fixes RFC 7578 header encoding
+    ],
     extras_require={
         # This can be used if particular backends have unique dependencies.
         # For simplicity, requests is included in the base requirements.
@@ -100,7 +103,6 @@ setup(
         "Programming Language :: Python :: Implementation :: PyPy",
         "Programming Language :: Python :: Implementation :: CPython",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",

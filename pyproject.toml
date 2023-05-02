@@ -1,7 +1,7 @@
 [tool.black]
 force-exclude = '^/tests/test_settings/settings_.*\.py'
 max-line-length = 88
-target-version = ["py36"]
+target-version = ["py37"]
 
 [tool.doc8]
 # ignore very long lines in ESP support table:
@@ -16,4 +16,4 @@ max-line-length = 120
 combine_as_imports = true
 known_first_party = "anymail"
 profile = "black"
-py_version = "36"
+py_version = "37"

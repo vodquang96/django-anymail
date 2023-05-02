@@ -25,6 +25,18 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
+vNext
+-----
+
+*unreleased changes*
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+* Require Python 3.7 or later.
+* Require urllib3 1.25 or later (released 2019-04-29).
+
+
 v9.2
 -----
 
