@@ -113,7 +113,10 @@ class AnymailInboundMessage(Message):
         """
         values = self.get_all(header)
         if values is not None:
-            values = parse_address_list(values)
+            if "".join(values).strip() == "":
+                values = None
+            else:
+                values = parse_address_list(values)
         return values or []
 
     def get_date_header(self, header):

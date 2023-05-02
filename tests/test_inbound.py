@@ -307,6 +307,12 @@ class AnymailInboundMessageConveniencePropTests(SimpleTestCase):
         self.assertEqual(msg.to, [])
         self.assertEqual(msg.cc, [])
 
+        # Empty strings
+        msg = AnymailInboundMessage.construct(from_email="", to="", cc="")
+        self.assertIsNone(msg.from_email)
+        self.assertEqual(msg.to, [])
+        self.assertEqual(msg.cc, [])
+
     def test_body_props(self):
         msg = AnymailInboundMessage.construct(text="Test plaintext", html="Test HTML")
         self.assertEqual(msg.text, "Test plaintext")

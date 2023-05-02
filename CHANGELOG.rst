@@ -33,6 +33,9 @@ vNext
 Fixes
 ~~~~~
 
+* **Postmark:** Fix spurious AnymailInvalidAddress in ``message.cc`` when
+  inbound message has no Cc recipients. (Thanks to `@Ecno92`_.)
+
 * **Postmark:** Workaround for handling inbound test webhooks.
   (`More info <https://github.com/anymail/django-anymail/issues/304>`__)
 
@@ -1428,6 +1431,7 @@ Features
 .. _@dgilmanAIDENTIFIED: https://github.com/dgilmanAIDENTIFIED
 .. _@dimitrisor: https://github.com/dimitrisor
 .. _@dominik-lekse: https://github.com/dominik-lekse
+.. _@Ecno92: https://github.com/Ecno92
 .. _@erikdrums: https://github.com/erikdrums
 .. _@ewingrj: https://github.com/ewingrj
 .. _@fdemmer: https://github.com/fdemmer
