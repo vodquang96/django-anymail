@@ -25,10 +25,10 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
+v9.2
 -----
 
-*Unreleased changes*
+*2023-05-02*
 
 Fixes
 ~~~~~
@@ -37,11 +37,11 @@ Fixes
   and session creation fails (e.g., with Amazon SES backend and missing
   credentials). (Thanks to `@technolingo`_.)
 
-* **Postmark:** Fix spurious AnymailInvalidAddress in ``message.cc`` when
-  inbound message has no Cc recipients. (Thanks to `@Ecno92`_.)
+* **Postmark inbound:** Fix spurious AnymailInvalidAddress in ``message.cc``
+  when inbound message has no Cc recipients. (Thanks to `@Ecno92`_.)
 
-* **Postmark:** Workaround for handling inbound test webhooks.
-  (`More info <https://github.com/anymail/django-anymail/issues/304>`__)
+* **Postmark inbound:** Add workaround for malformed test data sent by
+  Postmark's inbound webhook "Check" button. (See `#304`_. Thanks to `@Ecno92`_.)
 
 Deprecations
 ~~~~~~~~~~~~
@@ -1421,6 +1421,7 @@ Features
 .. _#147: https://github.com/anymail/django-anymail/issues/147
 .. _#148: https://github.com/anymail/django-anymail/issues/148
 .. _#153: https://github.com/anymail/django-anymail/issues/153
+.. _#304: https://github.com/anymail/django-anymail/issues/304
 
 .. _@ailionx: https://github.com/ailionx
 .. _@alee: https://github.com/alee

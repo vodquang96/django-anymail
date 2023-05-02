@@ -1,4 +1,4 @@
-VERSION = (9, 1)
+VERSION = (9, 2)
 
 #: major.minor.patch or major.minor.devN
 __version__ = ".".join([str(x) for x in VERSION])
