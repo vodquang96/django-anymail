@@ -36,6 +36,12 @@ Fixes
 * **Postmark:** Workaround for handling inbound test webhooks.
   (`More info <https://github.com/anymail/django-anymail/issues/304>`__)
 
+Deprecations
+~~~~~~~~~~~~
+
+* This will be the last Anymail release to support Python 3.6
+  (which reached end-of-life on 2021-12-23).
+
 Other
 ~~~~~
 

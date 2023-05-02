@@ -57,7 +57,8 @@ jobs:
         run: |
           set -x
           python -VV
-          python -m pip install 'tox<4'
+          # Must pin virtualenv for tox py36 testenv:
+          python -m pip install 'tox<4' 'virtualenv<20.22.0'
           python -m tox --version
       - name: Test ${{ matrix.tox.name }}
         run: |

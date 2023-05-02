@@ -45,6 +45,7 @@ requirements_dev = [
     "sphinx-rtd-theme",
     "tox",
     "twine",
+    "virtualenv<20.22.0",  # tox dependency, pinned for Python 3.6 tox testenv
     "wheel",
 ]
 
