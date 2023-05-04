@@ -18,4 +18,6 @@ formats: all
 
 python:
   install:
+    - path: .
+      method: pip
     - requirements: docs/requirements.txt
