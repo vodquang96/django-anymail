@@ -50,6 +50,11 @@ Breaking changes
   Be sure to update any dependencies specification (pip install, requirements.txt,
   etc.) that had been using ``[amazon_ses]``.
 
+* **Mandrill:** Remove support for Mandrill-specific message attributes left over
+  from Djrill. These attributes have raised DeprecationWarnings since Anymail 0.3
+  (in 2016), but are now silently ignored. See
+  `Migrating from Djrill <https://anymail.dev/en/latest/esps/mandrill/#djrill-message-attributes>`__.
+
 * Require Python 3.7 or later.
 
 * Require urllib3 1.25 or later (released 2019-04-29).

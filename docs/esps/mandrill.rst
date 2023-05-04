@@ -383,16 +383,19 @@ Changes to EmailMessage attributes
   instead. You'll need to pass a valid email address (not just a domain),
   but Anymail will use only the domain, and will ignore anything before the @.
 
+.. _djrill-message-attributes:
+
 **Other Mandrill-specific attributes**
   Djrill allowed nearly all Mandrill API parameters to be set
   as attributes directly on an EmailMessage. With Anymail, you
   should instead set these in the message's
   :ref:`esp_extra <mandrill-esp-extra>` dict as described above.
 
-  Although the Djrill style attributes are still supported (for now),
-  Anymail will issue a :exc:`DeprecationWarning` if you try to use them.
-  These warnings are visible during tests (with Django's default test
-  runner), and will explain how to update your code.
+  .. versionchanged:: 10.0
+
+        These Djrill-specific attributes are no longer supported,
+        and will be silently ignored. (Earlier versions raised a
+        :exc:`DeprecationWarning` but still worked.)
 
   You can also use the following git grep expression to find potential
   problems:
