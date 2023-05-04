@@ -6,17 +6,16 @@ Amazon SES
 Anymail integrates with the `Amazon Simple Email Service`_ (SES) using the `Boto 3`_
 AWS SDK for Python, and supports sending, tracking, and inbound receiving capabilities.
 
-.. versionchanged:: 9.1
+.. versionchanged:: 10.0
 
 .. note::
 
-    AWS has two versions of the SES API available for sending email. Anymail 9.0
-    and earlier used the SES v1 API. Anymail 9.1 supports both SES v1 and v2, but
-    support for the v1 API is now deprecated and will be removed in a future Anymail
-    release (likely in late 2023).
+    AWS has two versions of the SES API available for sending email. Anymail 10.0
+    uses the newer SES v2 API by default, and this is recommended for new projects.
 
-    For new projects, you should use the SES v2 API. For existing projects that are
-    using the SES v1 API, see :ref:`amazon-ses-v2` below.
+    If you integrated Amazon SES using an earlier Anymail release, you may need to
+    update your IAM permissions. See :ref:`amazon-ses-v2` below. Or if you are not
+    ready to switch, see :ref:`amazon-ses-v1` below.
 
 
 .. sidebar:: Alternatives
@@ -46,18 +45,16 @@ or separately run ``pip install boto3``.
 
     In earlier releases, the "extra name" could use an underscore
     (``django-anymail[amazon_ses]``). That now causes pip to warn
-    that "django-anymail does not provide the extra 'amazon_ses'",
+    that "django-anymail does not provide the extra 'amazon_ses',"
     and may result in a broken installation that is missing boto3.
 
 To send mail with Anymail's Amazon SES backend, set:
 
   .. code-block:: python
 
-      EMAIL_BACKEND = "anymail.backends.amazon_sesv2.EmailBackend"
+      EMAIL_BACKEND = "anymail.backends.amazon_ses.EmailBackend"
 
-in your settings.py. (If you need to use the older Amazon SES v1 API, replace
-``amazon_sesv2`` with just ``amazon_ses``---but be aware SES v1 support is
-deprecated and will be dropped in a near-future Anymail release.)
+in your settings.py.
 
 In addition, you must make sure boto3 is configured with AWS credentials having the
 necessary :ref:`amazon-ses-iam-permissions`.
@@ -75,16 +72,15 @@ setting to customize the Boto session.
 Migrating to the SES v2 API
 ---------------------------
 
-.. versionchanged:: 9.1
+.. versionchanged:: 10.0
 
-Anymail is in the process of switching email sending from the original Amazon SES API (v1)
-to the updated SES v2 API. Although the capabilities of the two API versions are virtually
-identical, Amazon is implementing SES improvements (such as increased maximum message size)
-only in the v2 API.
+Anymail 10.0 uses Amazon's updated SES v2 API to send email. Earlier Anymail releases
+used the original Amazon SES API (v1) by default. Although the capabilities of the two
+SES versions are virtually identical, Amazon is implementing improvements (such as
+increased maximum message size) only in the v2 API.
 
-If you used Anymail 9.0 or earlier to integrate with Amazon SES, you are using the
-older SES v1 API. Your code will continue to work with Anymail 9.1, but SES v1 support
-is now deprecated and will be removed in a future Anymail release (likely in late 2023).
+(The upgrade for SES v2 affects only sending email. There are no changes required
+for status tracking webhooks or receiving inbound email.)
 
 Migrating to SES v2 requires minimal code changes:
 
@@ -98,7 +94,7 @@ Migrating to SES v2 requires minimal code changes:
 
 2.  If your code uses Anymail's :attr:`~anymail.message.AnymailMessage.esp_extra`
     to pass additional SES API parameters, or examines the raw
-    raw :attr:`~anymail.message.AnymailStatus.esp_response` after sending a message,
+    :attr:`~anymail.message.AnymailStatus.esp_response` after sending a message,
     you may need to update it for the v2 API. Many parameters have different names
     in the v2 API compared to the equivalent v1 calls, and the response formats are
     slightly different.
@@ -108,22 +104,34 @@ Migrating to SES v2 requires minimal code changes:
     See AWS's docs for SES v1 `SendRawEmail`_ vs. v2 `SendEmail`_, or if you are sending
     with SES templates, compare v1 `SendBulkTemplatedEmail`_ to v2 `SendBulkEmail`_.
 
-3.  In your settings.py, update the :setting:`!EMAIL_BACKEND` to use ``amazon_sesv2``.
-    Change this:
+.. _SendRawEmail:
+    https://docs.aws.amazon.com/ses/latest/APIReference/API_SendRawEmail.html
+.. _SendBulkTemplatedEmail:
+    https://docs.aws.amazon.com/ses/latest/APIReference/API_SendBulkTemplatedEmail.html
+
+
+.. _amazon-ses-v1:
+
+Using SES v1 (deprecated)
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+New projects should use Anymail's default Amazon SES v2 integration. If you have an
+existing project that is not ready to switch to v2, Anymail's original SES v1 support
+is still available. In your settings.py, change the :setting:`!EMAIL_BACKEND` from:
 
     .. code-block:: python
 
-       EMAIL_BACKEND = "anymail.backends.amazon_ses.EmailBackend"  # SES v1
+       EMAIL_BACKEND = "anymail.backends.amazon_ses.EmailBackend"  # default SES v2
 
     to this:
 
     .. code-block:: python
 
-       EMAIL_BACKEND = "anymail.backends.amazon_sesv2.EmailBackend"  # SES v2
+       EMAIL_BACKEND = "anymail.backends.amazon_sesv1.EmailBackend"  # SES v1
        #                                           ^^
 
-The upgrade for SES v2 affects only sending email. There are no changes required
-for status tracking webhooks or receiving inbound email.
+Note that SES v1 support is deprecated and will be removed in a future Anymail release
+(likely in late 2023).
 
 
 .. _amazon-ses-quirks:
@@ -177,8 +185,7 @@ Limitations and quirks
 
 **Envelope-sender is forwarded**
   Anymail's :attr:`~anymail.message.AnymailMessage.envelope_sender` becomes
-  Amazon SES's ``FeedbackForwardingEmailAddress`` (for the SES v2 API; or for SES v1
-  either ``Source`` or ``ReturnPath``). That address will receive bounce and other
+  Amazon SES's ``FeedbackForwardingEmailAddress``. That address will receive bounce and other
   delivery notifications, but will not appear in the message sent to the recipient.
   SES always generates its own anonymized envelope sender (mailfrom) for each outgoing
   message, and then forwards that address to your envelope-sender. See
@@ -282,10 +289,9 @@ esp_extra support
 To use Amazon SES features not directly supported by Anymail, you can
 set a message's :attr:`~anymail.message.AnymailMessage.esp_extra` to
 a `dict` that will be shallow-merged into the params for the `SendEmail`_
-or `SendBulkEmail`_ SES v2 API call. (Or if you are using the SES v1 API,
-`SendRawEmail`_ or `SendBulkTemplatedEmail`_.)
+or `SendBulkEmail`_ SES v2 API call.
 
-Examples (for a non-template send using the SES v2 API):
+Examples (for a non-template send):
 
     .. code-block:: python
 
@@ -315,10 +321,6 @@ to apply it to all messages.)
     https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_SendEmail.html
 .. _SendBulkEmail:
     https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_SendBulkEmail.html
-.. _SendRawEmail:
-    https://docs.aws.amazon.com/ses/latest/APIReference/API_SendRawEmail.html
-.. _SendBulkTemplatedEmail:
-    https://docs.aws.amazon.com/ses/latest/APIReference/API_SendBulkTemplatedEmail.html
 
 
 .. _amazon-ses-templates:
@@ -332,7 +334,7 @@ See Amazon's `Sending personalized email`_ guide for more information.
 
 When you set a message's :attr:`~anymail.message.AnymailMessage.template_id`
 to the name of one of your SES templates, Anymail will use the SES v2 `SendBulkEmail`_
-(or v1 `SendBulkTemplatedEmail`_) call to send template messages personalized with data
+call to send template messages personalized with data
 from Anymail's normalized :attr:`~anymail.message.AnymailMessage.merge_data`
 and :attr:`~anymail.message.AnymailMessage.merge_global_data`
 message attributes.
@@ -752,15 +754,10 @@ IAM permissions
 
 Anymail requires IAM permissions that will allow it to use these actions:
 
-* To send mail with the SES v2 API:
+* To send mail:
 
   * Ordinary (non-templated) sends: ``ses:SendEmail``
   * Template/merge sends: ``ses:SendBulkEmail``
-
-* To send mail with the older SES v1 API (deprecated in Anymail 9.1):
-
-  * Ordinary (non-templated) sends: ``ses:SendRawEmail``
-  * Template/merge sends: ``ses:SendBulkTemplatedEmail``
 
 * To :ref:`automatically confirm <amazon-ses-confirm-sns-subscriptions>`
   webhook SNS subscriptions: ``sns:ConfirmSubscription``
@@ -787,10 +784,6 @@ This IAM policy covers all of those:
             "Resource": "*"
           }, {
             "Effect": "Allow",
-            "Action": ["ses:SendRawEmail", "ses:SendBulkTemplatedEmail"],
-            "Resource": "*"
-          }, {
-            "Effect": "Allow",
             "Action": ["sns:ConfirmSubscription"],
             "Resource": ["arn:aws:sns:*:*:*"]
           }, {
@@ -799,6 +792,12 @@ This IAM policy covers all of those:
             "Resource": ["arn:aws:s3:::MY-PRIVATE-BUCKET-NAME/MY-INBOUND-PREFIX/*"]
           }]
         }
+
+(To send using the deprecated ``amazon_sesv1`` EmailBackend,
+you will also need to allow ``ses:SendRawEmail`` for ordinary,
+non-templated sends, and/or ``ses:SendBulkTemplatedEmail`` for
+templated/merge sends.)
+
 
 .. _amazon-ses-iam-errors:
 
@@ -818,10 +817,6 @@ This IAM policy covers all of those:
 
 Following the principle of `least privilege`_, you should omit permissions
 for any features you aren't using, and you may want to add additional restrictions:
-
-* If you are not using the older Amazon SES v1 API, you can omit permissions
-  that allow ``ses:SendRawEmail`` and ``ses:SendBulkTemplatedEmail``. (See
-  :ref:`amazon-ses-v2` above.)
 
 * For Amazon SES sending, you can add conditions to restrict senders, recipients, times,
   or other properties. See Amazon's `Controlling access to Amazon SES`_ guide.

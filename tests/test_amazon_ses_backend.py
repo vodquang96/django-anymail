@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from email.encoders import encode_7or8bit
 from email.mime.application import MIMEApplication
 from unittest.mock import ANY, patch
 
@@ -8,7 +9,11 @@ from django.core.mail import BadHeaderError
 from django.test import SimpleTestCase, override_settings, tag
 
 from anymail import __version__ as ANYMAIL_VERSION
-from anymail.exceptions import AnymailAPIError, AnymailUnsupportedFeature
+from anymail.exceptions import (
+    AnymailAPIError,
+    AnymailDeprecationWarning,
+    AnymailUnsupportedFeature,
+)
 from anymail.inbound import AnymailInboundMessage
 from anymail.message import AnymailMessage, attach_inline_image_file
 
@@ -28,7 +33,7 @@ class AmazonSESBackendMockAPITestCase(AnymailTestMixin, SimpleTestCase):
     def setUp(self):
         super().setUp()
 
-        # Mock boto3.session.Session().client('ses').send_raw_email (and any other
+        # Mock boto3.session.Session().client('sesv2').send_raw_email (and any other
         # client operations). (We could also use botocore.stub.Stubber, but mock works
         # well with our test structure.)
         self.patch_boto3_session = patch(
@@ -38,7 +43,7 @@ class AmazonSESBackendMockAPITestCase(AnymailTestMixin, SimpleTestCase):
         self.addCleanup(self.patch_boto3_session.stop)
         #: boto3.session.Session().client
         self.mock_client = self.mock_session.return_value.client
-        #: boto3.session.Session().client('ses', ...)
+        #: boto3.session.Session().client('sesv2', ...)
         self.mock_client_instance = self.mock_client.return_value
         self.set_mock_response()
 
@@ -50,24 +55,25 @@ class AmazonSESBackendMockAPITestCase(AnymailTestMixin, SimpleTestCase):
     DEFAULT_SEND_RESPONSE = {
         "MessageId": "1111111111111111-bbbbbbbb-3333-7777-aaaa-eeeeeeeeeeee-000000",
         "ResponseMetadata": {
-            "RequestId": "aaaaaaaa-2222-1111-8888-bbbb3333bbbb",
+            "RequestId": "900dd7f3-0399-4a1b-9d9f-bed91f46924a",
             "HTTPStatusCode": 200,
             "HTTPHeaders": {
-                "x-amzn-requestid": "aaaaaaaa-2222-1111-8888-bbbb3333bbbb",
-                "content-type": "text/xml",
-                "content-length": "338",
-                "date": "Sat, 17 Mar 2018 03:33:33 GMT",
+                "date": "Tue, 21 Feb 2023 22:59:46 GMT",
+                "content-type": "application/json",
+                "content-length": "76",
+                "connection": "keep-alive",
+                "x-amzn-requestid": "900dd7f3-0399-4a1b-9d9f-bed91f46924a",
             },
             "RetryAttempts": 0,
         },
     }
 
-    def set_mock_response(self, response=None, operation_name="send_raw_email"):
+    def set_mock_response(self, response=None, operation_name="send_email"):
         mock_operation = getattr(self.mock_client_instance, operation_name)
         mock_operation.return_value = response or self.DEFAULT_SEND_RESPONSE
         return mock_operation.return_value
 
-    def set_mock_failure(self, response, operation_name="send_raw_email"):
+    def set_mock_failure(self, response, operation_name="send_email"):
         from botocore.exceptions import ClientError
 
         mock_operation = getattr(self.mock_client_instance, operation_name)
@@ -85,7 +91,7 @@ class AmazonSESBackendMockAPITestCase(AnymailTestMixin, SimpleTestCase):
             )
         return kwargs
 
-    def get_client_params(self, service="ses"):
+    def get_client_params(self, service="sesv2"):
         """Returns kwargs params passed to mock boto3 client constructor
 
         Fails test if boto3 client wasn't constructed with named service
@@ -103,12 +109,12 @@ class AmazonSESBackendMockAPITestCase(AnymailTestMixin, SimpleTestCase):
             )
         return kwargs
 
-    def get_send_params(self, operation_name="send_raw_email"):
+    def get_send_params(self, operation_name="send_email"):
         """Returns kwargs params passed to the mock send API.
 
         Fails test if API wasn't called.
         """
-        self.mock_client.assert_called_with("ses", config=ANY)
+        self.mock_client.assert_called_with("sesv2", config=ANY)
         mock_operation = getattr(self.mock_client_instance, operation_name)
         if mock_operation.call_args is None:
             raise AssertionError("API was not called")
@@ -116,17 +122,13 @@ class AmazonSESBackendMockAPITestCase(AnymailTestMixin, SimpleTestCase):
         return kwargs
 
     def get_sent_message(self):
-        """Returns a parsed version of the send_raw_email RawMessage.Data param"""
-
-        params = self.get_send_params(
-            operation_name="send_raw_email"
-            # (other operations don't have raw mime param)
-        )
-        raw_mime = params["RawMessage"]["Data"]
+        """Returns a parsed version of the send_email Content.Raw.Data param"""
+        params = self.get_send_params(operation_name="send_email")
+        raw_mime = params["Content"]["Raw"]["Data"]
         parsed = AnymailInboundMessage.parse_raw_mime_bytes(raw_mime)
         return parsed
 
-    def assert_esp_not_called(self, msg=None, operation_name="send_raw_email"):
+    def assert_esp_not_called(self, msg=None, operation_name="send_email"):
         mock_operation = getattr(self.mock_client_instance, operation_name)
         if mock_operation.called:
             raise AssertionError(msg or "ESP API was called and shouldn't have been")
@@ -146,16 +148,16 @@ class AmazonSESBackendStandardEmailTests(AmazonSESBackendMockAPITestCase):
             fail_silently=False,
         )
         params = self.get_send_params()
-        # send_raw_email takes a fully-formatted MIME message.
+        # send_email takes a fully-formatted MIME message.
         # This is a simple (if inexact) way to check for expected headers and body:
-        raw_mime = params["RawMessage"]["Data"]
-        self.assertIsInstance(raw_mime, bytes)  # SendRawEmail expects Data as bytes
+        raw_mime = params["Content"]["Raw"]["Data"]
+        self.assertIsInstance(raw_mime, bytes)  # SendEmail expects Data as bytes
         self.assertIn(b"\nFrom: from@example.com\n", raw_mime)
         self.assertIn(b"\nTo: to@example.com\n", raw_mime)
         self.assertIn(b"\nSubject: Subject here\n", raw_mime)
         self.assertIn(b"\n\nHere is the message", raw_mime)
-        # Destinations must include all recipients:
-        self.assertEqual(params["Destinations"], ["to@example.com"])
+        # Destination must include all recipients:
+        self.assertEqual(params["Destination"], {"ToAddresses": ["to@example.com"]})
 
     # Since the SES backend generates the MIME message using Django's
     # EmailMessage.message().to_string(), there's not really a need
@@ -170,18 +172,18 @@ class AmazonSESBackendStandardEmailTests(AmazonSESBackendMockAPITestCase):
         self.message.send()
         params = self.get_send_params()
         self.assertEqual(
-            params["Destinations"],
-            [
-                "to1@example.com",
-                '"Recipient, second" <to2@example.com>',
-                "cc1@example.com",
-                "Also cc <cc2@example.com>",
-                "bcc1@example.com",
-                "BCC 2 <bcc2@example.com>",
-            ],
+            params["Destination"],
+            {
+                "ToAddresses": [
+                    "to1@example.com",
+                    '"Recipient, second" <to2@example.com>',
+                ],
+                "CcAddresses": ["cc1@example.com", "Also cc <cc2@example.com>"],
+                "BccAddresses": ["bcc1@example.com", "BCC 2 <bcc2@example.com>"],
+            },
         )
         # Bcc's shouldn't appear in the message itself:
-        self.assertNotIn(b"bcc", params["RawMessage"]["Data"])
+        self.assertNotIn(b"bcc", params["Content"]["Raw"]["Data"])
 
     def test_non_ascii_headers(self):
         self.message.subject = "Thử tin nhắn"  # utf-8 in subject header
@@ -189,7 +191,7 @@ class AmazonSESBackendStandardEmailTests(AmazonSESBackendMockAPITestCase):
         self.message.cc = ["cc@thư.example.com"]  # utf-8 in domain
         self.message.send()
         params = self.get_send_params()
-        raw_mime = params["RawMessage"]["Data"]
+        raw_mime = params["Content"]["Raw"]["Data"]
         # Non-ASCII headers must use MIME encoded-word syntax:
         self.assertIn(b"\nSubject: =?utf-8?b?VGjhu60gdGluIG5o4bqvbg==?=\n", raw_mime)
         # Non-ASCII display names as well:
@@ -201,13 +203,13 @@ class AmazonSESBackendStandardEmailTests(AmazonSESBackendMockAPITestCase):
         # SES doesn't support non-ASCII in the username@ part
         # (RFC 6531 "SMTPUTF8" extension)
 
-        # Destinations must include all recipients:
+        # Destinations must include all recipients (addr-spec only, must use Punycode):
         self.assertEqual(
-            params["Destinations"],
-            [
-                "=?utf-8?b?TmfGsOG7nWkgbmjhuq1u?= <to@example.com>",
-                "cc@xn--th-e0a.example.com",
-            ],
+            params["Destination"],
+            {
+                "ToAddresses": ["=?utf-8?b?TmfGsOG7nWkgbmjhuq1u?= <to@example.com>"],
+                "CcAddresses": ["cc@xn--th-e0a.example.com"],
+            },
         )
 
     def test_attachments(self):
@@ -273,7 +275,7 @@ class AmazonSESBackendStandardEmailTests(AmazonSESBackendMockAPITestCase):
 
         # Make sure neither the html nor the inline image is treated as an attachment:
         params = self.get_send_params()
-        raw_mime = params["RawMessage"]["Data"]
+        raw_mime = params["Content"]["Raw"]["Data"]
         self.assertNotIn(b"\nContent-Disposition: attachment", raw_mime)
 
     def test_multiple_html_alternatives(self):
@@ -282,31 +284,30 @@ class AmazonSESBackendStandardEmailTests(AmazonSESBackendMockAPITestCase):
         self.message.attach_alternative("<p>And so is second</p>", "text/html")
         self.message.send()
         params = self.get_send_params()
-        raw_mime = params["RawMessage"]["Data"]
+        raw_mime = params["Content"]["Raw"]["Data"]
         # just check the alternative smade it into the message
         # (assume that Django knows how to format them properly)
         self.assertIn(b"\n\n<p>First html is OK</p>\n", raw_mime)
         self.assertIn(b"\n\n<p>And so is second</p>\n", raw_mime)
 
     def test_alternative(self):
-        # Non-HTML alternatives *are* allowed
-        self.message.attach_alternative('{"is": "allowed"}', "application/json")
+        # Non-HTML alternatives (including AMP) *are* allowed
+        self.message.attach_alternative("<p>AMP HTML</p>", "text/x-amp-html")
         self.message.send()
         params = self.get_send_params()
-        raw_mime = params["RawMessage"]["Data"]
+        raw_mime = params["Content"]["Raw"]["Data"]
         # just check the alternative made it into the message
-        # (assume that Django knows how to format it properly)
-        self.assertIn(b"\nContent-Type: application/json\n", raw_mime)
+        # (assume that Python email knows how to format it properly)
+        self.assertIn(b"\nContent-Type: text/x-amp-html", raw_mime)
 
     def test_multiple_from(self):
         # Amazon allows multiple addresses in the From header,
-        # but must specify which is Source
-        self.message.from_email = "from1@example.com, from2@example.com"
-        self.message.send()
-        params = self.get_send_params()
-        raw_mime = params["RawMessage"]["Data"]
-        self.assertIn(b"\nFrom: from1@example.com, from2@example.com\n", raw_mime)
-        self.assertEqual(params["Source"], "from1@example.com")
+        # but must specify a single one for the FromEmailAddress
+        self.message.from_email = "First <from1@example.com>, from2@example.com"
+        with self.assertRaisesMessage(
+            AnymailUnsupportedFeature, "multiple from emails"
+        ):
+            self.message.send()
 
     def test_commas_in_subject(self):
         """
@@ -321,47 +322,60 @@ class AmazonSESBackendStandardEmailTests(AmazonSESBackendMockAPITestCase):
         sent_message = self.get_sent_message()
         self.assertEqual(sent_message["Subject"], self.message.subject)
 
-    def test_body_avoids_cte_8bit(self):
+    def test_no_cte_8bit(self):
         """Anymail works around an Amazon SES bug that can corrupt non-ASCII bodies."""
         # (see detailed comments in the backend code)
+
+        # The generated MIMEText for each of these ends up using CTE 8bit by default:
         self.message.body = "Это text body"
         self.message.attach_alternative("<p>Это html body</p>", "text/html")
+        self.message.attach("sample.csv", "Это attachment", "text/csv")
+
+        # Also force a CTE 8bit attachment (which normally defaults to CTE base64):
+        att = MIMEApplication("Это data".encode("utf8"), "data", encode_7or8bit)
+        self.assertEqual(att["Content-Transfer-Encoding"], "8bit")
+        self.message.attach(att)
+
         self.message.send()
         sent_message = self.get_sent_message()
 
-        # Make sure none of the text parts use `Content-Transfer-Encoding: 8bit`.
+        # Make sure none of the resulting parts use `Content-Transfer-Encoding: 8bit`.
         # (Technically, either quoted-printable or base64 would be OK, but base64 text
         # parts have a reputation for triggering spam filters, so just require
-        # quoted-printable.)
-        text_part_encodings = [
+        # quoted-printable for them.)
+        part_encodings = [
             (part.get_content_type(), part["Content-Transfer-Encoding"])
             for part in sent_message.walk()
-            if part.get_content_maintype() == "text"
         ]
         self.assertEqual(
-            text_part_encodings,
+            part_encodings,
             [
+                ("multipart/mixed", None),
+                ("multipart/alternative", None),
                 ("text/plain", "quoted-printable"),
                 ("text/html", "quoted-printable"),
+                ("text/csv", "quoted-printable"),
+                ("application/data", "base64"),
             ],
         )
 
     def test_api_failure(self):
         error_response = {
             "Error": {
-                "Type": "Sender",
                 "Code": "MessageRejected",
                 "Message": "Email address is not verified. The following identities"
                 " failed the check in region US-EAST-1: to@example.com",
             },
             "ResponseMetadata": {
-                "RequestId": "aaaaaaaa-2222-1111-8888-bbbb3333bbbb",
-                "HTTPStatusCode": 400,
+                "RequestId": "c44b0ae2-e086-45ca-8820-b76a9b9f430a",
+                "HTTPStatusCode": 403,
                 "HTTPHeaders": {
-                    "x-amzn-requestid": "aaaaaaaa-2222-1111-8888-bbbb3333bbbb",
-                    "content-type": "text/xml",
-                    "content-length": "277",
-                    "date": "Sat, 17 Mar 2018 04:44:44 GMT",
+                    "date": "Tue, 21 Feb 2023 23:49:31 GMT",
+                    "content-type": "application/json",
+                    "content-length": "196",
+                    "connection": "keep-alive",
+                    "x-amzn-requestid": "c44b0ae2-e086-45ca-8820-b76a9b9f430a",
+                    "x-amzn-errortype": "MessageRejected",
                 },
                 "RetryAttempts": 0,
             },
@@ -444,7 +458,10 @@ class AmazonSESBackendAnymailFeatureTests(AmazonSESBackendMockAPITestCase):
         self.message.envelope_sender = "bounce-handler@bounces.example.com"
         self.message.send()
         params = self.get_send_params()
-        self.assertEqual(params["Source"], "bounce-handler@bounces.example.com")
+        self.assertEqual(
+            params["FeedbackForwardingEmailAddress"],
+            "bounce-handler@bounces.example.com",
+        )
 
     def test_spoofed_to(self):
         # Amazon SES is one of the few ESPs that actually permits the To header
@@ -453,15 +470,18 @@ class AmazonSESBackendAnymailFeatureTests(AmazonSESBackendMockAPITestCase):
         self.message.extra_headers["To"] = "Spoofed <spoofed-to@elsewhere.example.org>"
         self.message.send()
         params = self.get_send_params()
-        raw_mime = params["RawMessage"]["Data"]
-        self.assertEqual(params["Destinations"], ["Envelope <envelope-to@example.com>"])
+        raw_mime = params["Content"]["Raw"]["Data"]
+        self.assertEqual(
+            params["Destination"],
+            {"ToAddresses": ["Envelope <envelope-to@example.com>"]},
+        )
         self.assertIn(b"\nTo: Spoofed <spoofed-to@elsewhere.example.org>\n", raw_mime)
         self.assertNotIn(b"envelope-to@example.com", raw_mime)
 
     def test_metadata(self):
-        # (that \n is a header-injection test)
         self.message.metadata = {
             "User ID": 12345,
+            # that \n is a header-injection test:
             "items": "Correct horse,Battery,\nStaple",
             "Cart-Total": "22.70",
         }
@@ -504,7 +524,9 @@ class AmazonSESBackendAnymailFeatureTests(AmazonSESBackendMockAPITestCase):
         self.message.tags = ["Welcome"]
         self.message.send()
         params = self.get_send_params()
-        self.assertEqual(params["Tags"], [{"Name": "Campaign", "Value": "Welcome"}])
+        self.assertEqual(
+            params["EmailTags"], [{"Name": "Campaign", "Value": "Welcome"}]
+        )
 
         # Multiple Anymail tags are not supported when using this feature
         self.message.tags = ["Welcome", "Variation_A"]
@@ -547,22 +569,25 @@ class AmazonSESBackendAnymailFeatureTests(AmazonSESBackendMockAPITestCase):
         ANYMAIL_AMAZON_SES_MESSAGE_TAG_NAME="Campaign"
     )
     def test_template(self):
-        """With template_id, Anymail switches to SES SendBulkTemplatedEmail"""
-        # SendBulkTemplatedEmail uses a completely different API call and payload
+        """With template_id, Anymail switches to SESv2 SendBulkEmail"""
+        # SendBulkEmail uses a completely different API call and payload
         # structure, so this re-tests a bunch of Anymail features that were handled
         # differently above. (See test_amazon_ses_integration for a more realistic
         # template example.)
         raw_response = {
-            "Status": [
+            "BulkEmailEntryResults": [
                 {
-                    "Status": "Success",
+                    "Status": "SUCCESS",
                     "MessageId": "1111111111111111-bbbbbbbb-3333-7777",
                 },
-                {"Status": "AccountThrottled"},
+                {
+                    "Status": "ACCOUNT_DAILY_QUOTA_EXCEEDED",
+                    "Error": "Daily message quota exceeded",
+                },
             ],
             "ResponseMetadata": self.DEFAULT_SEND_RESPONSE["ResponseMetadata"],
         }
-        self.set_mock_response(raw_response, operation_name="send_bulk_templated_email")
+        self.set_mock_response(raw_response, operation_name="send_bulk_email")
         message = AnymailMessage(
             template_id="welcome_template",
             from_email='"Example, Inc." <from@example.com>',
@@ -577,30 +602,40 @@ class AmazonSESBackendAnymailFeatureTests(AmazonSESBackendMockAPITestCase):
             merge_global_data={"group": "Users", "site": "ExampleCo"},
             # (only works with AMAZON_SES_MESSAGE_TAG_NAME when using template):
             tags=["WelcomeVariantA"],
-            envelope_sender="bounces@example.com",
+            envelope_sender="bounce@example.com",
             esp_extra={
-                "SourceArn": "arn:aws:ses:us-east-1:123456789012:identity/example.com"
+                "FromEmailAddressIdentityArn": (
+                    "arn:aws:ses:us-east-1:123456789012:identity/example.com"
+                )
             },
         )
         message.send()
 
         # templates use a different API call...
-        self.assert_esp_not_called(operation_name="send_raw_email")
-        params = self.get_send_params(operation_name="send_bulk_templated_email")
-        self.assertEqual(params["Template"], "welcome_template")
-        self.assertEqual(params["Source"], '"Example, Inc." <from@example.com>')
-        destinations = params["Destinations"]
-        self.assertEqual(len(destinations), 2)
+        self.assert_esp_not_called(operation_name="send_email")
+        params = self.get_send_params(operation_name="send_bulk_email")
         self.assertEqual(
-            destinations[0]["Destination"],
+            params["DefaultContent"]["Template"]["TemplateName"], "welcome_template"
+        )
+        self.assertEqual(
+            params["FromEmailAddress"], '"Example, Inc." <from@example.com>'
+        )
+        bulk_entries = params["BulkEmailEntries"]
+        self.assertEqual(len(bulk_entries), 2)
+        self.assertEqual(
+            bulk_entries[0]["Destination"],
             {"ToAddresses": ["alice@example.com"], "CcAddresses": ["cc@example.com"]},
         )
         self.assertEqual(
-            json.loads(destinations[0]["ReplacementTemplateData"]),
+            json.loads(
+                bulk_entries[0]["ReplacementEmailContent"]["ReplacementTemplate"][
+                    "ReplacementTemplateData"
+                ]
+            ),
             {"name": "Alice", "group": "Developers"},
         )
         self.assertEqual(
-            destinations[1]["Destination"],
+            bulk_entries[1]["Destination"],
             {
                 # SES requires RFC2047:
                 "ToAddresses": ["=?utf-8?b?572X5Lyv54m5?= <bob@example.com>"],
@@ -608,10 +643,15 @@ class AmazonSESBackendAnymailFeatureTests(AmazonSESBackendMockAPITestCase):
             },
         )
         self.assertEqual(
-            json.loads(destinations[1]["ReplacementTemplateData"]), {"name": "Bob"}
+            json.loads(
+                bulk_entries[1]["ReplacementEmailContent"]["ReplacementTemplate"][
+                    "ReplacementTemplateData"
+                ]
+            ),
+            {"name": "Bob"},
         )
         self.assertEqual(
-            json.loads(params["DefaultTemplateData"]),
+            json.loads(params["DefaultContent"]["Template"]["TemplateData"]),
             {"group": "Users", "site": "ExampleCo"},
         )
         self.assertEqual(
@@ -619,12 +659,14 @@ class AmazonSESBackendAnymailFeatureTests(AmazonSESBackendMockAPITestCase):
             ["reply1@example.com", "Reply 2 <reply2@example.com>"],
         )
         self.assertEqual(
-            params["DefaultTags"], [{"Name": "Campaign", "Value": "WelcomeVariantA"}]
+            params["DefaultEmailTags"],
+            [{"Name": "Campaign", "Value": "WelcomeVariantA"}],
         )
-        self.assertEqual(params["ReturnPath"], "bounces@example.com")
+        self.assertEqual(params["FeedbackForwardingEmailAddress"], "bounce@example.com")
+        # esp_extra:
         self.assertEqual(
-            params["SourceArn"],
-            "arn:aws:ses:us-east-1:123456789012:identity/example.com",  # esp_extra
+            params["FromEmailAddressIdentityArn"],
+            "arn:aws:ses:us-east-1:123456789012:identity/example.com",
         )
 
         self.assertEqual(message.anymail_status.status, {"queued", "failed"})
@@ -647,6 +689,30 @@ class AmazonSESBackendAnymailFeatureTests(AmazonSESBackendMockAPITestCase):
             message.anymail_status.recipients["bob@example.com"].message_id
         )
         self.assertEqual(message.anymail_status.esp_response, raw_response)
+
+    def test_template_failure(self):
+        """Failures to all recipients raise a similar error to non-template sends"""
+        raw_response = {
+            "BulkEmailEntryResults": [
+                {
+                    "Status": "TEMPLATE_DOES_NOT_EXIST",
+                    "Error": "No template named 'oops'",
+                },
+                {
+                    "Status": "TEMPLATE_DOES_NOT_EXIST",
+                    "Error": "No template named 'oops'",
+                },
+            ],
+            "ResponseMetadata": self.DEFAULT_SEND_RESPONSE["ResponseMetadata"],
+        }
+        self.set_mock_response(raw_response, operation_name="send_bulk_email")
+        message = AnymailMessage(
+            template_id="oops",
+            from_email="from@example.com",
+            to=["alice@example.com", "bob@example.com"],
+        )
+        with self.assertRaisesMessage(AnymailAPIError, "No template named 'oops'"):
+            message.send()
 
     def test_template_unsupported(self):
         """A lot of options are not compatible with SendBulkTemplatedEmail"""
@@ -698,14 +764,14 @@ class AmazonSESBackendAnymailFeatureTests(AmazonSESBackendMockAPITestCase):
         message.tags = None
 
     def test_send_anymail_message_without_template(self):
-        # Make sure SendRawEmail is used for non-template_id messages
+        # Make sure SendEmail is used for non-template_id messages
         message = AnymailMessage(
             from_email="from@example.com", to=["to@example.com"], subject="subject"
         )
         message.send()
-        self.assert_esp_not_called(operation_name="send_bulk_templated_email")
-        # fails if send_raw_email not called:
-        self.get_send_params(operation_name="send_raw_email")
+        self.assert_esp_not_called(operation_name="send_bulk_email")
+        # fails if send_email not called:
+        self.get_send_params(operation_name="send_email")
 
     def test_default_omits_options(self):
         """Make sure by default we don't send any ESP-specific options.
@@ -716,20 +782,17 @@ class AmazonSESBackendAnymailFeatureTests(AmazonSESBackendMockAPITestCase):
         """
         self.message.send()
         params = self.get_send_params()
+        self.assertNotIn("BulkEmailEntries", params)
         self.assertNotIn("ConfigurationSetName", params)
-        self.assertNotIn("DefaultTags", params)
-        self.assertNotIn("DefaultTemplateData", params)
-        self.assertNotIn("FromArn", params)
-        self.assertNotIn("Message", params)
+        self.assertNotIn("DefaultContent", params)
+        self.assertNotIn("DefaultContent", params)
+        self.assertNotIn("DefaultEmailTags", params)
+        self.assertNotIn("EmailTags", params)
+        self.assertNotIn("FeedbackForwardingEmailAddress", params)
+        self.assertNotIn("FeedbackForwardingEmailAddressIdentityArn", params)
+        self.assertNotIn("FromEmailAddressIdentityArn", params)
+        self.assertNotIn("ListManagementOptions", params)
         self.assertNotIn("ReplyToAddresses", params)
-        self.assertNotIn("ReturnPath", params)
-        self.assertNotIn("ReturnPathArn", params)
-        self.assertNotIn("Source", params)
-        self.assertNotIn("SourceArn", params)
-        self.assertNotIn("Tags", params)
-        self.assertNotIn("Template", params)
-        self.assertNotIn("TemplateArn", params)
-        self.assertNotIn("TemplateData", params)
 
         sent_message = self.get_sent_message()
         # custom headers not added if not needed:
@@ -910,3 +973,18 @@ class AmazonSESBackendConfigurationTests(AmazonSESBackendMockAPITestCase):
         self.message.send()
         params = self.get_send_params()
         self.assertEqual(params["ConfigurationSetName"], "CustomConfigurationSet")
+
+    @override_settings(EMAIL_BACKEND="anymail.backends.amazon_sesv2.EmailBackend")
+    def test_sesv2_warning(self):
+        # Default SES v2 backend is still available as "amazon_sesv2",
+        # but using that should warn to switch to just "amazon_ses".
+        with self.assertWarnsMessage(
+            AnymailDeprecationWarning,
+            "Please change 'amazon_sesv2' to 'amazon_ses' in your EMAIL_BACKEND setting.",
+        ):
+            self.message.send()
+
+    def test_no_warning_default(self):
+        # Default SES backend does not have "amazon_sesv2" warning.
+        with self.assertDoesNotWarn(AnymailDeprecationWarning):
+            self.message.send()

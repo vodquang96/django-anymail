@@ -1,5 +1,6 @@
 import os
 import unittest
+import warnings
 from email.utils import formataddr
 
 from django.test import SimpleTestCase, override_settings, tag
@@ -30,7 +31,7 @@ ANYMAIL_TEST_AMAZON_SES_DOMAIN = os.getenv("ANYMAIL_TEST_AMAZON_SES_DOMAIN")
     " environment variables to run Amazon SES integration tests",
 )
 @override_settings(
-    EMAIL_BACKEND="anymail.backends.amazon_sesv2.EmailBackend",
+    EMAIL_BACKEND="anymail.backends.amazon_sesv1.EmailBackend",
     ANYMAIL={
         "AMAZON_SES_CLIENT_PARAMS": {
             # This setting provides Anymail-specific AWS credentials to boto3.client(),
@@ -67,7 +68,7 @@ class AmazonSESBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
 
     def setUp(self):
         super().setUp()
-        self.from_email = f"test@{ANYMAIL_TEST_AMAZON_SES_DOMAIN}"
+        self.from_email = "test@%s" % ANYMAIL_TEST_AMAZON_SES_DOMAIN
         self.message = AnymailMessage(
             "Anymail Amazon SES integration test",
             "Text content",
@@ -75,6 +76,16 @@ class AmazonSESBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
             ["success@simulator.amazonses.com"],
         )
         self.message.attach_alternative("<p>HTML content</p>", "text/html")
+
+        # boto3 relies on GC to close connections. Python 3 warns about unclosed
+        # ssl.SSLSocket during cleanup. We don't care. (It may be a false positive,
+        # or it may be a botocore problem, but it's not *our* problem.)
+        # https://github.com/boto/boto3/issues/454#issuecomment-586033745
+        # Filter in TestCase.setUp because unittest resets the warning filters
+        # for each test. https://stackoverflow.com/a/26620811/647002
+        warnings.filterwarnings(
+            "ignore", message=r"unclosed <ssl\.SSLSocket", category=ResourceWarning
+        )
 
     def test_simple_send(self):
         # Example of getting the Amazon SES send status and message id from the message
@@ -118,7 +129,6 @@ class AmazonSESBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
             headers={"X-Anymail-Test": "value"},
             metadata={"meta1": "simple_string", "meta2": 2},
             tags=["Re-engagement", "Cohort 12/2017"],
-            envelope_sender=f"bounce-handler@{ANYMAIL_TEST_AMAZON_SES_DOMAIN}",
         )
         message.attach("attachment1.txt", "Here is some\ntext for you", "text/plain")
         message.attach("attachment2.csv", "ID,Name\n1,Amy Lina", "text/csv")
@@ -139,16 +149,14 @@ class AmazonSESBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
 
     def test_stored_template(self):
         # Using a template created like this:
-        # boto3.client('sesv2').create_email_template(
-        #     TemplateName="TestTemplate",
-        #     TemplateContent={
-        #         "Subject": "Your order {{order}} shipped",
-        #         "Html": "<h1>Dear {{name}}:</h1>"
+        # boto3.client('ses').create_template(Template={
+        #     "TemplateName": "TestTemplate",
+        #     "SubjectPart": "Your order {{order}} shipped",
+        #     "HtmlPart": "<h1>Dear {{name}}:</h1>"
         #                 "<p>Your order {{order}} shipped {{ship_date}}.</p>",
-        #         "Text": "Dear {{name}}:\r\n"
+        #     "TextPart": "Dear {{name}}:\r\n"
         #                 "Your order {{order}} shipped {{ship_date}}."
-        #     },
-        # )
+        # })
         message = AnymailMessage(
             template_id="TestTemplate",
             from_email=formataddr(("Test From", self.from_email)),

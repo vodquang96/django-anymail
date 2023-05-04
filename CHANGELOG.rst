@@ -33,6 +33,18 @@ vNext
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+* **Amazon SES:** The Amazon SES backend now sends using the SES v2 API.
+  Most projects should not require code changes, but you may need to update
+  your IAM permissions. See
+  `Migrating to the SES v2 API <https://anymail.dev/en/latest/esps/amazon_ses/#amazon-ses-v2>`__.
+
+  If you were using SES v2 under Anymail 9.1 or 9.2, change your
+  ``EMAIL_BACKEND`` setting from ``amazon_sesv2`` to just ``amazon_ses``.
+
+  (If you are not ready to migrate to SES v2, an ``amazon_sesv1`` EmailBackend
+  is available. But Anymail will drop support for that later this year. See
+  `Using SES v1 (deprecated) <https://anymail.dev/en/latest/esps/amazon_ses/#amazon-ses-v1>`__.)
+
 * **Amazon SES:** The "extra name" for installation must now be spelled with
   a hyphen rather than an underscore: ``django-anymail[amazon-ses]``.
   Be sure to update any dependencies specification (pip install, requirements.txt,
