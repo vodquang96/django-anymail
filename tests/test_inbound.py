@@ -284,6 +284,7 @@ class AnymailInboundMessageConveniencePropTests(SimpleTestCase):
             from_email='"Sender, Inc." <sender@example.com>',
             to="First To <to1@example.com>, to2@example.com",
             cc="First Cc <cc1@example.com>, cc2@example.com",
+            bcc="bcc@example.com",
         )
         self.assertEqual(str(msg.from_email), '"Sender, Inc." <sender@example.com>')
         self.assertEqual(msg.from_email.addr_spec, "sender@example.com")
@@ -300,6 +301,9 @@ class AnymailInboundMessageConveniencePropTests(SimpleTestCase):
         self.assertEqual(len(msg.cc), 2)
         self.assertEqual(msg.cc[0].address, "First Cc <cc1@example.com>")
         self.assertEqual(msg.cc[1].address, "cc2@example.com")
+
+        self.assertEqual(len(msg.bcc), 1)
+        self.assertEqual(msg.bcc[0].address, "bcc@example.com")
 
         # Default None/empty lists
         msg = AnymailInboundMessage()

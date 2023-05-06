@@ -59,6 +59,19 @@ Breaking changes
 
 * Require urllib3 1.25 or later (released 2019-04-29).
 
+Features
+~~~~~~~~
+
+* **Postmark inbound:**
+
+  * Handle Postmark's "Include raw email content in JSON payload"
+    inbound option. Enabling this setting is recommended to get
+    the most accurate representation of any received email.
+  * Obtain ``envelope_sender`` from *Return-Path* Postmark now provides.
+    (Replaces potentially faulty *Received-SPF* header parsing.)
+  * Add *Bcc* header to inbound message if provided. Postmark adds bcc
+    when the delivered-to address does not appear in the *To* header.
+
 Other
 ~~~~~
 

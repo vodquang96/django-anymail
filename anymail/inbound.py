@@ -72,6 +72,12 @@ class AnymailInboundMessage(Message):
         return self.get_address_header("Cc")
 
     @property
+    def bcc(self):
+        """list of EmailAddress objects from Bcc header"""
+        # equivalent to Python 3.2+ message['Bcc'].addresses
+        return self.get_address_header("Bcc")
+
+    @property
     def subject(self):
         """str value of Subject header, or None"""
         return self["Subject"]
@@ -233,6 +239,7 @@ class AnymailInboundMessage(Message):
         from_email=None,
         to=None,
         cc=None,
+        bcc=None,
         subject=None,
         headers=None,
         text=None,
@@ -252,6 +259,7 @@ class AnymailInboundMessage(Message):
         :param from_email: {str|None} value for From header
         :param to: {str|None} value for To header
         :param cc: {str|None} value for Cc header
+        :param bcc: {str|None} value for Bcc header
         :param subject: {str|None} value for Subject header
         :param headers: {sequence[(str, str)]|mapping|None} additional headers
         :param text: {str|None} plaintext body
@@ -279,6 +287,9 @@ class AnymailInboundMessage(Message):
         if cc is not None:
             del msg["Cc"]
             msg["Cc"] = cc
+        if bcc is not None:
+            del msg["Bcc"]
+            msg["Bcc"] = bcc
         if subject is not None:
             del msg["Subject"]
             msg["Subject"] = subject
