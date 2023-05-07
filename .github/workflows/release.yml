@@ -59,8 +59,11 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+          # For test PyPI, set release var PYPI_REPOSITORY_URL=https://test.pypi.org/legacy/.
+          # For production PyPI, leave unset (or set to empty string).
+          TWINE_REPOSITORY_URL: ${{ vars.PYPI_REPOSITORY_URL }}
         run: |
-          python -m twine upload dist/*
+          python -m twine upload --disable-progress-bar --non-interactive dist/*
 
       - name: Release to GitHub
         env:
