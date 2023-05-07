@@ -25,10 +25,10 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
+v10.0
 -----
 
-*unreleased changes*
+*2023-05-07*
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -36,28 +36,31 @@ Breaking changes
 * **Amazon SES:** The Amazon SES backend now sends using the SES v2 API.
   Most projects should not require code changes, but you may need to update
   your IAM permissions. See
-  `Migrating to the SES v2 API <https://anymail.dev/en/latest/esps/amazon_ses/#amazon-ses-v2>`__.
+  `Migrating to the SES v2 API <https://anymail.dev/en/stable/esps/amazon_ses/#amazon-ses-v2>`__.
 
   If you were using SES v2 under Anymail 9.1 or 9.2, change your
   ``EMAIL_BACKEND`` setting from ``amazon_sesv2`` to just ``amazon_ses``.
 
   (If you are not ready to migrate to SES v2, an ``amazon_sesv1`` EmailBackend
   is available. But Anymail will drop support for that later this year. See
-  `Using SES v1 (deprecated) <https://anymail.dev/en/latest/esps/amazon_ses/#amazon-ses-v1>`__.)
+  `Using SES v1 (deprecated) <https://anymail.dev/en/stable/esps/amazon_ses/#amazon-ses-v1>`__.)
 
 * **Amazon SES:** The "extra name" for installation must now be spelled with
   a hyphen rather than an underscore: ``django-anymail[amazon-ses]``.
   Be sure to update any dependencies specification (pip install, requirements.txt,
-  etc.) that had been using ``[amazon_ses]``.
+  etc.) that had been using ``[amazon_ses]``. (This change is due to
+  package name normalization rules enforced by modern Python packaging tools.)
 
 * **Mandrill:** Remove support for Mandrill-specific message attributes left over
   from Djrill. These attributes have raised DeprecationWarnings since Anymail 0.3
   (in 2016), but are now silently ignored. See
-  `Migrating from Djrill <https://anymail.dev/en/latest/esps/mandrill/#djrill-message-attributes>`__.
+  `Migrating from Djrill <https://anymail.dev/en/v10.0/esps/mandrill/#djrill-message-attributes>`__.
 
 * Require Python 3.7 or later.
 
-* Require urllib3 1.25 or later (released 2019-04-29).
+* Require urllib3 1.25 or later. (Drop a workaround for older urllib3 releases.
+  urllib3 is a requests dependency; version 1.25 was released 2019-04-29. Unless
+  you are pinning an earlier urllib3, this change should have no impact.)
 
 Features
 ~~~~~~~~
@@ -65,8 +68,8 @@ Features
 * **Postmark inbound:**
 
   * Handle Postmark's "Include raw email content in JSON payload"
-    inbound option. Enabling this setting is recommended to get
-    the most accurate representation of any received email.
+    inbound option. We recommend enabling this in Postmark's dashboard
+    to get the most accurate representation of received email.
   * Obtain ``envelope_sender`` from *Return-Path* Postmark now provides.
     (Replaces potentially faulty *Received-SPF* header parsing.)
   * Add *Bcc* header to inbound message if provided. Postmark adds bcc
