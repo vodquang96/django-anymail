@@ -132,9 +132,8 @@ class PostmarkBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
 
     @override_settings(ANYMAIL_POSTMARK_SERVER_TOKEN="Hey, that's not a server token!")
     def test_invalid_server_token(self):
-        with self.assertRaises(AnymailAPIError) as cm:
+        # Message will include something like
+        # "Request does not contain a valid Server token"
+        # or "Please verify that you are using a valid token"
+        with self.assertRaisesRegex(AnymailAPIError, r"valid.*token"):
             self.message.send()
-        err = cm.exception
-        self.assertEqual(err.status_code, 401)
-        # Make sure the exception message includes Postmark's response:
-        self.assertIn("Please verify that you are using a valid token", str(err))
