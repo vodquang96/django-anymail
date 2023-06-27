@@ -108,15 +108,11 @@ class MandrillBackendIntegrationTests(AnymailTestMixin, SimpleTestCase):
 
     def test_invalid_from(self):
         # Example of trying to send from an invalid address
-        # Mandrill returns a 500 response (which raises a MandrillAPIError)
         self.message.from_email = (
             "webmaster@localhost"  # Django default DEFAULT_FROM_EMAIL
         )
-        with self.assertRaises(AnymailAPIError) as cm:
+        with self.assertRaisesMessage(AnymailAPIError, "email address is invalid"):
             self.message.send()
-        err = cm.exception
-        self.assertEqual(err.status_code, 500)
-        self.assertIn("email address is invalid", str(err))
 
     def test_invalid_to(self):
         # Example of detecting when a recipient is not a valid email address
