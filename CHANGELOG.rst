@@ -30,6 +30,33 @@ vNext
 
 *Unreleased changes*
 
+Features
+~~~~~~~~
+
+* **Inbound:** Improve `AnymailInboundMessage`'s handling of inline content:
+
+  * Rename `inline_attachments` to `content_id_map`, more accurately reflecting its function.
+  * Add new `inlines` property that provides a complete list of inline content,
+    whether or not it includes a *Content-ID*. This is helpful for accessing
+    inline images that appear directly in a *multipart/mixed* body, such as those
+    created by the Apple Mail app.
+  * Rename `is_inline_attachment()` to just `is_inline()`.
+
+  The renamed items are still available, but deprecated, under their old names.
+  See `docs <http://anymail.dev/en/latest/inbound/#anymail.inbound.AnymailInboundMessage>`__.
+  (Thanks to `@martinezleoml`_.)
+
+* **Inbound:** `AnymailInboundMessage` now derives from Python's
+  `email.message.EmailMessage`, which provides improved compatibility with
+  email standards. (Thanks to `@martinezleoml`_.)
+
+
+Deprecations
+~~~~~~~~~~~~
+
+* **Inbound:** `AnymailInboundMessage.inline_attachments` and `.is_inline_attachment()`
+  have been renamed---see above.
+
 Other
 ~~~~~
 
@@ -1525,6 +1552,7 @@ Features
 .. _@Lekensteyn: https://github.com/Lekensteyn
 .. _@lewistaylor: https://github.com/lewistaylor
 .. _@mark-mishyn: https://github.com/mark-mishyn
+.. _@martinezleoml: https://github.com/martinezleoml
 .. _@mbk-ok: https://github.com/mbk-ok
 .. _@mwheels: https://github.com/mwheels
 .. _@nuschk: https://github.com/nuschk
