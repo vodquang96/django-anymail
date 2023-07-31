@@ -25,10 +25,10 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
+v10.1
 -----
 
-*Unreleased changes*
+*2023-07-31*
 
 Features
 ~~~~~~~~
@@ -43,17 +43,22 @@ Features
   * Rename `is_inline_attachment()` to just `is_inline()`.
 
   The renamed items are still available, but deprecated, under their old names.
-  See `docs <http://anymail.dev/en/latest/inbound/#anymail.inbound.AnymailInboundMessage>`__.
+  See `docs <http://anymail.dev/en/stable/inbound/#anymail.inbound.AnymailInboundMessage>`__.
   (Thanks to `@martinezleoml`_.)
 
 * **Inbound:** `AnymailInboundMessage` now derives from Python's
   `email.message.EmailMessage`, which provides improved compatibility with
   email standards. (Thanks to `@martinezleoml`_.)
 
-* **Brevo (Sendinblue):** Add support for inbound email. (See
-  `docs <https://anymail.dev/en/latest/esps/sendinblue/#sendinblue-inbound>`_.)
+* **Brevo (Sendinblue):** Sendinblue has rebranded to "Brevo." Change default
+  API endpoint to ``api.brevo.com``, and update docs to reflect new name. Anymail
+  still uses ``sendinblue`` in the backend name, for settings, etc., so there
+  should be no impact on your code. (Thanks to `@sblondon`_.)
 
-* **SendGrid:** Support for multiple ``reply_to`` addresses.
+* **Brevo (Sendinblue):** Add support for inbound email. (See
+  `docs <https://anymail.dev/en/stable/esps/sendinblue/#sendinblue-inbound>`_.)
+
+* **SendGrid:** Support multiple ``reply_to`` addresses.
   (Thanks to `@gdvalderrama`_ for pointing out the new API.)
 
 Deprecations
@@ -61,14 +66,6 @@ Deprecations
 
 * **Inbound:** `AnymailInboundMessage.inline_attachments` and `.is_inline_attachment()`
   have been renamed---see above.
-
-Other
-~~~~~
-
-* **Brevo (Sendinblue):** Sendinblue has rebranded to "Brevo." Change default
-  API endpoint to ``api.brevo.com``, and update docs to reflect new name. Anymail
-  still uses ``sendinblue`` in the backend name, for settings, etc., so there
-  should be no impact on your code. (Thanks to `@sblondon`_.)
 
 
 v10.0
