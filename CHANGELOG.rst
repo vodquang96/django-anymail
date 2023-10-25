@@ -25,16 +25,16 @@ Release history
 ^^^^^^^^^^^^^^^
     ..  This extra heading level keeps the ToC from becoming unmanageably long
 
-vNext
+v10.2
 -----
 
-*unreleased changes*
+*2023-10-25*
 
 Features
 ~~~~~~~~
 
 * **Resend**: Add support for this ESP
-  (`docs <https://anymail.dev/en/latest/esps/resend/>`__).
+  (`docs <https://anymail.dev/en/stable/esps/resend/>`__).
 
 Fixes
 ~~~~~
