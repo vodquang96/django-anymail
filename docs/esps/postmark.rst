@@ -6,9 +6,15 @@ Postmark
 Anymail integrates with the `Postmark`_ transactional email service,
 using their `HTTP email API`_.
 
+.. sidebar:: Alternatives
+
+    The :pypi:`postmarker` package includes a `Postmarker Django EmailBackend`_.
+    Depending on your needs, it may be more appropriate than Anymail.
+
 .. _Postmark: https://postmarkapp.com/
 .. _HTTP email API: https://postmarkapp.com/developer/api/email-api
-
+.. _Postmarker Django EmailBackend:
+   https://postmarker.readthedocs.io/en/stable/django.html
 
 Settings
 --------
