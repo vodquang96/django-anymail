@@ -73,10 +73,7 @@ jobs:
           NOTES: |
             [Changelog](https://anymail.dev/en/stable/changelog/#${{ steps.version.outputs.anchor }})
         run: |
-          # gh release create-or-edit "$TAG" --target "$GITHUB_REF" --title "$TITLE" --notes "$NOTES" ./dist/*
-          # (gh release doesn't support edit - 6/2021)
-          # (hub requires separate --attach=FILE arg for each file)
-          FILES=(./dist/*)
-          if ! hub release edit --message "$TITLE" --message "$NOTES" "${FILES[@]/#/--attach=}" "$TAG"; then
-            hub release create -t "$GITHUB_SHA" --message "$TITLE" --message "$NOTES" "${FILES[@]/#/--attach=}" "$TAG"
+          if ! gh release edit "$TAG" --verify-tag --target "$GITHUB_REF" --title "$TITLE" --notes "$NOTES"; then
+            gh release create "$TAG" --verify-tag --target "$GITHUB_REF" --title "$TITLE" --notes "$NOTES"
           fi
+          gh release upload "$TAG" ./dist/*
