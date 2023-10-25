@@ -449,7 +449,7 @@ follow MailerSend's instructions to `add a webhook to your domain`_.
 
         ANYMAIL = {
             # ...
-            MAILERSEND_SIGNING_SECRET = "<secret you copied>"
+            "MAILERSEND_SIGNING_SECRET": "<secret you copied>"
         }
 
 For troubleshooting, MailerSend provides a helpful log of calls to the webhook.
@@ -517,7 +517,7 @@ If you want to receive email from MailerSend through Anymail's normalized
 
         ANYMAIL = {
             # ...
-            MAILERSEND_INBOUND_SECRET = "<secret you copied>"
+            "MAILERSEND_INBOUND_SECRET": "<secret you copied>"
         }
 
     Note that this is a *different* secret from the
