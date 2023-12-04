@@ -12,10 +12,16 @@ def freeze_readme_versions(text: str, version: str) -> str:
     (This assumes version X.Y will be tagged "vX.Y" in git.)
     """
     release_tag = f"v{version}"
+    # (?<=...) is "positive lookbehind": must be there, but won't get replaced
+    text = re.sub(
+        # GitHub Actions badge: badge.svg?branch=main --> badge.svg?tag=vX.Y.Z:
+        r"(?<=badge\.svg\?)branch=main",
+        f"tag={release_tag}",
+        text,
+    )
     return re.sub(
-        # (?<=...) is "positive lookbehind": must be there, but won't get replaced
-        # GitHub Actions build status: branch=main --> branch=vX.Y.Z:
-        r"(?<=branch[=:])main"
+        # GitHub Actions status links: branch:main --> branch:vX.Y.Z:
+        r"(?<=branch:)main"
         # ReadTheDocs links: /stable --> /vX.Y.Z:
         r"|(?<=/)stable"
         # ReadTheDocs badge: version=stable --> version=vX.Y.Z:
