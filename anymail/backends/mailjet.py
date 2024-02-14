@@ -177,6 +177,8 @@ class MailjetPayload(RequestsPayload):
                 self.unsupported_feature("Multiple reply_to addresses")
 
     def set_extra_headers(self, headers):
+        headers.pop("Message-ID", None)
+
         self.data["Globals"]["Headers"] = headers
 
     def set_text_body(self, body):
